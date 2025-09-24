@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Idris Adeleke — Web Dev & Cybersecurity</title>
+<meta name="description" content="Idris Adeleke — Full-stack web developer & cybersecurity enthusiast. Portfolio of secure web apps, dashboards and private demos."/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#0f1724;         /* dark bg */
+    --card:#0b1220;
+    --muted:#94a3b8;
+    --accent:#06b6d4;     /* cyan */
+    --accent-2:#7c3aed;   /* purple */
+    --glass: rgba(255,255,255,0.03);
+    --glass-2: rgba(255,255,255,0.02);
+    --card-radius:18px;
+    --max-width:1100px;
+    --mono: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%;margin:0;font-family:var(--mono);background:linear-gradient(180deg,#071025 0%, #071827 60%);color:#e6eef8;overflow-y:scroll; -webkit-font-smoothing:antialiased;}
+  a{color:var(--accent); text-decoration:none}
+  .wrap{max-width:var(--max-width);margin:40px auto;padding:32px;}
+
+/* Header / hero */
+  header{display:flex;gap:20px;align-items:center;justify-content:space-between;margin-bottom:28px}
+  .brand{display:flex;gap:18px;align-items:center}
+  .logo{
+    width:72px;height:72px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-weight:800;color:#021029;font-size:22px;
+    box-shadow:0 6px 30px rgba(124,58,237,0.12), 0 2px 8px rgba(3,7,18,0.6);
+  }
+  .brand h1{font-size:20px;margin:0}
+  .brand p{margin:0;color:var(--muted);font-size:13px}
+  nav{display:flex;gap:18px;align-items:center}
+  .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));padding:10px 14px;border-radius:12px;font-weight:700;color:#031022;box-shadow:0 6px 24px rgba(6,182,212,0.08);border:none;cursor:pointer}
+  .ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:10px 12px;border-radius:12px;color:var(--muted);cursor:pointer}
+
+  /* Hero */
+  .hero{
+    display:grid;grid-template-columns:1fr 420px;gap:36px;align-items:start;margin-bottom:36px;
+  }
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:var(--card-radius);padding:28px;box-shadow: 0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);
+  }
+  .lead{font-size:32px;line-height:1.05;margin:6px 0 12px;font-weight:700}
+  .sub{color:var(--muted);margin-bottom:16px}
+  .cta-row{display:flex;gap:12px;align-items:center}
+  .pill{display:inline-flex;gap:10px;align-items:center;padding:8px 12px;background:var(--glass);border-radius:999px;color:var(--muted);font-weight:600;font-size:13px;border:1px solid rgba(255,255,255,0.02)}
+
+  /* Profile card right */
+  .profile-img{
+    width:100%;height:320px;border-radius:12px;background-image: url('https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=1b1f3b3b1a3f9b1d7a1a9f2b0f7a9b1c');
+    background-size:cover;background-position:center;box-shadow:inset 0 -40px 80px rgba(0,0,0,0.25);
+  }
+  .profile-meta{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .meta-line{display:flex;gap:12px;align-items:center;justify-content:space-between}
+  .meta-line small{color:var(--muted);font-size:13px}
+
+  /* grid sections */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:18px}
+  .projects-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .project-card{position:relative;overflow:hidden;border-radius:14px;min-height:220px;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.6));cursor:pointer;transition:transform .28s ease, box-shadow .28s ease}
+  .project-card:hover{transform:translateY(-8px);box-shadow:0 18px 50px rgba(2,6,23,0.6)}
+  .project-image{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.44) saturate(.95);transition:transform .8s ease}
+  .project-overlay{position:relative;z-index:3}
+  .proj-title{font-weight:700;font-size:20px;margin:0}
+  .proj-sub{color:var(--muted);font-size:13px;margin-top:6px}
+
+  /* skill bars */
+  .skill{margin-bottom:12px}
+  .skill .label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  .bar{height:10px;background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));border-radius:999px;margin-top:6px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:999px;transition:width 1.3s cubic-bezier(.2,.9,.2,1)}
+  .tag{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:12px;color:var(--muted);margin-right:8px;margin-top:8px}
+
+  /* timeline */
+  .timeline{display:flex;flex-direction:column;gap:14px}
+  .timeline .item{display:flex;gap:12px;align-items:flex-start}
+  .dot{width:12px;height:12px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent-2));margin-top:6px;box-shadow:0 6px 18px rgba(6,182,212,0.08)}
+  .timeline .content{background:var(--glass);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.02)}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(2,6,17,0.7);display:grid;place-items:center;padding:20px;visibility:hidden;opacity:0;transition:opacity .22s ease}
+  .modal.show{visibility:visible;opacity:1}
+  .modal-card{max-width:960px;width:100%;background:#061022;border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.04)}
+  .modal-gallery{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .close-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;font-weight:700}
+
+  /* footer */
+  footer{text-align:center;color:var(--muted);margin:36px 0 80px;font-size:13px}
+
+  /* utilities */
+  .muted{color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .center{display:grid;place-items:center}
+
+  /* responsive */
+  @media (max-width:980px){
+    .hero{grid-template-columns:1fr;}
+    .projects-grid{grid-template-columns:repeat(1,1fr)}
+    .grid{grid-template-columns:1fr}
+    .wrap{padding:20px;margin:18px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">IA</div>
+        <div>
+          <h1 style="margin:0">Idris Adeleke</h1>
+          <p style="margin:0;font-size:13px;color:var(--muted)">Web Developer • Cybersecurity • Ethical Hacking</p>
+        </div>
+      </div>
+
+      <nav>
+        <a class="ghost" href="#projects">Projects</a>
+        <a class="ghost" href="#skills">Skills</a>
+        <a class="ghost" href="#about">About</a>
+        <button class="btn" id="contactMeBtn">Contact</button>
+      </nav>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-weight:800;color:#021029">IA</div>
+          <div>
+            <div class="pill">Open to junior dev roles & security gigs</div>
+            <h2 class="lead">I build secure, high-performance web apps — from pixel-perfect UI to hardened backends.</h2>
+            <p class="sub">Full-stack dev who loves shipping polished frontends and locking down the backend. Private demos available on request.</p>
+            <div class="cta-row">
+              <a class="btn" href="#projects">See Projects</a>
+              <button class="ghost" id="downloadPDF">Download CV</button>
+              <a class="pill" href="mailto:IdrisAdeleke647@gmail.com?subject=Opportunity%20for%20Idris">Email me</a>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:22px">
+          <div class="chips">
+            <span class="tag">HTML</span><span class="tag">CSS</span><span class="tag">JavaScript</span><span class="tag">Node.js</span><span class="tag">React</span><span class="tag">Docker</span><span class="tag">Nmap</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="card" style="padding:18px;">
+        <div class="profile-img" role="img" aria-label="Developer workspace"></div>
+        <div class="profile-meta">
+          <div class="meta-line"><small class="muted">Location</small><small>Nigeria</small></div>
+          <div class="meta-line"><small class="muted">Phone</small><small>+234 705 545 6797</small></div>
+          <div class="meta-line"><small class="muted">Email</small><small>IdrisAdeleke647@gmail.com</small></div>
+          <div style="margin-top:8px"><small class="muted">Availability</small><div style="font-weight:700">Open to internships & junior dev roles</div></div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="projects" style="margin-top:18px">
+      <h3 style="margin-bottom:10px">Signature Projects</h3>
+      <p class="muted" style="margin-top:0;margin-bottom:16px">Click any project to open details, screenshots and tech stack. Private demos available on request.</p>
+
+      <div class="projects-grid">
+        <!-- Project 1 -->
+        <div class="project-card" data-proj="p1" role="button" tabindex="0" aria-label="Portfolio Platform">
+          <div class="project-image" style="background-image:url('https://i.pinimg.com/1200x/5f/ab/8d/5fab8dd4151d56026acad7df87fb99e4.jpg')"></div>
+          <div class="project-overlay">
+            <h4 class="proj-title">Hacking tools and Bug bounty</h4>
+            <div class="proj-sub">i 87% knowladge of C programming which i use in making tool for ethical hacking and bug hounty </div>
+          </div>
+        </div>
+
+        <!-- Project 2 -->
+        <div class="project-card" data-proj="p2" role="button" tabindex="0" aria-label="E-commerce Prototype">
+          <div class="project-image" style="background-image:url('https://i.pinimg.com/736x/f1/ca/4a/f1ca4a2b4143a4ce875b20261bc91a4c.jpg')"></div>
+          <div class="project-overlay">
+            <h4 class="proj-title">ShopSecure - E-commerce Website Prototype</h4>
+            <div class="proj-sub">i have made websites for lot of business clients</div>
+          </div>
+        </div>
+    </section>
+    <!-- DETAILS & SKILLS -->
+    <div class="grid" style="margin-top:28px">
+      <div class="card" id="about">
+        <h3 style="margin-top:0">About & Story</h3>
+        <p class="muted">I’m Idris — I design and build full-stack web apps and secure them from the ground up. I run private labs (Termux & Kali) to test defenses, improve APIs, and harden web layers. My work is practical: clear UI, robust backend, and security-first architecture.</p>
+
+        <h4 style="margin-top:16px">What I can deliver (sample)</h4>
+        <ul style="margin-top:6px;color:var(--muted)">
+          <li>Responsive, accessible front-ends with SSR or static export</li>
+          <li>REST APIs with authentication, RBAC & rate-limits</li>
+          <li>Secure deployment (Docker, Nginx, Let's Encrypt, CI)</li>
+          <li>Pentest & OWASP fixes: input sanitation, auth hardening, HTTPS everywhere</li>
+          <li>Monitoring & logging with healthchecks and alerting</li>
+        </ul>
+
+        <h4 style="margin-top:14px">Visual & media plan</h4>
+        <div class="chips">
+          <span class="tag">Hero image</span><span class="tag">Device mockups</span><span class="tag">Process diagrams</span><span class="tag">Case-study PDFs</span>
+        </div>
+      </div>
+
+      <aside class="card" id="skills">
+        <h3 style="margin-top:0">Skills & Tools</h3>
+        <div style="margin-top:10px">
+          <div class="skill">
+            <div class="label"><span>Front-end (HTML/CSS/JS/React)</span><span class="muted">90%</span></div>
+            <div class="bar" data-val="90"><i></i></div>
+          </div>
+
+          <div class="skill">
+            <div class="label"><span>Back-end (Node/Express)</span><span class="muted">80%</span></div>
+            <div class="bar" data-val="80"><i></i></div>
+          </div>
+
+          <div class="skill">
+            <div class="label"><span>Databases (Postgres/Mongo)</span><span class="muted">72%</span></div>
+            <div class="bar" data-val="72"><i></i></div>
+          </div>
+
+          <div class="skill">
+            <div class="label"><span>Security & Pentesting</span><span class="muted">75%</span></div>
+            <div class="bar" data-val="75"><i></i></div>
+          </div>
+
+          <div style="margin-top:14px">
+            <small class="muted">Technologies:</small>
+            <div style="margin-top:8px">
+              <span class="tag">JavaScript</span><span class="tag">Node.js</span><span class="tag">React</span><span class="tag">Docker</span><span class="tag">Nginx</span><span class="tag">Nmap</span>
+            </div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:14px">Timeline</h4>
+        <div class="timeline" style="margin-top:8px">
+          <div class="item">
+            <div class="dot"></div>
+            <div class="content">
+              <div style="font-weight:700">City & Guilds — ICT</div>
+              <div class="muted" style="font-size:13px">Foundational certification and practical skills</div>
+            </div>
+          </div>
+
+          <div class="item">
+            <div class="dot"></div>
+            <div class="content">
+              <div style="font-weight:700">Private labs & projects</div>
+              <div class="muted" style="font-size:13px">Termux/Kali, local pentesting, private demos</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+
+    
+    <!-- contact -->
+    <section style="margin-top:22px">
+      <div class="card">
+        <h3 style="margin-top:0">Contact</h3>
+        <p class="muted">Want private demos or a quick convo? Send a short message and I'll get back fast.</p>
+
+        <form id="contactForm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <input name="name" placeholder="Your name" required style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+          <input name="email" placeholder="Your email" required style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+          <input name="subject" placeholder="Subject" style="padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit" >
+          <textarea name="message" placeholder="Message (short)" style="grid-column:1 / -1;min-height:120px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit"></textarea>
+          <div style="grid-column:1 / -1;display:flex;gap:10px;align-items:center;justify-content:space-between">
+            <div class="muted">Or email directly: <strong>IdrisAdeleke647@gmail.com</strong></div>
+            <button class="btn" type="submit">Send Message</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <footer>
+
+    </footer>
+  </div>
+
+  <!-- Project Modal -->
+  <div id="modal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 id="modalTitle" style="margin:0">Project Title</h3>
+        <button class="close-btn" id="closeModal">✕ Close</button>
+      </div>
+
+      <div id="modalBody">
+        <div class="modal-gallery">
+          <div style="border-radius:10px;overflow:hidden">
+            <img id="modalImg1" src="" style="width:100%;height:100%;object-fit:cover;border-radius:8px" alt="screenshot">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <img id="modalImg2" src="" alt="s2" style="width:100%;height:48%;object-fit:cover;border-radius:8px">
+            <img id="modalImg3" src="" alt="s3" style="width:100%;height:48%;object-fit:cover;border-radius:8px">
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <h4 style="margin:0" id="modalSub">Short description</h4>
+          <p id="modalDesc" class="muted" style="margin-top:6px">Details</p>
+
+          <div style="margin-top:10px">
+            <strong>Tech:</strong> <span id="modalTech" class="muted"></span>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+            <a id="modalDemo" class="btn" href="#" target="_blank">Live Demo</a>
+            <a id="modalRepo" class="ghost" href="#" target="_blank">Repo (private)</a>
+            <button class="ghost" id="requestDemo">Request private demo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // small helper
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => document.querySelectorAll(sel);
+
+  // Year
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // skill bar animation
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.bar').forEach(b => {
+      const val = b.getAttribute('data-val') || 60;
+      const inner = b.querySelector('i');
+      setTimeout(()=> inner.style.width = val + '%', 300);
+    });
+  });
+
+
+  // open modal
+  const openModal = (id) => {
+    const data = projects[id];
+    if(!data) return;
+    $('#modalTitle').textContent = data.title;
+    $('#modalSub').textContent = data.sub;
+    $('#modalDesc').textContent = data.desc;
+    $('#modalTech').textContent = data.tech;
+    $('#modalImg1').src = data.imgs[0];
+    $('#modalImg2').src = data.imgs[1];
+    $('#modalImg3').src = data.imgs[2];
+    $('#modalDemo').href = data.demo;
+    $('#modalRepo').href = data.repo;
+    $('#modal').classList.add('show');
+    $('#modal').setAttribute('aria-hidden','false');
+  };
+
+  // attach project card click
+  document.querySelectorAll('.project-card').forEach(card=>{
+    const pid = card.getAttribute('data-proj');
+    card.addEventListener('click', ()=> openModal(pid));
+    card.addEventListener('keypress', (e)=>{ if(e.key === 'Enter') openModal(pid) });
+  });
+
+  // close modal
+  $('#closeModal').addEventListener('click', ()=> {
+    $('#modal').classList.remove('show');
+    $('#modal').setAttribute('aria-hidden','true');
+  });
+  $('#modal').addEventListener('click', (e)=>{ if(e.target === $('#modal')) { $('#modal').classList.remove('show'); $('#modal').setAttribute('aria-hidden','true'); } });
+
+  // basic image fullscreen gallery (click thumbnails)
+  document.querySelectorAll('img[data-full]').forEach(img=>{
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', ()=> {
+      const overlay = document.createElement('div');
+      overlay.style.position='fixed';overlay.style.inset='0';overlay.style.background='rgba(0,0,0,0.85)';overlay.style.display='grid';overlay.style.placeItems='center';overlay.style.zIndex=9999;
+      const big = document.createElement('img');
+      big.src = img.getAttribute('data-full'); big.style.maxWidth='92%'; big.style.maxHeight='92%'; big.style.borderRadius='8px'; overlay.appendChild(big);
+      overlay.addEventListener('click', ()=> overlay.remove());
+      document.body.appendChild(overlay);
+    });
+  });
+
+  // contact form: open mailto (no backend) — also graceful fallback
+  $('#contactForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const fm = new FormData(e.target);
+    const name = encodeURIComponent(fm.get('name') || 'No name');
+    const email = encodeURIComponent(fm.get('email') || 'no-email');
+    const subject = encodeURIComponent(fm.get('subject') || 'Hello from portfolio');
+    const message = encodeURIComponent(fm.get('message') || '');
+    const body = encodeURIComponent(`From: ${name} <${email}>\n\n${message}`);
+    // open mail client
+    window.location.href = `mailto:IdrisAdeleke647@gmail.com?subject=${subject}&body=${body}`;
+  });
+
+  // download CV button - if you have a CV hosted, set URL. For now downloads a simple text CV.
+  $('#downloadPDF').addEventListener('click', ()=>{
+    // quick dynamic text CV fallback
+    const text = `Idris Adeleke\nNigeria\n+234 705 545 6797\nEmail: IdrisAdeleke647@gmail.com\n\nProfile:\nMotivated Web Developer and Cybersecurity enthusiast...`;
+    const blob = new Blob([text], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='Idris_Adeleke_CV.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+
+  // Request private demo button (modal action)
+  $('#requestDemo').addEventListener('click', ()=>{
+    alert('Thanks — to request a private demo please email: IdrisAdeleke647@gmail.com (you can attach an NDA if needed).');
+  });
+
+  // keyboard: esc closes modal
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') { $('#modal').classList.remove('show'); $('#modal').setAttribute('aria-hidden','true'); } });
+
+  // small progressive enhancement: lazy load project background zoom on scroll
+  document.addEventListener('mousemove', (e)=>{ /* subtle parallax could be added here */ });
+
+  // Accessibility: focus outlines for keyboard users
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Tab') document.documentElement.style.setProperty('--focus','2px solid rgba(6,182,212,0.25)') });
+</script>
+</body>
+</html>
