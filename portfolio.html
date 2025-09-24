@@ -91,6 +91,18 @@
 
   /* footer */
   footer{text-align:center;color:var(--muted);margin:36px 0 80px;font-size:13px}
+   @media (max-width:680px){
+  header{flex-direction:column;align-items:flex-start;gap:12px}
+  nav{flex-wrap:wrap;gap:10px}
+  .hero{grid-template-columns:1fr;}
+  .profile-img{height:220px}
+}
+@media (max-width:600px){
+  #contactForm{grid-template-columns:1fr}
+}
+@media (max-width:500px){
+  .project-card{min-height:160px}
+}
 
   /* utilities */
   .muted{color:var(--muted)}
