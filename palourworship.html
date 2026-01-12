@@ -14,6 +14,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.9/dat.gui.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <!-- NEW: Add AngularJS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+    <!-- NEW: Add Materialize CSS and Icons for the new form -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -177,7 +183,7 @@
         .header-inner nav ul {
             display: flex;
             /* FIX: Use flexible spacing instead of a large fixed gap */
-            justify-content: center;
+            justify-content: space-around; /* --- MODIFIED: Adjust spacing for new item --- */
             gap: clamp(20px, 6vw, 120px); /* Responsive gap */
             align-items: center;
         }
@@ -1483,6 +1489,77 @@
         }
     </style>
 
+    <!-- NEW: Sign-up Form Styles -->
+    <style>
+        .signup-view {
+            background-color: #263238;
+            color: white;
+        }
+
+        .signup-view .text-center{
+            text-align: center;
+        }
+
+        .signup-view .space-bot{
+            margin-bottom: 35px;
+        }
+
+        .signup-view .space-top{
+            margin-top: 35px;
+        }
+
+        .signup-view h1 {
+            color: white;
+            font-family: 'Roboto', sans-serif;
+            text-transform: uppercase;
+            font-weight: 900;
+            font-size: 25px;
+            text-align: center;
+        }
+
+        .signup-view .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .signup-view .signup-screen {
+            padding: 20px 40px 40px 40px;
+            border-radius: 5px;
+            background-color: #2c3940;
+            box-shadow: 0 1px 6px rgba(0,0,0,.3);
+            color: white;
+        }
+
+        .signup-view .btn{
+            border-radius: 2px;
+            margin: 0 5px;
+        }
+
+        .signup-view .cancel{ background-color: #df405a; }
+        .signup-view .done{ background-color: #5CAB7D; }
+        .signup-view .done:hover{ background-color: #6dc793; }
+        .signup-view .cancel:hover{ background-color: #f0435f; }
+        
+        /* Override Materialize input styles to fit the theme */
+        .signup-view .input-field > label { color: rgba(255,255,255,0.7); }
+        .signup-view .input-field input:focus + label { color: #fff !important; }
+        .signup-view .input-field input {
+            border-bottom: 1px solid rgba(255,255,255,0.7) !important;
+            box-shadow: 0 1px 0 0 rgba(255,255,255,0.7) !important;
+            color: #fff;
+        }
+        .signup-view .input-field input:focus {
+            border-bottom: 1px solid #fff !important;
+            box-shadow: 0 1px 0 0 #fff !important;
+        }
+        .signup-view .input-field .validate.invalid {
+            border-bottom: 1px solid #df405a !important;
+            box-shadow: 0 1px 0 0 #df405a !important;
+        }
+        .signup-view .red-text { color: #df405a !important; }
+        .signup-view .row { margin-bottom: 0; }
+    </style>
+
     <!-- NEW: Testimonial Section Styles -->
     <style>
         .testimonial-section {
@@ -1771,6 +1848,7 @@
                 <ul>
                     <li><a href="#home" class="nav-link" data-target="home-view">Home</a></li>
                     <li><a href="#event" class="nav-link" data-target="event-view">Event</a></li>
+                    <li><a href="#signup" class="nav-link" data-target="signup-view">Sign Up</a></li>
                 </ul>
             </nav>
             <!-- Hamburger button moved inside header for perfect alignment -->
@@ -1806,6 +1884,7 @@
             <ul>
                 <li><a href="#home" class="nav-link" data-target="home-view">Home</a></li>
                 <li><a href="#event" class="nav-link" data-target="event-view">Event</a></li>
+                <li><a href="#signup" class="nav-link" data-target="signup-view">Sign Up</a></li>
             </ul>
         </div>
     </div>
@@ -1838,6 +1917,56 @@
                 </div>
             </div>
         </div>
+
+        <!-- --- NEW: Sign Up View --- -->
+        <div id="signup-view" class="view-section" ng-app="myApp" ng-controller="RegisterCtrl">
+            <div class="container">
+                <div id="signup">
+                    <div class="signup-screen">
+                        <div class="space-bot text-center">
+                            <h1>Sign up</h1>
+                            <div class="divider"></div>
+                        </div>
+                        <!-- FormSubmit configuration: Sends email to toluabeh@gmail.com -->
+                        <form class="form-register" action="https://formsubmit.co/toluabeh@gmail.com" method="POST" name="register" novalidate>
+                            <input type="hidden" name="_subject" value="New Sign Up - Parlour Worship">
+                            <div class="row">
+                                <div class="input-field col s12 m6">
+                                    <input id="first-name" name="first-name" type="text" class="validate" required>
+                                    <label for="first-name">First Name</label>
+                                </div>
+                                <div class="input-field col s12 m6">
+                                    <input id="last-name" name="last-name" type="text" class="validate" required>
+                                    <label for="last-name">Last Name</label>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field col s12">
+                                    <input id="email" type="email" name="email" ng-model="email" class="validate" required>
+                                    <label for="email">Email</label>
+                                    <p class="red-text" ng-show="register.email.$dirty && register.email.$error.email">Your email is invalid.</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field col s12">
+                                    <input id="password" type="password" name="password" ng-model="password" ng-minlength='6' class="validate" required>
+                                    <label for="password">Password</label>
+                                    <p class="red-text" ng-show="register.password.$dirty && register.password.$error.minlength">Your password must be at least 6 characters.</p>
+                                </div>
+                            </div>
+                            <div class="space-top text-center">
+                                <button type="submit" ng-disabled="register.$invalid" class="waves-effect waves-light btn done">
+                                    <i class="material-icons left">done</i> Done
+                                </button>
+                                <button type="button" class="waves-effect waves-light btn cancel">
+                                    <i class="material-icons left">clear</i>Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <canvas class="webgl" id="webgl"></canvas>
@@ -1848,6 +1977,9 @@
     <!-- NEW: jQuery and Owl Carousel for Testimonials -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+
+    <!-- NEW: Materialize JS for the new form -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 
     <script>
         // Scene setup
@@ -2151,6 +2283,16 @@
                     }
                 });
             });
+        });
+    </script>
+
+    <!-- NEW: AngularJS Controller for the new form -->
+    <script>
+        var myApp = angular.module("myApp", []);
+        myApp.controller("RegisterCtrl", function ($scope) {
+            // The form uses declarative validation from AngularJS.
+            // Submission is handled by a standard form POST to a service like Formspree.
+            // No extra controller logic is needed for this setup.
         });
     </script>
 </body>
