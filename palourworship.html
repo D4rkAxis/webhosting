@@ -442,16 +442,13 @@
                 width: 90%;
                 top: 15px;
             }
-            .header-inner { padding: 10px 15px; }
-            .header-inner .logo-text { font-size: 24px; }
-            .header-inner .logo-svg { width: 24px; height: 24px; }
         }
 
         /* --- NEW: Responsive adjustments for the text animation and layout --- */
         @media (max-width: 767px) {
             .text-animation-container {
-                font-size: clamp(32px, 8vw, 42px); /* Reduced font size for mobile */
-                padding-top: 30vh; /* Adjusted vertical alignment */
+                font-size: 42px; /* Reduced font size for mobile */
+                padding-top: 40vh; /* Adjusted vertical alignment */
             }
 
             /* Adjust animation values for the smaller font size */
@@ -574,11 +571,10 @@
         /* Responsive adjustments for buttons */
         @media (max-width: 767px) {
             .button-container {
-                flex-direction: column; /* Stack buttons vertically for better touch targets */
-                gap: 20px;
+                flex-direction: row; /* Keep buttons side-by-side */
+                gap: 15px; /* Reduce gap for mobile */
                 margin-top: 5vh;
                 padding-bottom: 15vh;
-                align-items: center;
             }
             .tagline {
                 margin-top: 2vh; /* --- FIX: Removed negative margin for mobile view --- */
@@ -1497,7 +1493,7 @@
     <style>
         .signup-view {
             background-color: #1a1a1a;
-            color: white;
+            color: grey;
         }
 
         .signup-view .text-center{
@@ -1529,7 +1525,7 @@
         .signup-view .signup-screen {
             padding: 20px 40px 40px 40px;
             border-radius: 5px;
-            background-color: #2d2d2d;
+            background-color: #333333;
             box-shadow: 0 1px 6px rgba(0,0,0,.3);
             color: white;
         }
@@ -1562,15 +1558,6 @@
         }
         .signup-view .red-text { color: #df405a !important; }
         .signup-view .row { margin-bottom: 0; }
-
-        @media (max-width: 600px) {
-            .signup-view .signup-screen { padding: 20px 15px; }
-            .signup-view .container { width: 95%; }
-            .signup-view .space-top .btn {
-                width: 100%;
-                margin: 5px 0;
-            }
-        }
     </style>
 
     <!-- NEW: Testimonial Section Styles -->
@@ -1739,8 +1726,6 @@
             align-items: center;
             justify-content: center;
             padding-top: 80px; /* Space for header */
-            overflow-y: auto; /* Allow scrolling on mobile */
-            -webkit-overflow-scrolling: touch;
         }
 
         .view-section.active-view {
@@ -1801,10 +1786,8 @@
         @media (max-width: 900px) {
             .event-container {
                 flex-direction: column-reverse;
-                height: auto;
-                min-height: 80vh;
-                width: 95%;
-                margin-bottom: 40px;
+                height: 80vh;
+                width: 90%;
             }
             .event-info {
                 flex: 0 0 auto;
@@ -1812,7 +1795,6 @@
             }
             .event-info h2 { font-size: 1.8rem; }
             .event-info p { font-size: 1rem; }
-            .event-map { height: 300px; flex: none; }
         }
     </style>
 </head>
