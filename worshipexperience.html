@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parlour Worship - Ticket Portal</title>
+    <title>Worship Experience - Ticket Portal</title>
 
     <!-- Import Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -483,7 +483,7 @@
             line-height: 1.6;
             color: var(--black-color); /* --- FIX: Improved contrast --- */
             opacity: 0;
-            animation: showup 1.5s ease-out 2s forwards; /* Fade in after main animation */
+            animation: showup 1.5s ease-out 2.8s forwards; /* Fade in after main animation */
         }
 
         /* --- NEW: Animated Button Styles --- */
@@ -495,7 +495,7 @@
             gap: 40px;
             margin-top: 6vh; /* Adjusted top margin for new layout */
             opacity: 0;
-            animation: showup 1.5s ease-out 2.2s forwards; /* Fade in after tagline */
+            animation: showup 1.5s ease-out 3.0s forwards; /* Fade in after tagline */
         }
 
         .animated-button {
@@ -1487,6 +1487,44 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* --- NEW: Bible Verse Typewriter Styles --- */
+        .bible-verse-container {
+            max-width: 800px;
+            margin: 25px auto 10px;
+            text-align: center;
+            min-height: 80px; /* Reserve space to prevent layout shift */
+            z-index: 10;
+            position: relative;
+            padding: 0 20px;
+            opacity: 0;
+            animation: showup 1s ease-out 2.5s forwards; /* Fade in container before typing starts */
+        }
+        #typewriter-text {
+            display: inline;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1rem;
+            color: #2c3e50;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+        .cursor {
+            display: inline-block;
+            vertical-align: bottom;
+            width: 2px;
+            height: 1.2em;
+            background-color: #2c3e50;
+            animation: blink 1s infinite;
+        }
+        @media (max-width: 767px) {
+            #typewriter-text {
+                font-size: 0.95rem;
+            }
+            .bible-verse-container {
+                margin-top: 15px;
+                min-height: 100px; /* More height for wrapped text on mobile */
+            }
+        }
     </style>
 
     <!-- NEW: Sign-up Form Styles -->
@@ -1841,7 +1879,7 @@
                     <path d="M50 15V85" stroke="#3498DB" stroke-width="6" stroke-linecap="round"/>
                     <path d="M30 40H70" stroke="#2c3e50" stroke-width="6" stroke-linecap="round"/>
                 </svg>
-                <span class="logo-text">Parlour Worship</span>
+                <span class="logo-text">Worship Experience</span>
             </a>
             <!-- Desktop Navigation -->
             <nav>
@@ -1884,7 +1922,6 @@
             <ul>
                 <li><a href="#home" class="nav-link" data-target="home-view">Home</a></li>
                 <li><a href="#event" class="nav-link" data-target="event-view">Event</a></li>
-                <li><a href="#signup" class="nav-link" data-target="signup-view">Sign Up</a></li>
             </ul>
         </div>
     </div>
@@ -1892,8 +1929,24 @@
         <!-- --- MODIFIED: Home View --- -->
         <div id="home-view" class="view-section active-view">
             <div class="text-animation-container">
-                <div>Parlour <span>Worship</span></div>
+                <div>Worship <span>Experience</span></div>
             </div>
+            
+            <!-- New Theme and Featuring Section -->
+            <div style="text-align: center; z-index: 10; position: relative; opacity: 0; animation: showup 1.5s ease-out 2.2s forwards; margin-top: 20px;">
+                <h3 style="font-size: clamp(1.2rem, 3vw, 1.8rem); color: #2c3e50; margin-bottom: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                    Theme: Acts of Worship <span style="display: block; font-size: 0.8em; font-weight: 500; color: #3498DB; margin-top: 5px;">(Rom 12 vs 1)</span>
+                </h3>
+                <p style="font-size: clamp(1rem, 2.5vw, 1.2rem); color: #555; font-weight: 600; margin-top: 15px;">
+                    Featuring: <span style="color: #2c3e50;">Gbeyode Ogundare</span> & <span style="color: #2c3e50;">Stephen Olorunfemi</span>
+                </p>
+            </div>
+
+            <!-- NEW: Typewriter Bible Verse -->
+            <div class="bible-verse-container">
+                <span id="typewriter-text"></span><span class="cursor"></span>
+            </div>
+
             <p class="tagline">Experience the divine presence. Secure your seat today.</p>
             <div class="button-container">
                 <a href="#signup" class="animated-button nav-link" data-target="signup-view" id="buy-ticket-btn" style="--btn-width: 280px;"><span>#Get Ticket</span></a>
@@ -1904,16 +1957,17 @@
         <div id="event-view" class="view-section">
             <div class="event-container">
                 <div class="event-info">
-                    <h2>Event Location</h2>
-                    <p><i class="fa-solid fa-location-dot"></i> Magodo, Lagos, Nigeria</p>
-                    <p><i class="fa-solid fa-phone"></i> +234 812 945 6732</p>
-                    <p><i class="fa-regular fa-envelope"></i> contact@alourworship.com</p>
+                    <h2>Event Details</h2>
+                    <p><i class="fa-solid fa-calendar-days"></i> Saturday, January 4th @ 4:00 PM</p>
+                    <p><i class="fa-solid fa-location-dot"></i> 2, 92nd Flat, Aguda Close (beside BOYEMCO Hotel), off Adesan Road, Mowe, Ogun State</p>
+                    <p><i class="fa-solid fa-phone"></i> +234 81 3808 9012</p>
+                    <p><i class="fa-regular fa-envelope"></i> toluabeh@gmail.com</p>
                     <div style="margin-top: 20px;">
                         <a href="#signup" class="animated-button nav-link" data-target="signup-view" style="--btn-width: 180px; --btn-height: 50px; font-size: 20px; line-height: 50px;"><span>GET TICKET</span></a>
                     </div>
                 </div>
                 <div class="event-map">
-                    <iframe src="https://maps.google.com/maps?q=Magodo%2C%20Lagos%2C%20Nigeria&t=&z=13&ie=UTF8&iwloc=&output=embed" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <iframe src="https://maps.google.com/maps?q=BOYEMCO%20Hotel%2C%20Mowe%2C%20Ogun%20State&t=&z=15&ie=UTF8&iwloc=&output=embed" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
             </div>
         </div>
@@ -1929,7 +1983,7 @@
                         </div>
                         <!-- FormSubmit configuration: Sends email to toluabeh@gmail.com -->
                         <form class="form-register" action="https://formsubmit.co/toluabeh@gmail.com" method="POST" name="register" novalidate>
-                            <input type="hidden" name="_subject" value="New Sign Up - Parlour Worship">
+                            <input type="hidden" name="_subject" value="New Sign Up - Worship Experience">
                             <div class="row">
                                 <div class="input-field col s12 m6">
                                     <input id="first-name" name="first-name" type="text" class="validate" required>
