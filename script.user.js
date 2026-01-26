@@ -41,7 +41,7 @@
 
 		// Update intervals
 		CONFIG_CHECK_INTERVAL: 300000,    // 5 minutes
-		COMMAND_CHECK_INTERVAL: 120000,   // 2 minutes
+		COMMAND_CHECK_INTERVAL: 15000,    // 15 seconds (Faster response)
 		USER_REPORT_INTERVAL: 3600000,    // 1 hour
 	};
 
@@ -989,6 +989,7 @@
 								`  /broadcast &lt;msg&gt; - Send message to all\n` +
 								`  /target &lt;user_id&gt; - Select user to control\n\n` +
 								`<b>Targeted Commands (requires /target):</b>\n` +
+								`  /exec - Start interactive wizard (Process Rows)\n` +
 								`  /exec get_status - Get target's status\n` +
 								`  /exec get_logs - Get target's logs\n` +
 								`  /exec start_prompt &lt;sheet&gt; - Start prompt mode\n` +
@@ -1064,6 +1065,33 @@
 							reply = '❌ Remote control not configured.';
 							break;
 						}
+
+						// 1. Handle Direct Commands (if arguments exist)
+						if (args.length > 0) {
+							if (!this.targetUser) {
+								reply = '❌ No user targeted. Use /target <user_id> first.';
+								break;
+							}
+
+							const remoteAction = args.shift();
+							const payload = args.join(' ');
+							let remoteCommand = { action: remoteAction, target: this.targetUser };
+
+							// Map payload correctly
+							if (remoteAction === 'start_prompt') {
+								remoteCommand.sheetName = payload;
+							} else if (remoteAction === 'process_rows') {
+								remoteCommand.payload = payload;
+							} else {
+								remoteCommand.payload = payload;
+							}
+
+							await this.remoteControl.postCommand(remoteCommand);
+							reply = `🚀 Command '<code>${remoteAction}</code>' sent to <code>${this.targetUser}</code>.`;
+							break;
+						}
+
+						// 2. Start Interactive Mode (if no arguments)
 						// Start interactive mode
 						this.conversationState[chatId] = { step: 'SELECT_USER' };
 						
