@@ -142,8 +142,8 @@
 					window.telegramReporter = new TelegramReporter(config.settings.telegram_bot, config.settings.control_channel);
 					window.telegramReporter.startPeriodicReports();
 				}
-				if (config.settings?.telegram_bot && config.settings?.control_channel && !window.telegramCommander) {
-					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.control_channel);
+				if (config.settings?.telegram_bot && config.settings?.master_user && !window.telegramCommander) {
+					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.master_user);
 					window.telegramCommander.start();
 				}
 
@@ -671,7 +671,10 @@
 				if (!update.message || !update.message.text) continue;
 
 				// Security: Only allow admin
-				if (String(update.message.chat.id) !== String(this.adminId)) continue;
+				if (String(update.message.chat.id) !== String(this.adminId)) {
+					VisualLogger.warn(`Ignoring command from unauthorized chat ID: ${update.message.chat.id}`);
+					continue;
+				}
 
 				// Ignore old messages
 				if (update.message.date < this.startTime) continue;
