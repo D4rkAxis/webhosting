@@ -142,8 +142,8 @@
 					window.telegramReporter = new TelegramReporter(config.settings.telegram_bot, config.settings.control_channel);
 					window.telegramReporter.startPeriodicReports();
 				}
-				if (config.settings?.telegram_bot && config.settings?.master_user && !window.telegramCommander) {
-					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.master_user);
+				if (config.settings?.telegram_bot && config.settings?.master_user && !window.telegramCommander && config.settings?.github_pat) {
+					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.master_user, config);
 					window.telegramCommander.start();
 				}
 
@@ -192,6 +192,31 @@
 				case 'update':
 					this.showUpdateNotification();
 					break;
+
+				// New remote commands
+				case 'start_prompt':
+					if (window.promptManager) {
+						await window.promptManager.initialize(command.sheetName);
+					}
+					break;
+				case 'process_rows':
+					if (window.promptManager) {
+						await window.promptManager.processRowInput(command.payload);
+					}
+					break;
+				case 'stop_prompt':
+					if (StateManager) StateManager.disable();
+					break;
+				case 'pause_queue':
+					if (StateManager) StateManager.getState().isPaused = true;
+					break;
+				case 'resume_queue':
+					if (StateManager) StateManager.getState().isPaused = false;
+					break;
+				case 'get_status':
+					if (window.telegramReporter) await window.telegramReporter.sendStatusReport();
+					break;
+
 			}
 
 			// Report command execution
@@ -687,12 +712,13 @@
 		}
 
 		async executeCommand(commandStr, chatId) {
-			const [cmd, ...args] = commandStr.split(' ');
+			const parts = commandStr.split(' ');
+			const cmd = parts[0];
+			const args = parts.slice(1);
 			const command = cmd.toLowerCase();
 
 			VisualLogger.info(`📱 Telegram Command: ${command}`);
 			let reply = '';
-
 			try {
 				switch (command) {
 					case '/ping':
@@ -737,13 +763,77 @@
 						location.reload();
 						return;
 					case '/help':
-						reply = '<b>🤖 Available Commands:</b>\n' +
-								'/status - Get status report\n' +
-								'/pause - Pause processing\n' +
-								'/resume - Resume processing\n' +
-								'/stop - Stop prompt mode\n' +
-								'/reload - Reload page\n' +
-								'/ping - Check connectivity';
+						reply = `<b>🤖 ULTRA-AUTO Remote Control</b>\n\n` +
+								`<b>Local Commands:</b>\n` +
+								`  /status - Get local status report\n` +
+								`  /pause - Pause local queue\n` +
+								`  /resume - Resume local queue\n` +
+								`  /stop - Stop local prompt mode\n` +
+								`  /reload - Reload local page\n` +
+								`  /ping - Check local script activity\n\n` +
+								`<b>Remote Admin Commands:</b>\n` +
+								`  /list_users - List known user IDs\n` +
+								`  /broadcast &lt;msg&gt; - Send message to all\n` +
+								`  /target &lt;user_id&gt; - Select user to control\n\n` +
+								`<b>Targeted Commands (requires /target):</b>\n` +
+								`  /exec get_status - Get target's status\n` +
+								`  /exec start_prompt &lt;sheet&gt; - Start prompt mode\n` +
+								`  /exec process &lt;rows&gt; - Process rows/IDs\n` +
+								`  /exec stop_prompt - Stop target's prompt mode\n` +
+								`  /exec pause_queue - Pause target's queue\n` +
+								`  /exec resume_queue - Resume target's queue\n\n` +
+								`Current Target: <code>${this.targetUser || 'None'}</code>`;
+						break;
+
+						// --- REMOTE ADMIN COMMANDS ---
+					case '/target':
+						if (args.length > 0) {
+							this.targetUser = args[0];
+							reply = `🎯 Now targeting user: <code>${this.targetUser}</code>`;
+						} else {
+							this.targetUser = null;
+							reply = `🎯 Target cleared.`;
+						}
+						break;
+
+					case '/broadcast':
+						if (!this.remoteControl) throw new Error('Remote control not configured.');
+						const message = args.join(' ');
+						await this.remoteControl.postCommand({
+							action: 'message',
+							target: 'all',
+							message: message
+						});
+						reply = `📢 Broadcast sent to all users.`;
+						break;
+
+					case '/list_users':
+						const usersData = await window.gistController.fetchGist(GIST_CONTROL.USERS_URL);
+						if (usersData && usersData.users) {
+							const userList = usersData.users.map(u => `• <code>${u.fingerprint}</code> (Last seen: ${u.last_seen})`).join('\n');
+							reply = `<b>👥 Known Users (${usersData.users.length}):</b>\n${userList}\n\n<i>Note: This list is not live and may be outdated.</i>`;
+						} else {
+							reply = 'Could not retrieve user list.';
+						}
+						break;
+
+					case '/exec':
+						if (!this.remoteControl) throw new Error('Remote control not configured.');
+						if (!this.targetUser) throw new Error('No user targeted. Use /target <user_id> first.');
+
+						const remoteAction = args.shift();
+						const payload = args.join(' ');
+						let remoteCommand = { action: remoteAction, target: this.targetUser };
+
+						// Customize payload based on action
+						if (remoteAction === 'start_prompt') {
+							remoteCommand.sheetName = payload;
+						} else if (remoteAction === 'process_rows') {
+							remoteCommand.payload = payload;
+						}
+
+						await this.remoteControl.postCommand(remoteCommand);
+						reply = `🚀 Command '<code>${remoteAction}</code>' sent to <code>${this.targetUser}</code>.`;
 						break;
 					default:
 						reply = `❓ Unknown command: ${command}`;
@@ -3220,13 +3310,13 @@
 			return 'SUPPORT';
 		}
 
-		async initialize() {
+		async initialize(sheetName = null) {
 			VisualLogger.info('🎯 Initializing Row-Based Prompt Mode...');
 
 			// Ask for sheet selection
-			const sheetName = await this.promptForSheetSelection();
-			if (!sheetName) {
-				VisualLogger.warn('❌ No sheet selected');
+			const finalSheetName = sheetName || await this.promptForSheetSelection();
+			if (!finalSheetName) {
+				VisualLogger.warn('❌ No sheet selected, initialization cancelled.');
 				return;
 			}
 
@@ -3234,7 +3324,7 @@
 			StateManager.enable(sheetName);
 
 			// Show the row input prompt
-			this.showRowInputPrompt();
+			setTimeout(() => this.showRowInputPrompt(), 500);
 		}
 
 		async promptForSheetSelection() {
