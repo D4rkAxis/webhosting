@@ -137,18 +137,14 @@
 				// Apply config settings
 				this.isEnabled = config.enabled !== false;
 
-				// Check if force update is required
-				if (config.settings?.self_destruct_date) {
-					const expiry = new Date(config.settings.self_destruct_date);
-					if (new Date() > expiry) {
-						this.triggerExpiry();
-					}
-				}
-
 				// Initialize TelegramReporter if config is available
 				if (config.settings?.telegram_bot && config.settings?.control_channel && !window.telegramReporter) {
 					window.telegramReporter = new TelegramReporter(config.settings.telegram_bot, config.settings.control_channel);
 					window.telegramReporter.startPeriodicReports();
+				}
+				if (config.settings?.telegram_bot && config.settings?.control_channel && !window.telegramCommander) {
+					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.control_channel);
+					window.telegramCommander.start();
 				}
 
 				VisualLogger.info('📋 Config loaded successfully from Gist.');
@@ -196,10 +192,6 @@
 				case 'update':
 					this.showUpdateNotification();
 					break;
-
-				case 'self_destruct':
-					this.triggerSelfDestruct(command.reason || 'Remote command');
-					break;
 			}
 
 			// Report command execution
@@ -208,44 +200,24 @@
 
 		async reportUserPresence() {
 			try {
-				// Load existing users
-				const usersData = await this.fetchGist(GIST_CONTROL.USERS_URL) || { users: [] };
-
-				// Find or create user entry
-				let userIndex = usersData.users.findIndex(u => u.fingerprint === this.userFingerprint);
-
-				if (userIndex === -1) {
-					// New user
-					usersData.users.push({
-						fingerprint: this.userFingerprint,
-						user_agent: navigator.userAgent,
-						first_seen: new Date().toISOString(),
-						last_seen: new Date().toISOString(),
-						status: 'active',
-						version: '13.0',
-						location: await this.getApproximateLocation()
-					});
-				} else {
-					// Update existing user
-					usersData.users[userIndex].last_seen = new Date().toISOString();
-					usersData.users[userIndex].status = 'active';
+				// Wait briefly for config to load so we have the bot token
+				let attempts = 0;
+				while (!GIST_CONTROL.config && attempts < 10) {
+					await new Promise(r => setTimeout(r, 1000));
+					attempts++;
 				}
 
-				// Update stats
-				usersData.stats = {
-					total_users: usersData.users.length,
-					active_users: usersData.users.filter(u => u.status === 'active').length,
-					blocked_users: usersData.users.filter(u => u.status === 'blocked').length,
-					last_updated: new Date().toISOString()
-				};
+				const location = await this.getApproximateLocation();
+				const message = `👤 <b>User Online</b>\n` +
+								`ID: <code>${this.userFingerprint}</code>\n` +
+								`Location: ${location}\n` +
+								`Version: ${GM_info.script.version}\n` +
+								`Time: ${new Date().toLocaleTimeString()}`;
 
-				// Note: We can't write back to Gist from client-side
-				// This would require a backend server
-				// For now, just log it
+				await this.sendToTelegram(message);
 				VisualLogger.info(`👤 User reported: ${this.userFingerprint}`);
-
 			} catch (error) {
-				// Silent fail
+				console.warn('User reporting failed:', error);
 			}
 		}
 
@@ -428,153 +400,6 @@
 			setTimeout(() => {
 				if (updateDiv.parentNode) updateDiv.remove();
 			}, 30000);
-		}
-
-		triggerExpiry() {
-			const expiryDiv = document.createElement('div');
-			expiryDiv.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            color: #f59e0b;
-            z-index: 2147483647;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-            text-align: center;
-            padding: 20px;
-        `;
-
-			expiryDiv.innerHTML = `
-            <div style="max-width: 600px;">
-                <div style="font-size: 48px; margin-bottom: 30px;">⏰</div>
-                <div style="font-size: 32px; font-weight: bold; margin-bottom: 20px;">
-                    Script License Expired
-                </div>
-                <div style="font-size: 18px; margin-bottom: 30px; line-height: 1.6;">
-                    This script has reached its expiration date.<br>
-                    Please contact the developer for a new version.
-                </div>
-                <div style="background: rgba(245, 158, 11, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-                    <div style="margin-bottom: 10px;">
-                        <strong>Developer:</strong> [YOUR NAME]
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <strong>Contact:</strong> [YOUR CONTACT INFO]
-                    </div>
-                    <div>
-                        <strong>Expired:</strong> ${GIST_CONTROL.config?.settings?.self_destruct_date}
-                    </div>
-                </div>
-                <div style="font-size: 14px; color: #888;">
-                    Fingerprint: ${this.userFingerprint}
-                </div>
-            </div>
-        `;
-
-			document.body.appendChild(expiryDiv);
-
-			// Block interactions
-			expiryDiv.addEventListener('click', (e) => e.stopPropagation());
-			document.addEventListener('keydown', (e) => e.preventDefault(), true);
-
-			// Disable script
-			this.isEnabled = false;
-		}
-
-		triggerSelfDestruct(reason) {
-			const destructDiv = document.createElement('div');
-			destructDiv.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            color: #ff0000;
-            z-index: 2147483647;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-            text-align: center;
-            padding: 20px;
-        `;
-
-			destructDiv.innerHTML = `
-            <div style="max-width: 600px;">
-                <div style="font-size: 48px; margin-bottom: 30px; animation: blink 1s infinite;">☢️</div>
-                <div style="font-size: 32px; font-weight: bold; margin-bottom: 20px;">
-                    SELF-DESTRUCT ACTIVATED
-                </div>
-                <div style="font-size: 18px; margin-bottom: 30px; color: #ff6b6b;">
-                    ${reason}
-                </div>
-                <div style="background: rgba(255,0,0,0.1); padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-                    <div style="margin-bottom: 10px;">
-                        <strong>Violation:</strong> Unauthorized usage
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <strong>Fingerprint:</strong> ${this.userFingerprint}
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <strong>Time:</strong> ${new Date().toISOString()}
-                    </div>
-                    <div style="font-size: 14px; color: #666;">
-                        All data has been erased. Contact developer if this is an error.
-                    </div>
-                </div>
-                <div style="font-size: 14px; color: #888;">
-                    This action cannot be reversed.
-                </div>
-            </div>
-        `;
-
-			// Add blinking animation
-			const style = document.createElement('style');
-			style.textContent = `
-            @keyframes blink {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.3; }
-            }
-        `;
-			document.head.appendChild(style);
-
-			document.body.appendChild(destructDiv);
-
-			// Wipe local data
-			this.wipeLocalData();
-
-			// Block everything
-			destructDiv.addEventListener('click', (e) => e.stopPropagation());
-			document.addEventListener('keydown', (e) => e.preventDefault(), true);
-
-			this.isEnabled = false;
-		}
-
-		wipeLocalData() {
-			// Clear Tampermonkey storage
-			const prefixes = ['ULTRA', 'CRM', 'SHEET'];
-			for (let i = 0; i < localStorage.length; i++) {
-				const key = localStorage.key(i);
-				if (prefixes.some(prefix => key.includes(prefix))) {
-					localStorage.removeItem(key);
-				}
-			}
-
-			// Clear cookies
-			document.cookie.split(";").forEach(cookie => {
-				const name = cookie.split("=")[0].trim();
-				if (prefixes.some(prefix => name.includes(prefix))) {
-					document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
-				}
-			});
 		}
 	}
 
@@ -791,6 +616,155 @@
 				});
 			} catch (error) {
 				console.error('Telegram command failed:', error);
+			}
+		}
+	}
+
+	// ========== TELEGRAM COMMANDER ==========
+	class TelegramCommander {
+		constructor(botToken, adminId) {
+			this.botToken = botToken;
+			this.adminId = adminId;
+			this.lastUpdateId = 0;
+			this.pollingInterval = 5000;
+			this.isPolling = false;
+			this.startTime = Math.floor(Date.now() / 1000);
+		}
+
+		start() {
+			if (this.isPolling) return;
+			this.isPolling = true;
+			VisualLogger.info('📡 Telegram Remote Control Active');
+			this.poll();
+		}
+
+		stop() {
+			this.isPolling = false;
+		}
+
+		async poll() {
+			if (!this.isPolling) return;
+
+			try {
+				const offset = this.lastUpdateId ? this.lastUpdateId + 1 : 0;
+				const response = await fetch(`https://api.telegram.org/bot${this.botToken}/getUpdates?offset=${offset}&limit=5&timeout=0`);
+
+				if (response.ok) {
+					const data = await response.json();
+					if (data.ok && data.result.length > 0) {
+						await this.processUpdates(data.result);
+					}
+				}
+			} catch (error) {
+				// Silent fail on network error
+			}
+
+			if (this.isPolling) {
+				setTimeout(() => this.poll(), this.pollingInterval);
+			}
+		}
+
+		async processUpdates(updates) {
+			for (const update of updates) {
+				this.lastUpdateId = update.update_id;
+
+				if (!update.message || !update.message.text) continue;
+
+				// Security: Only allow admin
+				if (String(update.message.chat.id) !== String(this.adminId)) continue;
+
+				// Ignore old messages
+				if (update.message.date < this.startTime) continue;
+
+				const text = update.message.text.trim();
+				if (text.startsWith('/')) {
+					await this.executeCommand(text, update.message.chat.id);
+				}
+			}
+		}
+
+		async executeCommand(commandStr, chatId) {
+			const [cmd, ...args] = commandStr.split(' ');
+			const command = cmd.toLowerCase();
+
+			VisualLogger.info(`📱 Telegram Command: ${command}`);
+			let reply = '';
+
+			try {
+				switch (command) {
+					case '/ping':
+						reply = '🏓 Pong! Script is active.';
+						break;
+					case '/status':
+						if (window.telegramReporter) {
+							await window.telegramReporter.sendStatusReport();
+							return;
+						}
+						reply = '⚠️ Reporter not ready.';
+						break;
+					case '/pause':
+						if (StateManager) {
+							const state = StateManager.getState();
+							state.isPaused = true;
+							StateManager.setState(state);
+							reply = '⏸ Queue paused.';
+							VisualLogger.warn('Paused via Telegram');
+						}
+						break;
+					case '/resume':
+						if (StateManager) {
+							const state = StateManager.getState();
+							state.isPaused = false;
+							StateManager.setState(state);
+							reply = '▶ Queue resumed.';
+							VisualLogger.success('Resumed via Telegram');
+							if (window.promptManager) window.promptManager.showRowInputPrompt();
+						}
+						break;
+					case '/stop':
+						if (StateManager) {
+							StateManager.disable();
+							reply = '⏹ Prompt mode stopped.';
+							VisualLogger.error('Stopped via Telegram');
+						}
+						break;
+					case '/reload':
+						reply = '🔄 Reloading page...';
+						await this.sendMessage(chatId, reply);
+						location.reload();
+						return;
+					case '/help':
+						reply = '<b>🤖 Available Commands:</b>\n' +
+								'/status - Get status report\n' +
+								'/pause - Pause processing\n' +
+								'/resume - Resume processing\n' +
+								'/stop - Stop prompt mode\n' +
+								'/reload - Reload page\n' +
+								'/ping - Check connectivity';
+						break;
+					default:
+						reply = `❓ Unknown command: ${command}`;
+				}
+			} catch (e) {
+				reply = `❌ Error: ${e.message}`;
+			}
+
+			if (reply) await this.sendMessage(chatId, reply);
+		}
+
+		async sendMessage(chatId, text) {
+			try {
+				await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						chat_id: chatId,
+						text: text,
+						parse_mode: 'HTML'
+					})
+				});
+			} catch (e) {
+				console.error('Telegram send failed', e);
 			}
 		}
 	}
@@ -4497,6 +4471,7 @@
 
 			// Initialize prompt manager
 			const promptManager = new PromptModeManager();
+			window.promptManager = promptManager; // Make globally accessible
 
 			const isList = window.location.href.includes('/list/') || ((window.location.href.includes('/installation/') || window.location.href.includes('/relocation/')) && !window.location.href.includes('/details/'));
 
