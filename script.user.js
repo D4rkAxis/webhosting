@@ -142,8 +142,8 @@
 					window.telegramReporter = new TelegramReporter(config.settings.telegram_bot, config.settings.control_channel);
 					window.telegramReporter.startPeriodicReports();
 				}
-				if (config.settings?.telegram_bot && config.settings?.master_user && !window.telegramCommander && config.settings?.github_pat) {
-					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.master_user, config);
+				if (config.settings?.telegram_bot && config.settings?.master_user && !window.telegramCommander) {
+					window.telegramCommander = new TelegramCommander(config.settings.telegram_bot, config.settings.master_user, config.gist_ids);
 					window.telegramCommander.start();
 				}
 
@@ -645,15 +645,95 @@
 		}
 	}
 
+	// ========== REMOTE CONTROL MANAGER ==========
+	class RemoteControlManager {
+		constructor(commandGistId, pat) {
+			this.gistId = commandGistId;
+			this.pat = pat;
+			this.fileName = 'gistfile1.txt'; // Assuming the command file is named this
+		}
+
+		async postCommand(command) {
+			VisualLogger.info(`📡 Posting remote command: ${command.action} for ${command.target}`);
+			try {
+				const currentGist = await this.fetchGist();
+				let commands = { pending_commands: [] };
+				if (currentGist && currentGist.files[this.fileName] && currentGist.files[this.fileName].content) {
+					try {
+						commands = JSON.parse(currentGist.files[this.fileName].content);
+						if (!Array.isArray(commands.pending_commands)) {
+							commands.pending_commands = [];
+						}
+					} catch (e) {
+						VisualLogger.warn('Command Gist is not valid JSON. Overwriting.');
+					}
+				}
+
+				command.timestamp = new Date().toISOString();
+				command.id = `cmd_${Date.now()}`;
+				commands.pending_commands.push(command);
+
+				await this.updateGist(JSON.stringify(commands, null, 2));
+				VisualLogger.success(`✅ Command posted successfully.`);
+
+			} catch (error) {
+				VisualLogger.error(`❌ Failed to post command: ${error.message}`);
+				throw error;
+			}
+		}
+
+		fetchGist() {
+			return new Promise((resolve, reject) => {
+				GM_xmlhttpRequest({
+					method: 'GET',
+					url: `https://api.github.com/gists/${this.gistId}`,
+					headers: { 'Authorization': `token ${this.pat}`, 'Accept': 'application/vnd.github.v3+json' },
+					onload: (res) => res.status === 200 ? resolve(JSON.parse(res.responseText)) : reject(new Error(`HTTP ${res.status}`)),
+					onerror: (err) => reject(err)
+				});
+			});
+		}
+
+		updateGist(content) {
+			return new Promise((resolve, reject) => {
+				GM_xmlhttpRequest({
+					method: 'PATCH',
+					url: `https://api.github.com/gists/${this.gistId}`,
+					headers: { 'Authorization': `token ${this.pat}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+					data: JSON.stringify({ files: { [this.fileName]: { content } } }),
+					onload: (res) => res.status === 200 ? resolve(JSON.parse(res.responseText)) : reject(new Error(`HTTP ${res.status}: ${res.responseText}`)),
+					onerror: (err) => reject(err)
+				});
+			});
+		}
+	}
+
 	// ========== TELEGRAM COMMANDER ==========
 	class TelegramCommander {
-		constructor(botToken, adminId) {
+		constructor(botToken, adminId, gistIds) {
 			this.botToken = botToken;
 			this.adminId = adminId;
+			this.gistIds = gistIds;
 			this.lastUpdateId = 0;
 			this.pollingInterval = 5000;
 			this.isPolling = false;
 			this.startTime = Math.floor(Date.now() / 1000);
+			this.targetUser = null;
+			this.remoteControl = null;
+
+			this.initializeRemoteControl();
+		}
+
+		initializeRemoteControl() {
+			const pat = GM_getValue('GITHUB_PAT', null);
+			if (pat && this.gistIds?.commands) {
+				this.remoteControl = new RemoteControlManager(this.gistIds.commands, pat);
+				VisualLogger.success('✅ Remote Control Manager initialized.');
+			} else if (!pat) {
+				VisualLogger.warn('⚠️ Remote control disabled. Use /set_pat <token> via Telegram to enable.');
+			} else if (!this.gistIds?.commands) {
+				VisualLogger.warn('⚠️ Remote control disabled. Missing `gist_ids.commands` in config.');
+			}
 		}
 
 		start() {
@@ -771,6 +851,8 @@
 								`  /stop - Stop local prompt mode\n` +
 								`  /reload - Reload local page\n` +
 								`  /ping - Check local script activity\n\n` +
+								`<b>Admin Setup:</b>\n` +
+								`  /set_pat &lt;token&gt; - Securely store your GitHub PAT\n\n` +
 								`<b>Remote Admin Commands:</b>\n` +
 								`  /list_users - List known user IDs\n` +
 								`  /broadcast &lt;msg&gt; - Send message to all\n` +
@@ -783,6 +865,21 @@
 								`  /exec pause_queue - Pause target's queue\n` +
 								`  /exec resume_queue - Resume target's queue\n\n` +
 								`Current Target: <code>${this.targetUser || 'None'}</code>`;
+						break;
+
+					case '/set_pat':
+						if (args.length > 0) {
+							const pat = args[0];
+							if (pat.startsWith('ghp_')) {
+								GM_setValue('GITHUB_PAT', pat);
+								this.initializeRemoteControl(); // Re-initialize
+								reply = '✅ GitHub PAT saved. Remote control is now active.';
+							} else {
+								reply = '❌ Invalid PAT. It must start with `ghp_`.';
+							}
+						} else {
+							reply = 'Usage: /set_pat &lt;your_github_token&gt;';
+						}
 						break;
 
 						// --- REMOTE ADMIN COMMANDS ---
