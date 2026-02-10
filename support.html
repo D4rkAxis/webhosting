@@ -36,27 +36,15 @@
             border: 1px solid #e5e7eb;
         }
         h1 {
-            text-align: left;
-            margin-bottom: 8px;
             font-size: 1.5rem;
-            color: var(--text-dark);
             font-weight: 700;
             border-bottom: 2px solid var(--primary-blue);
             padding-bottom: 5px;
-        }
-        p.subtitle {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 30px;
-        }
-        .form-group { margin-bottom: 24px; }
-        label {
-            display: block;
             margin-bottom: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--text-dark);
         }
+        p.subtitle { color: var(--text-light); font-size: 0.9rem; margin-bottom: 30px; }
+        .form-group { margin-bottom: 24px; }
+        label { font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; display: block; }
         input, textarea, select {
             width: 100%;
             padding: 10px 14px;
@@ -96,46 +84,61 @@
             z-index: 1000;
             font-size: 14px;
             display: none;
+            animation: slideUp 0.3s ease-out;
         }
         .toast.success { background: var(--success-green); }
         .toast.error { background: var(--error-red); }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .warning {
-            background: #d1fae5;
-            border: 1px solid #10b981;
-            color: #065f46;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            font-size: 0.95rem;
-            line-height: 1.5;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
         }
-        .warning strong { color: #047857; }
+        .history {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .history h3 { font-size: 0.9rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 15px; }
+        #history-list { max-height: 150px; overflow-y: auto; }
+        .history-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Submit ticket → command posted to your CHANNEL as the BOT (signed) → automation runs automatically.</p>
+    <p class="subtitle">Submit ticket → command posted to CHANNEL → automation runs AUTOMATICALLY (no manual send needed).</p>
     
     <div class="warning">
-        <strong>CRITICAL SETUP STEP (DO THIS ONCE):</strong><br>
-        1. Open your channel in Telegram.<br>
-        2. Go to channel settings → Manage Channel → Sign Messages → TURN ON.<br>
-        3. Make sure your bot is an admin with "Post Messages" permission.<br><br>
-        After this, every command will appear <strong>signed by your bot's name/username</strong> (e.g., "— @YourBotName").<br>
-        Automation triggers instantly, message gets deleted automatically after processing.<br><br>
-        Avoid using "|" in RCA text.
+        <strong>PERFECT SETUP:</strong><br>
+        • Command posts to your channel (appears as channel name for ~2 seconds, then AUTO-DELETED).<br>
+        • All status updates ("Starting", "Complete", errors) go to YOUR PRIVATE CHAT as the bot.<br>
+        • Fully automatic – no manual sending required.<br>
+        • Do NOT use "|" in RCA.
     </div>
 
     <form id="bot-form">
         <div class="form-group">
             <label for="ticket-id">Ticket ID *</label>
             <input type="text" id="ticket-id" placeholder="e.g. FOB12345" required>
-            <div class="error-msg" id="ticket-error">Invalid or too short Ticket ID</div>
+            <div class="error-msg" id="ticket-error">Invalid or too short</div>
         </div>
         <div class="form-group">
             <label for="rca">Root Cause Analysis (RCA) *</label>
-            <textarea id="rca" placeholder="Clear description, no '|' character..." required></textarea>
+            <textarea id="rca" placeholder="Clear description – no '|' character..." required></textarea>
             <div class="error-msg" id="rca-error">Too short or contains "|"</div>
         </div>
         <div class="form-group">
@@ -148,20 +151,23 @@
             <div class="error-msg" id="modem-error">Required</div>
         </div>
         <div class="buttons">
-            <button type="button" id="clear-btn">Clear Form</button>
+            <button type="button" id="clear-btn">Clear</button>
             <button type="submit" id="send-btn">Submit to Channel</button>
         </div>
     </form>
+    <div class="history">
+        <h3>Recent Submissions</h3>
+        <div id="history-list"></div>
+    </div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script>
-// Your exact bot token and channel ID
+// Your details
 const BOT_TOKEN = '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38';
-const CHANNEL_ID = '-1003563647186';  // Your channel – posts will be signed by the bot after you enable "Sign Messages"
+const CHANNEL_ID = '-1003563647186';  // Command goes here (auto-trigger + auto-delete)
 const API_URL = 'https://api.telegram.org/bot';
 
-// Elements & functions (same robust validation as before)
 const form = document.getElementById('bot-form');
 const ticketIdInput = document.getElementById('ticket-id');
 const rcaInput = document.getElementById('rca');
@@ -218,6 +224,21 @@ function validateForm() {
     return valid;
 }
 
+function saveToHistory(ticket, modem) {
+    const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
+    history.push({ ticket, modem, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) });
+    if (history.length > 50) history.shift();
+    localStorage.setItem('fobBotHistory', JSON.stringify(history));
+    const list = document.getElementById('history-list');
+    list.innerHTML = '';
+    history.slice(-10).reverse().forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<span><strong>${item.ticket}</strong> → ${item.modem}</span><span>${item.time}</span>`;
+        list.appendChild(div);
+    });
+}
+
 clearBtn.addEventListener('click', () => {
     form.reset();
     modemSelect.value = '';
@@ -234,7 +255,7 @@ form.addEventListener('submit', async e => {
 
     try {
         sendBtn.disabled = true;
-        sendBtn.textContent = 'Posting to Channel...';
+        sendBtn.textContent = 'Submitting...';
 
         const commandText = `/process ${ticketId} | ${rca} | ${modem}`;
 
@@ -251,21 +272,22 @@ form.addEventListener('submit', async e => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.description || 'Failed to post');
 
-        showToast(`✅ Perfect! Command posted to channel – signed by your BOT. Automation starting now...`, 'success');
-
+        showToast('✅ Submitted! Command posted to channel → automation starting automatically. Status will arrive in your private chat.', 'success');
+        saveToHistory(ticketId, modem);
         form.reset();
         modemSelect.value = '';
         clearErrors();
 
     } catch (error) {
-        showToast(`❌ Error: ${error.message} (check bot admin rights & Sign Messages enabled)`, 'error');
+        showToast(`❌ Error: ${error.message} (Bot must be admin in channel with posting rights)`, 'error');
     } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Submit to Channel';
     }
 });
 
-showToast('Portal ready. After enabling "Sign Messages" in channel settings, every job will show as from your bot!', 'success');
+saveToHistory();  // Load on start
+showToast('Portal ready – fully automatic with channel trigger + private status.', 'success');
 </script>
 </body>
 </html>
