@@ -257,13 +257,13 @@
     // ─────────────────────────────────────────────
     async function pollForResponse(ticketId, startTime) {
         const POLL_INTERVAL = 2000; // 2 seconds
-        const TIMEOUT = 60000;      // 60 seconds timeout
+        const TIMEOUT = 300000;     // 5 minutes timeout
         let elapsed = 0;
         let nextOffset = null;
 
         while (elapsed < TIMEOUT) {
             try {
-                const url = `${TG_API}${RELAY_BOT_TOKEN}/getUpdates?allowed_updates=["channel_post","message"]` + (nextOffset ? `&offset=${nextOffset}` : '');
+                const url = `${TG_API}${RELAY_BOT_TOKEN}/getUpdates?allowed_updates=${encodeURIComponent('["channel_post","message"]')}` + (nextOffset ? `&offset=${nextOffset}` : '');
                 const res = await fetch(url);
                 const data = await res.json();
 
@@ -274,13 +274,18 @@
                         if (!msg || !msg.text) continue;
                         
                         // Check if message is recent and contains Ticket ID
-                        if (msg.date >= Math.floor(startTime / 1000) && msg.text.includes(ticketId)) {
+                        if (msg.date >= Math.floor(startTime / 1000) && msg.text.toLowerCase().includes(ticketId.toLowerCase())) {
                             const text = msg.text.toLowerCase();
-                            if (text.includes('success') || text.includes('done') || text.includes('completed')) {
+                            
+                            // Check for definitive success keywords
+                            if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved')) {
                                 return { success: true, message: msg.text };
-                            } else {
+                            } 
+                            // Check for definitive failure keywords (e.g., "failed", "error", "invalid ticket")
+                            else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped')) {
                                 return { success: false, message: msg.text };
                             }
+                            // If no keywords match, it's not a final status message. Continue polling.
                         }
                     }
                 }
