@@ -89,6 +89,20 @@
         #send-btn { background: var(--primary-blue); color: white; }
         #send-btn:hover { background: var(--hover-blue); }
         #send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        #send-btn.loading { cursor: wait; opacity: 0.9; }
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        #send-btn.loading .spinner { display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         #clear-btn { background: white; color: var(--text-dark); border: 1px solid var(--border-color); }
         #clear-btn:hover { background: #f9fafb; border-color: #9ca3af; }
         .toast {
@@ -158,7 +172,10 @@
         </div>
         <div class="buttons">
             <button type="button" id="clear-btn">Clear Form</button>
-            <button type="submit" id="send-btn">Submit Job</button>
+            <button type="submit" id="send-btn">
+                <span class="spinner"></span>
+                <span id="btn-text">Submit Job</span>
+            </button>
         </div>
     </form>
 
@@ -236,6 +253,45 @@
     });
 
     // ─────────────────────────────────────────────
+    // POLLING FOR RESPONSE
+    // ─────────────────────────────────────────────
+    async function pollForResponse(ticketId, startTime) {
+        const POLL_INTERVAL = 2000; // 2 seconds
+        const TIMEOUT = 60000;      // 60 seconds timeout
+        let elapsed = 0;
+        let nextOffset = null;
+
+        while (elapsed < TIMEOUT) {
+            try {
+                const url = `${TG_API}${RELAY_BOT_TOKEN}/getUpdates?allowed_updates=["channel_post","message"]` + (nextOffset ? `&offset=${nextOffset}` : '');
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.ok && data.result.length > 0) {
+                    nextOffset = data.result[data.result.length - 1].update_id + 1;
+                    for (const update of data.result) {
+                        const msg = update.channel_post || update.message;
+                        if (!msg || !msg.text) continue;
+                        
+                        // Check if message is recent and contains Ticket ID
+                        if (msg.date >= Math.floor(startTime / 1000) && msg.text.includes(ticketId)) {
+                            const text = msg.text.toLowerCase();
+                            if (text.includes('success') || text.includes('done') || text.includes('completed')) {
+                                return { success: true, message: msg.text };
+                            } else {
+                                return { success: false, message: msg.text };
+                            }
+                        }
+                    }
+                }
+            } catch (e) { console.error("Polling error:", e); }
+            await new Promise(r => setTimeout(r, POLL_INTERVAL));
+            elapsed += POLL_INTERVAL;
+        }
+        throw new Error("Timeout: No response from automation bot.");
+    }
+
+    // ─────────────────────────────────────────────
     // SUBMIT — Relay bot sends command to channel
     // ─────────────────────────────────────────────
     form.addEventListener('submit', async e => {
@@ -265,7 +321,9 @@
 
         // Disable button while sending
         sendBtn.disabled = true;
-        sendBtn.textContent = 'Sending...';
+        sendBtn.classList.add('loading');
+        const btnText = document.getElementById('btn-text');
+        btnText.textContent = 'Processing...';
 
         try {
             const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
@@ -280,9 +338,20 @@
             const result = await response.json();
 
             if (result.ok) {
-                showToast(`✅ Job for ${ticketId} sent! Bot will process shortly.`, 'success');
-                saveToHistory(ticketId, modem);
-                form.reset();
+                // Message sent, now wait for confirmation
+                const startTime = Date.now();
+                try {
+                    const outcome = await pollForResponse(ticketId, startTime);
+                    if (outcome.success) {
+                        showToast(`✅ ${outcome.message}`, 'success');
+                        saveToHistory(ticketId, modem);
+                        form.reset();
+                    } else {
+                        showToast(`❌ ${outcome.message}`, 'error');
+                    }
+                } catch (pollErr) {
+                    showToast(`⚠️ ${pollErr.message}`, 'error');
+                }
             } else {
                 showToast(`Telegram error: ${result.description}`, 'error');
             }
@@ -291,7 +360,8 @@
             showToast(`Network error: ${err.message}`, 'error');
         } finally {
             sendBtn.disabled = false;
-            sendBtn.textContent = 'Submit Job';
+            sendBtn.classList.remove('loading');
+            btnText.textContent = 'Submit Job';
         }
     });
 
