@@ -108,23 +108,51 @@
             margin-bottom: 20px;
             font-size: 0.875rem;
         }
+        .history {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .history h3 {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 15px;
+        }
+        #history-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .history-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Submit ticket → bot sends formatted command to YOUR PRIVATE CHAT as the bot → you see it instantly.</p>
+    <p class="subtitle">Submit ticket → command posted directly to your CHANNEL → automation runs instantly and deletes the command.</p>
     
     <div class="warning">
-        <strong>Perfect setup:</strong> The command will appear in your private chat with the bot (as from the bot).<br>
-        No channel = message shows as the bot. Avoid "|" in RCA.
+        <strong>Channel behavior:</strong> All messages (command + status) will appear as from the CHANNEL name (not the bot name). This is normal for Telegram channels.<br>
+        The command message will be automatically deleted after processing. Status updates remain in the channel.<br>
+        Avoid using "|" in RCA text.
     </div>
 
     <form id="bot-form">
         <div class="form-group">
             <label for="ticket-id">Ticket ID *</label>
             <input type="text" id="ticket-id" placeholder="e.g. FOB12345" required>
-            <div class="error-msg" id="ticket-error">Invalid/min length Ticket ID</div>
+            <div class="error-msg" id="ticket-error">Invalid or too short Ticket ID</div>
         </div>
         <div class="form-group">
             <label for="rca">Root Cause Analysis (RCA) *</label>
@@ -141,17 +169,21 @@
             <div class="error-msg" id="modem-error">Required</div>
         </div>
         <div class="buttons">
-            <button type="button" id="clear-btn">Clear</button>
-            <button type="submit" id="send-btn">Send to My Chat</button>
+            <button type="button" id="clear-btn">Clear Form</button>
+            <button type="submit" id="send-btn">Submit to Channel</button>
         </div>
     </form>
+    <div class="history">
+        <h3>Recent Submissions</h3>
+        <div id="history-list"></div>
+    </div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script>
-// Your exact details
+// Exact config from your setup
 const BOT_TOKEN = '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38';
-const MY_CHAT_ID = '6219788806';  // Your private chat ID – message will appear here AS THE BOT
+const CHANNEL_ID = '-1003563647186';  // Your channel – command and status go here
 const API_URL = 'https://api.telegram.org/bot';
 
 // Elements
@@ -162,6 +194,7 @@ const modemSelect = document.getElementById('modem-required');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
 const toast = document.getElementById('toast');
+const historyList = document.getElementById('history-list');
 
 const ticketError = document.getElementById('ticket-error');
 const rcaError = document.getElementById('rca-error');
@@ -171,7 +204,7 @@ function showToast(message, type = 'success') {
     toast.textContent = message;
     toast.className = 'toast ' + type;
     toast.style.display = 'block';
-    setTimeout(() => toast.style.display = 'none', 7000);
+    setTimeout(() => toast.style.display = 'none', 8000);
 }
 
 function clearErrors() {
@@ -207,8 +240,27 @@ function validateForm() {
         valid = false;
     }
 
-    if (!valid) showToast('Fix the red fields', 'error');
+    if (!valid) showToast('Fix the highlighted fields', 'error');
     return valid;
+}
+
+// History
+function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('fobChannelHistory') || '[]');
+    historyList.innerHTML = '';
+    history.slice(-10).reverse().forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<span><strong>${item.ticket}</strong> → ${item.modem}</span><span>${item.time}</span>`;
+        historyList.appendChild(div);
+    });
+}
+function saveToHistory(ticket, modem) {
+    const history = JSON.parse(localStorage.getItem('fobChannelHistory') || '[]');
+    history.push({ ticket, modem, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) });
+    if (history.length > 50) history.shift();
+    localStorage.setItem('fobChannelHistory', JSON.stringify(history));
+    loadHistory();
 }
 
 clearBtn.addEventListener('click', () => {
@@ -227,7 +279,7 @@ form.addEventListener('submit', async e => {
 
     try {
         sendBtn.disabled = true;
-        sendBtn.textContent = 'Sending...';
+        sendBtn.textContent = 'Posting to Channel...';
 
         const commandText = `/process ${ticketId} | ${rca} | ${modem}`;
 
@@ -235,28 +287,32 @@ form.addEventListener('submit', async e => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                chat_id: MY_CHAT_ID,
+                chat_id: CHANNEL_ID,
                 text: commandText,
                 parse_mode: 'Markdown'
             })
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.description || 'Failed');
+        if (!response.ok) throw new Error(data.description || 'Failed to post');
 
-        showToast(`✅ Sent! Check your private chat with the bot – command arrived AS THE BOT. Copy & send it back to trigger automation.`, 'success');
-
+        showToast(`✅ Command posted to channel! Automation starting now – command will auto-delete.`, 'success');
+        saveToHistory(ticketId, modem);
         form.reset();
         modemSelect.value = '';
         clearErrors();
 
     } catch (error) {
-        showToast(`❌ Error: ${error.message}`, 'error');
+        showToast(`❌ Error: ${error.message} (Bot must be admin with posting rights)`, 'error');
     } finally {
         sendBtn.disabled = false;
-        sendBtn.textContent = 'Send to My Chat';
+        sendBtn.textContent = 'Submit to Channel';
     }
 });
+
+// Init
+loadHistory();
+showToast('Portal ready – submit → command goes to channel → automation runs instantly.', 'success');
 </script>
 </body>
 </html>
