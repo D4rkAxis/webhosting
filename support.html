@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FOB CRM Portal</title>
+    <title>FOB CRM Direct Sender</title>
     <style>
         :root {
             --primary-blue: #1a56db;
@@ -15,7 +15,11 @@
             --error-red: #c81e1e;
             --success-green: #057a55;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-gray);
@@ -31,7 +35,7 @@
             border-radius: 8px;
             padding: 40px;
             width: 100%;
-            max-width: 550px;
+            max-width: 500px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #e5e7eb;
         }
@@ -42,9 +46,29 @@
             padding-bottom: 5px;
             margin-bottom: 8px;
         }
-        p.subtitle { color: var(--text-light); font-size: 0.9rem; margin-bottom: 30px; }
-        .form-group { margin-bottom: 24px; }
-        label { font-size: 0.875rem; font-weight: 600; margin-bottom: 8px; display: block; }
+        p.subtitle {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+        .warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
         input, textarea, select {
             width: 100%;
             padding: 10px 14px;
@@ -57,11 +81,15 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
         }
-        textarea { resize: vertical; min-height: 100px; }
-        .error-field { border: 1px solid var(--error-red) !important; }
-        .error-msg { color: var(--error-red); font-size: 0.8rem; margin-top: 4px; display: none; }
-        .error-msg.show { display: block; }
-        .buttons { display: flex; gap: 12px; margin-top: 10px; }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
         button {
             flex: 1;
             padding: 12px;
@@ -69,77 +97,80 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
         }
-        #send-btn { background: var(--primary-blue); color: white; }
-        #send-btn:hover { background: var(--hover-blue); }
-        #send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
-        #clear-btn { background: white; color: var(--text-dark); border: 1px solid var(--border-color); }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 24px;
-            border-radius: 6px;
+        #send-btn {
+            background: var(--primary-blue);
             color: white;
-            z-index: 1000;
-            font-size: 14px;
-            display: none;
-            animation: slideUp 0.3s ease-out;
         }
-        .toast.success { background: var(--success-green); }
-        .toast.error { background: var(--error-red); }
-        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .warning {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
+        #send-btn:hover {
+            background: var(--hover-blue);
+        }
+        #send-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        #clear-btn {
+            background: white;
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
+        }
+        #clear-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        .status {
+            margin-top: 20px;
             padding: 12px;
             border-radius: 6px;
-            margin-bottom: 20px;
             font-size: 0.875rem;
+            display: none;
         }
-        .history {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
+        .status.success {
+            display: block;
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
         }
-        .history h3 { font-size: 0.9rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 15px; }
-        #history-list { max-height: 150px; overflow-y: auto; }
-        .history-item {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            font-size: 12px;
-            display: flex;
-            justify-content: space-between;
+        .status.error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .telegram-link {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .telegram-link a {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .telegram-link a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Submit ticket → command posted to CHANNEL → automation runs AUTOMATICALLY (no manual send needed).</p>
+    <h1>FOB CRM Direct Sender</h1>
+    <p class="subtitle">Send commands directly to channel as YOU (using your Telegram account)</p>
     
     <div class="warning">
-        <strong>PERFECT SETUP:</strong><br>
-        • Command posts to your channel (appears as channel name for ~2 seconds, then AUTO-DELETED).<br>
-        • All status updates ("Starting", "Complete", errors) go to YOUR PRIVATE CHAT as the bot.<br>
-        • Fully automatic – no manual sending required.<br>
-        • Do NOT use "|" in RCA.
+        <strong>REQUIREMENT:</strong> You must be logged into Telegram in your browser.<br>
+        Open <a href="https://web.telegram.org" target="_blank">web.telegram.org</a> first, then use this tool.
     </div>
 
-    <form id="bot-form">
+    <form id="command-form">
         <div class="form-group">
             <label for="ticket-id">Ticket ID *</label>
             <input type="text" id="ticket-id" placeholder="e.g. FOB12345" required>
-            <div class="error-msg" id="ticket-error">Invalid or too short</div>
         </div>
         <div class="form-group">
             <label for="rca">Root Cause Analysis (RCA) *</label>
             <textarea id="rca" placeholder="Clear description – no '|' character..." required></textarea>
-            <div class="error-msg" id="rca-error">Too short or contains "|"</div>
         </div>
         <div class="form-group">
             <label for="modem-required">Modem Required *</label>
@@ -148,146 +179,143 @@
                 <option value="Yes">Yes</option>
                 <option value="No">No</option>
             </select>
-            <div class="error-msg" id="modem-error">Required</div>
         </div>
         <div class="buttons">
             <button type="button" id="clear-btn">Clear</button>
-            <button type="submit" id="send-btn">Submit to Channel</button>
+            <button type="submit" id="send-btn">Send to Channel</button>
         </div>
     </form>
-    <div class="history">
-        <h3>Recent Submissions</h3>
-        <div id="history-list"></div>
+
+    <div class="telegram-link">
+        <a href="https://web.telegram.org" target="_blank">➤ Open Telegram Web to confirm messages</a>
     </div>
+
+    <div id="status" class="status"></div>
 </div>
-<div id="toast" class="toast"></div>
 
 <script>
-// Your details
-const BOT_TOKEN = '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38';
-const CHANNEL_ID = '-1003563647186';  // Command goes here (auto-trigger + auto-delete)
-const API_URL = 'https://api.telegram.org/bot';
+const CHANNEL_USERNAME = '@fob_crm_channel'; // Replace with your actual channel username
+// OR use CHANNEL_ID = '-1003563647186' if you know the numeric ID
 
-const form = document.getElementById('bot-form');
+const form = document.getElementById('command-form');
 const ticketIdInput = document.getElementById('ticket-id');
 const rcaInput = document.getElementById('rca');
 const modemSelect = document.getElementById('modem-required');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
-const toast = document.getElementById('toast');
+const statusDiv = document.getElementById('status');
 
-const ticketError = document.getElementById('ticket-error');
-const rcaError = document.getElementById('rca-error');
-const modemError = document.getElementById('modem-error');
-
-function showToast(message, type = 'success') {
-    toast.textContent = message;
-    toast.className = 'toast ' + type;
-    toast.style.display = 'block';
-    setTimeout(() => toast.style.display = 'none', 8000);
-}
-
-function clearErrors() {
-    ticketIdInput.classList.remove('error-field');
-    rcaInput.classList.remove('error-field');
-    modemSelect.classList.remove('error-field');
-    ticketError.classList.remove('show');
-    rcaError.classList.remove('show');
-    modemError.classList.remove('show');
+function showStatus(message, isError = false) {
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+    setTimeout(() => {
+        statusDiv.className = 'status';
+    }, 5000);
 }
 
 function validateForm() {
-    clearErrors();
-    let valid = true;
-
     const ticketId = ticketIdInput.value.trim();
     const rca = rcaInput.value.trim();
     const modem = modemSelect.value;
 
-    if (!ticketId || ticketId.length < 4 || !/^[a-zA-Z0-9-]+$/i.test(ticketId)) {
-        ticketIdInput.classList.add('error-field');
-        ticketError.classList.add('show');
-        valid = false;
+    if (!ticketId || ticketId.length < 4) {
+        showStatus('Error: Ticket ID must be at least 4 characters', true);
+        return false;
     }
     if (!rca || rca.length < 5 || rca.includes('|')) {
-        rcaInput.classList.add('error-field');
-        rcaError.classList.add('show');
-        valid = false;
+        showStatus('Error: RCA must be at least 5 characters and cannot contain "|"', true);
+        return false;
     }
     if (!modem) {
-        modemSelect.classList.add('error-field');
-        modemError.classList.add('show');
-        valid = false;
+        showStatus('Error: Please select Modem Required status', true);
+        return false;
     }
-
-    if (!valid) showToast('Fix the red fields before submitting', 'error');
-    return valid;
-}
-
-function saveToHistory(ticket, modem) {
-    const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
-    history.push({ ticket, modem, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) });
-    if (history.length > 50) history.shift();
-    localStorage.setItem('fobBotHistory', JSON.stringify(history));
-    const list = document.getElementById('history-list');
-    list.innerHTML = '';
-    history.slice(-10).reverse().forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'history-item';
-        div.innerHTML = `<span><strong>${item.ticket}</strong> → ${item.modem}</span><span>${item.time}</span>`;
-        list.appendChild(div);
-    });
+    return true;
 }
 
 clearBtn.addEventListener('click', () => {
     form.reset();
     modemSelect.value = '';
-    clearErrors();
+    statusDiv.className = 'status';
 });
 
-form.addEventListener('submit', async e => {
+form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
     if (!validateForm()) return;
-
+    
     const ticketId = ticketIdInput.value.trim();
     const rca = rcaInput.value.trim();
     const modem = modemSelect.value;
-
+    
+    const command = `/process ${ticketId} | ${rca} | ${modem}`;
+    
     try {
         sendBtn.disabled = true;
-        sendBtn.textContent = 'Submitting...';
-
-        const commandText = `/process ${ticketId} | ${rca} | ${modem}`;
-
-        const response = await fetch(`${API_URL}${BOT_TOKEN}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHANNEL_ID,
-                text: commandText,
-                parse_mode: 'Markdown'
-            })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.description || 'Failed to post');
-
-        showToast('✅ Submitted! Command posted to channel → automation starting automatically. Status will arrive in your private chat.', 'success');
-        saveToHistory(ticketId, modem);
-        form.reset();
-        modemSelect.value = '';
-        clearErrors();
-
+        sendBtn.textContent = 'Sending...';
+        
+        // Method 1: Try to open Telegram Web with pre-filled message
+        const telegramUrl = `https://web.telegram.org/k/#@fob_crm_channel`;
+        
+        // Show instructions
+        showStatus(`✅ Command prepared! Now manually send this to the channel:\n\n${command}\n\n1. Open Telegram Web\n2. Go to your FOB channel\n3. Paste and send the command`, false);
+        
+        // Copy to clipboard for easy pasting
+        await navigator.clipboard.writeText(command);
+        
+        // Open Telegram Web in new tab
+        window.open(telegramUrl, '_blank');
+        
+        // Reset form after delay
+        setTimeout(() => {
+            form.reset();
+            modemSelect.value = '';
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send to Channel';
+        }, 2000);
+        
     } catch (error) {
-        showToast(`❌ Error: ${error.message} (Bot must be admin in channel with posting rights)`, 'error');
-    } finally {
+        showStatus(`Error: ${error.message}`, true);
         sendBtn.disabled = false;
-        sendBtn.textContent = 'Submit to Channel';
+        sendBtn.textContent = 'Send to Channel';
     }
 });
 
-saveToHistory();  // Load on start
-showToast('Portal ready – fully automatic with channel trigger + private status.', 'success');
+// Alternative: Bookmarklet method (for manual sending)
+function createBookmarklet() {
+    const bookmarkletCode = `javascript:(function(){var ticket=prompt('Ticket ID (e.g., FOB12345):');if(!ticket)return;var rca=prompt('RCA (Root Cause Analysis):');if(!rca)return;var modem=prompt('Modem Required (Yes/No):');if(!modem)return;var cmd='/process '+ticket+' | '+rca+' | '+modem;navigator.clipboard.writeText(cmd).then(()=>alert('Command copied to clipboard!\\n\\n'+cmd+'\\n\\nNow paste in Telegram channel.'));})()`;
+    
+    const bookmarkletLink = document.createElement('a');
+    bookmarkletLink.href = bookmarkletCode;
+    bookmarkletLink.textContent = '📌 Drag this to bookmarks: FOB Sender';
+    bookmarkletLink.style.display = 'block';
+    bookmarkletLink.style.marginTop = '20px';
+    bookmarkletLink.style.padding = '10px';
+    bookmarkletLink.style.background = '#f3f4f6';
+    bookmarkletLink.style.borderRadius = '6px';
+    bookmarkletLink.style.textAlign = 'center';
+    bookmarkletLink.style.textDecoration = 'none';
+    bookmarkletLink.style.color = var('--primary-blue');
+    bookmarkletLink.style.fontWeight = '600';
+    
+    document.querySelector('.container').appendChild(bookmarkletLink);
+}
+
+// Create bookmarklet on load
+createBookmarklet();
+
+// Simple history in localStorage
+function saveHistory(ticketId, rca, modem) {
+    const history = JSON.parse(localStorage.getItem('fobDirectHistory') || '[]');
+    history.unshift({
+        ticket: ticketId,
+        rca: rca.substring(0, 50) + (rca.length > 50 ? '...' : ''),
+        modem: modem,
+        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+    });
+    if (history.length > 20) history.pop();
+    localStorage.setItem('fobDirectHistory', JSON.stringify(history));
+}
 </script>
 </body>
 </html>
