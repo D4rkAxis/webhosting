@@ -86,6 +86,16 @@
         }
         .error-field {
             border: 1px solid var(--error-red) !important;
+            box-shadow: 0 0 0 3px rgba(200, 30, 30, 0.1);
+        }
+        .error-msg {
+            color: var(--error-red);
+            font-size: 0.8rem;
+            margin-top: 4px;
+            display: none;
+        }
+        .error-msg.show {
+            display: block;
         }
         .buttons {
             display: flex;
@@ -176,8 +186,8 @@
             justify-content: space-between;
         }
         .warning {
-            background: #fffbeb;
-            border: 1px solid #fcd34d;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
             color: #92400e;
             padding: 12px;
             border-radius: 6px;
@@ -192,28 +202,32 @@
 <body>
 <div class="container">
     <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Submit ticket details → Bot posts the command directly to the channel → Automation processes it instantly.</p>
+    <p class="subtitle">Submit ticket → command posted to channel → automation runs instantly.</p>
     
     <div class="warning">
-        <strong>Important:</strong> Avoid using the pipe character "|" in the RCA text, as it will break command parsing. Use "-" or other symbols instead.
+        <strong>IMPORTANT:</strong> Do NOT use the pipe "|" in RCA text (it breaks parsing). Use "-" or commas instead.<br>
+        Fill ALL fields correctly. Errors will be shown in red below each field.
     </div>
 
     <form id="bot-form">
         <div class="form-group">
-            <label for="ticket-id">Ticket ID</label>
-            <input type="text" id="ticket-id" placeholder="e.g. FOB12345" required>
+            <label for="ticket-id">Ticket ID *</label>
+            <input type="text" id="ticket-id" placeholder="e.g. FOB12345 or fob-12345" required>
+            <div class="error-msg" id="ticket-error">Invalid Ticket ID (use letters, numbers, hyphens only, min 4 chars)</div>
         </div>
         <div class="form-group">
-            <label for="rca">Root Cause Analysis (RCA)</label>
-            <textarea id="rca" placeholder="Provide technical details (avoid using '|')..." required></textarea>
+            <label for="rca">Root Cause Analysis (RCA) *</label>
+            <textarea id="rca" placeholder="Describe the root cause clearly (min 5 characters, no '|')..." required></textarea>
+            <div class="error-msg" id="rca-error">RCA too short or contains forbidden "|" character</div>
         </div>
         <div class="form-group">
-            <label for="modem-required">Modem Required</label>
+            <label for="modem-required">Modem Required *</label>
             <select id="modem-required" required>
-                <option value="" disabled selected>Select status</option>
+                <option value="" disabled selected>Choose Yes or No</option>
                 <option value="Yes">Yes</option>
                 <option value="No">No</option>
             </select>
+            <div class="error-msg" id="modem-error">Please select Yes or No</div>
         </div>
         <div class="buttons">
             <button type="button" id="clear-btn">Clear Form</button>
@@ -228,9 +242,9 @@
 <div id="toast" class="toast"></div>
 
 <script>
-// Telegram Config - Updated with your provided details
+// Telegram Config
 const BOT_TOKEN = '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38';
-const CHANNEL_ID = '-1003563647186';  // Correct channel ID (negative)
+const CHANNEL_ID = '-1003563647186';  // Your channel ID
 const API_URL = 'https://api.telegram.org/bot';
 
 // DOM Elements
@@ -241,27 +255,77 @@ const modemSelect = document.getElementById('modem-required');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
 const toast = document.getElementById('toast');
-const historyList = document.getElementById('history-list');
+
+const ticketError = document.getElementById('ticket-error');
+const rcaError = document.getElementById('rca-error');
+const modemError = document.getElementById('modem-error');
 
 // Toast
 function showToast(message, type = 'info') {
     toast.textContent = message;
-    toast.className = 'toast'; // reset
+    toast.className = 'toast';
     toast.classList.add(type);
     toast.style.display = 'block';
-    setTimeout(() => toast.style.display = 'none', 6000);
+    setTimeout(() => toast.style.display = 'none', 7000);
+}
+
+// Clear errors
+function clearErrors() {
+    ticketIdInput.classList.remove('error-field');
+    rcaInput.classList.remove('error-field');
+    modemSelect.classList.remove('error-field');
+    ticketError.classList.remove('show');
+    rcaError.classList.remove('show');
+    modemError.classList.remove('show');
 }
 
 // Validation
-function validateTicketId(value) {
-    return /^[a-zA-Z0-9-]+$/i.test(value.trim()); // Stricter: letters, numbers, hyphens only
+function validateForm() {
+    clearErrors();
+    let valid = true;
+    const errors = [];
+
+    const ticketId = ticketIdInput.value.trim();
+    const rca = rcaInput.value.trim();
+    const modem = modemSelect.value;
+
+    // Ticket ID: letters, numbers, hyphens, min 4 chars
+    if (!ticketId || ticketId.length < 4 || !/^[a-zA-Z0-9-]+$/i.test(ticketId)) {
+        ticketIdInput.classList.add('error-field');
+        ticketError.classList.add('show');
+        errors.push('Ticket ID');
+        valid = false;
+    }
+
+    // RCA: min 5 chars, no '|'
+    if (!rca || rca.length < 5 || rca.includes('|')) {
+        rcaInput.classList.add('error-field');
+        rcaError.classList.add('show');
+        errors.push('RCA');
+        valid = false;
+    }
+
+    // Modem
+    if (!modem) {
+        modemSelect.classList.add('error-field');
+        modemError.classList.add('show');
+        errors.push('Modem Required');
+        valid = false;
+    }
+
+    if (!valid) {
+        showToast(`❌ Fix errors in: ${errors.join(', ')}`, 'error');
+    }
+
+    return valid;
 }
 
 // History
 function loadHistory() {
     const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
+    const historyList = document.getElementById('history-list');
     historyList.innerHTML = '';
-    history.slice(0, 10).reverse().forEach(item => {
+    history.slice(-10).reverse().forEach(item => {
         const div = document.createElement('div');
         div.className = 'history-item';
         div.innerHTML = `<span><strong>${item.ticket}</strong> → ${item.modem}</span><span>${item.time}</span>`;
@@ -273,62 +337,34 @@ function saveToHistory(ticket, modem) {
     history.push({ 
         ticket, 
         modem, 
-        time: new Date().toLocaleTimeString('en-NG', {hour:'2-digit', minute:'2-digit', second:'2-digit'})
+        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
     });
     if (history.length > 50) history.shift();
     localStorage.setItem('fobBotHistory', JSON.stringify(history));
     loadHistory();
 }
 
-// Clear
+// Clear form
 clearBtn.addEventListener('click', () => {
     form.reset();
-    ticketIdInput.classList.remove('error-field');
+    modemSelect.value = '';
+    clearErrors();
 });
 
-// Submit - Send command directly to the channel
+// Submit
 form.addEventListener('submit', async e => {
     e.preventDefault();
+
+    if (!validateForm()) return;
 
     const ticketId = ticketIdInput.value.trim();
     const rca = rcaInput.value.trim();
     const modem = modemSelect.value;
 
-    // Validation
-    let valid = true;
-    if (!validateTicketId(ticketId) || ticketId.length < 5) {
-        ticketIdInput.classList.add('error-field');
-        valid = false;
-    } else {
-        ticketIdInput.classList.remove('error-field');
-    }
-    if (rca.length < 10) {
-        rcaInput.classList.add('error-field');
-        valid = false;
-    } else {
-        rcaInput.classList.remove('error-field');
-    }
-    if (!modem) {
-        modemSelect.classList.add('error-field');
-        valid = false;
-    } else {
-        modemSelect.classList.remove('error-field');
-    }
-    if (rca.includes('|')) {
-        showToast('RCA contains "|" which will break parsing. Please remove it.', 'error');
-        valid = false;
-    }
-
-    if (!valid) {
-        showToast('Please fix the errors above before submitting.', 'error');
-        return;
-    }
-
     try {
         sendBtn.disabled = true;
-        sendBtn.textContent = 'Sending to Channel...';
+        sendBtn.textContent = 'Sending...';
 
-        // Exact command format that the Tampermonkey script expects
         const commandText = `/process ${ticketId} | ${rca} | ${modem}`;
 
         const response = await fetch(`${API_URL}${BOT_TOKEN}/sendMessage`, {
@@ -344,17 +380,18 @@ form.addEventListener('submit', async e => {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.description || 'Failed to send message to channel');
+            throw new Error(data.description || 'Failed to post to channel');
         }
 
-        // Success: Message posted to channel → Tampermonkey script will detect, process, and delete it
-        showToast(`✅ Success! Command posted to channel and queued for automation.`, 'success');
+        showToast(`✅ Success! Command posted to channel. Automation will start shortly.`, 'success');
         saveToHistory(ticketId, modem);
         form.reset();
+        modemSelect.value = '';
+        clearErrors();
 
     } catch (error) {
-        console.error('Telegram API Error:', error);
-        showToast(`❌ Error: ${error.message}. Check if bot is admin in channel.`, 'error');
+        console.error(error);
+        showToast(`❌ Error: ${error.message}. Is the bot admin in the channel with posting rights?`, 'error');
     } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Submit to Channel';
@@ -363,7 +400,7 @@ form.addEventListener('submit', async e => {
 
 // Init
 loadHistory();
-showToast('Portal ready. Submit jobs → they appear in channel → automation runs instantly.', 'success');
+showToast('Portal ready. Fill all fields → submit → job runs automatically via channel.', 'success');
 </script>
 </body>
 </html>
