@@ -1,981 +1,316 @@
-// ==UserScript==
-// @name         FOB CRM Advanced Automation with Telegram Bot
-// @namespace    http://tampermonkey.net/
-// @version      4.2.0
-// @description  Advanced CRM automation with Telegram bot integration for FOB Helpdesk
-// @author       Advanced Automation System
-// @match        https://intranet.fob.ng/crm/type/163/list/category/23/*
-// @match        https://fobsupportsystem.netlify.app/support.html*
-// @grant        GM_xmlhttpRequest
-// @grant        GM_notification
-// @grant        GM_getValue
-// @grant        GM_setValue
-// @grant        GM_deleteValue
-// @grant        GM_addStyle
-// @require      https://code.jquery.com/jquery-3.6.0.min.js
-// @connect      api.telegram.org
-// @connect      *
-// @run-at       document-end
-// ==/UserScript==
-
-(function() {
-    'use strict';
-
-    // ============================================================================
-    // CONFIG
-    // ============================================================================
-    const CONFIG = {
-        BOT_TOKEN: '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38',
-        CHAT_ID: '6219788806',
-        POLL_INTERVAL: 2000,
-        API_URL: 'https://api.telegram.org/bot'
-    };
-
-    const SELECTORS = {
-        // Search elements - Updated based on your screenshots
-        SEARCH_INPUT: 'input[placeholder="Filter and search"]',
-        SEARCH_INPUT_ALT: 'input#crm-type-item-list-163-23_search, input.main-ui-control',
-
-        // Ticket link - from the Name column
-        TICKET_LINK: 'a[href*="NURW-"], a[href*="/crm/"]',
-        TICKET_ROW: '.main-grid-row',
-
-        // Loading indicator
-        LOADING_INDICATOR: '.main-ui-filter-field-button-loading, .main-grid-loader',
-        ALL_LOADERS: '.ui-side-panel-loader, .main-ui-loader, .bx-core-loader, .main-grid-loader, .main-ui-filter-field-button-loading',
-
-        // Results count
-        RESULTS_INFO: '.main-grid-pagination-container, [class*="pagination"]',
-
-        // Comment and editor
-        COMMENT_TAB_XPATH: "//div[contains(@class, 'side-panel')]//span[normalize-space()='Comment'] | //span[normalize-space()='Comment'] | //span[contains(text(), 'Comment')]",
-        EDITOR: 'textarea.crm-entity-stream-content-new-comment-textarea, .bxhtmled-textarea, [contenteditable="true"]',
-        SEND_BTN_CSS: ".crm-entity-stream-content-new-comment-btn-container .ui-btn-primary",
-
-        // Resolved workflow
-        RESOLVED_BTN_XPATH: "//*[@id='DYNAMIC_163_details_C23_container']/div[1]/div[1]/div[9]/div[1]/div[1] | //div[contains(text(), 'Resolved')] | //button[contains(., 'Resolved')]",
-        POPUP_SELECT_XPATH: "//div[contains(@id, 'partial_editor_container')]//select | //select[contains(@class, 'crm-')]",
-        POPUP_RCA_INPUT_XPATH: "//div[contains(@id, 'partial_editor_container')]//input[@type='text'] | //input[contains(@placeholder, 'RCA')]",
-        POPUP_SAVE_BTN_CSS: ".crm-entity-popup-fill-required-fields-btns .ui-btn-primary, .ui-btn-primary[type='submit']"
-    };
-
-    // ============================================================================
-    // INJECTION ENGINE
-    // ============================================================================
-    const Injector = {
-        setNativeValue(element, value) {
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype,
-                'value'
-            )?.set;
-
-            const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLTextAreaElement.prototype,
-                'value'
-            )?.set;
-
-            if (element instanceof HTMLInputElement && nativeInputValueSetter) {
-                nativeInputValueSetter.call(element, value);
-            } else if (element instanceof HTMLTextAreaElement && nativeTextAreaValueSetter) {
-                nativeTextAreaValueSetter.call(element, value);
-            } else {
-                element.value = value;
-            }
-
-            // Trigger comprehensive event chain
-            const events = [
-                new Event('input', { bubbles: true, cancelable: true }),
-                new Event('change', { bubbles: true, cancelable: true }),
-                new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'a' }),
-                new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'a' }),
-                new Event('blur', { bubbles: true })
-            ];
-
-            events.forEach(event => element.dispatchEvent(event));
-        },
-
-        setRichText(element, html) {
-            element.focus();
-
-            let success = false;
-
-            // Method 1: execCommand
-            try {
-                document.execCommand('selectAll', false, null);
-                success = document.execCommand('insertHTML', false, html);
-            } catch (e) {
-                console.log('execCommand failed:', e);
-            }
-
-            // Method 2: Direct innerHTML
-            if (!success) {
-                element.innerHTML = html;
-            }
-
-            // Method 3: textContent fallback
-            if (!element.innerHTML || element.innerHTML.trim() === '') {
-                element.textContent = html.replace(/<[^>]*>/g, '');
-            }
-
-            // Trigger all possible events
-            const events = ['input', 'change', 'blur', 'keyup', 'keydown', 'textInput', 'paste'];
-            events.forEach(name => {
-                const event = new Event(name, { bubbles: true, cancelable: true });
-                element.dispatchEvent(event);
-            });
-
-            // Additional trigger for contenteditable
-            if (element.isContentEditable) {
-                const inputEvent = new InputEvent('input', {
-                    bubbles: true,
-                    cancelable: true,
-                    inputType: 'insertText',
-                    data: element.textContent
-                });
-                element.dispatchEvent(inputEvent);
-            }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOB CRM Portal</title>
+    <style>
+        /* Professional Base Styles */
+        :root {
+            --primary-blue: #1a56db;
+            --hover-blue: #1e429f;
+            --bg-gray: #f3f4f6;
+            --border-color: #d1d5db;
+            --text-dark: #111827;
+            --text-light: #6b7280;
+            --error-red: #c81e1e;
+            --success-green: #057a55;
         }
-    };
-
-    // ============================================================================
-    // 🚀 SUPER SEARCH ENGINE (ADVANCED)
-    // ============================================================================
-    const SuperSearchEngine = {
-        config: {
-            searchTimeout: 10000,
-            typingDelay: 10, // ms
-            gridSelector: '.main-grid-table, .main-grid-container',
-            rowSelector: '.main-grid-row',
-            linkSelector: 'a[href*="/crm/type/"]'
-        },
-
-        async execute(ticketId) {
-            Utils.log(`🚀 SUPER SEARCH ENGINE ACTIVATED: ${ticketId}`, 'success');
-            const startTime = performance.now();
-
-            try {
-                // Phase 1: Instant Scan (Pre-search)
-                // Check if the ticket is already visible on the screen to avoid reload
-                const instantMatch = this.scanVisibleGrid(ticketId);
-                if (instantMatch) {
-                    Utils.log(`⚡ Instant match found in ${(performance.now() - startTime).toFixed(2)}ms`, 'success');
-                    return this.clickTarget(instantMatch);
-                }
-
-                // Phase 2: Input Acquisition & Injection
-                const searchInput = await this.acquireSearchInput();
-                if (!searchInput) throw new Error("Search input unavailable");
-
-                await this.injectSearchTerm(searchInput, ticketId);
-
-                // Give the UI a moment to react to the enter key (start loading)
-                await Utils.delay(1000);
-
-                // Phase 3: Reactive Wait (MutationObserver)
-                Utils.log('⏳ Waiting for grid update...', 'info');
-                await this.waitForGridUpdate(ticketId);
-
-                // Add a small delay for the grid to fully render after mutation is detected.
-                Utils.log('Grid updated. Allowing 500ms for final render...', 'info');
-                await Utils.delay(500);
-
-                // Phase 4: Deep DOM Analysis
-                const target = await this.findBestTarget(ticketId);
-
-                if (target) {
-                    Utils.log(`🎯 Target acquired in ${(performance.now() - startTime).toFixed(2)}ms`, 'success');
-                    return this.clickTarget(target);
-                }
-
-                throw new Error(`Ticket ${ticketId} not found after deep scan`);
-
-            } catch (error) {
-                console.error("SuperSearch Error:", error);
-                throw error;
-            }
-        },
-
-        scanVisibleGrid(ticketId) {
-            // Fast heuristic scan of current DOM state
-            const rows = document.querySelectorAll(this.config.rowSelector);
-            // Use a regex to match the whole word to avoid partial matches (e.g., "fob123" in "fob12345")
-            const escapedTicketId = ticketId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`\\b${escapedTicketId}\\b`, 'i');
-
-            for (const row of rows) {
-                if (regex.test(row.innerText)) {
-                    return this.extractLinkFromRow(row, ticketId);
-                }
-            }
-            return null;
-        },
-
-        async acquireSearchInput() {
-            const selectors = [
-                'input[placeholder="Filter and search"]',
-                'input#crm-type-item-list-163-23_search',
-                '.main-ui-filter-search-input',
-                'input[type="search"]'
-            ];
-
-            // Parallel query for speed
-            for (const selector of selectors) {
-                const el = document.querySelector(selector);
-                if (el && el.offsetParent) return el;
-            }
-            return null;
-        },
-
-        async injectSearchTerm(input, term) {
-            // Clear existing
-            input.value = '';
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-
-            // Native setter bypass for frameworks
-            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-            nativeSetter.call(input, term);
-
-            // Trigger events
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-
-            // Press Enter
-            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-
-            // Click search button if available (backup)
-            const btn = document.querySelector('.main-ui-filter-search-button');
-            if (btn) btn.click();
-        },
-
-        waitForGridUpdate(ticketId) {
-            return new Promise(resolve => {
-                const grid = document.querySelector(this.config.gridSelector) || document.body;
-
-                // Check immediately if ticket is already there
-                if (this.scanVisibleGrid(ticketId)) {
-                    resolve();
-                    return;
-                }
-
-                const observer = new MutationObserver(() => {
-                    // Check on every mutation if the ticket appeared
-                    if (this.scanVisibleGrid(ticketId)) {
-                        observer.disconnect();
-                        resolve();
-                    }
-                });
-
-                observer.observe(grid, { childList: true, subtree: true, attributes: true });
-
-                // Fallback timeout
-                setTimeout(() => {
-                    observer.disconnect();
-                    resolve();
-                }, 5000);
-            });
-        },
-
-        async findBestTarget(ticketId) {
-            // Strategy: Find row containing ID, then find primary link
-            const rows = document.querySelectorAll(this.config.rowSelector);
-            const escapedTicketId = ticketId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`\\b${escapedTicketId}\\b`, 'i');
-
-            for (const row of rows) {
-                if (regex.test(row.innerText)) {
-                    return this.extractLinkFromRow(row, ticketId);
-                }
-            }
-            return null;
-        },
-
-        extractLinkFromRow(row, ticketId) {
-            // Priority 1 (User Request): The link in the 3rd column, which is typically the 'Name' or 'Subject'.
-            const thirdColumnLink = row.querySelector('.main-grid-cell:nth-child(3) a');
-            if (thirdColumnLink) return thirdColumnLink;
-
-            // Fallback 1: Find a link where the visible text contains the ticket ID.
-            if (ticketId) {
-                const links = row.querySelectorAll('a');
-                for (const link of links) {
-                    if (link.innerText.includes(ticketId)) return link;
-                }
-            }
-
-            // Fallback 2: Find any link that looks like a CRM detail link.
-            const crmLink = row.querySelector('a[href*="/crm/type/"], a[href*="NURW-"]');
-            if (crmLink) return crmLink;
-
-            // Final fallback: any link in the row.
-            return row.querySelector('a');
-        },
-
-        async clickTarget(element) {
-            Utils.log(`Clicking target: ${element.innerText || element.href}`, 'info');
-            element.scrollIntoView({ behavior: 'auto', block: 'center' });
-
-            await Utils.delay(150); // Minimal delay for scroll to settle before click
-            element.click();
-
-            // Wait for navigation
-            await Utils.waitForDisappearance(SELECTORS.ALL_LOADERS, 5000); // Reduced timeout
-            return true;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    };
-
-    // ============================================================================
-    // UTILS
-    // ============================================================================
-    const Utils = {
-        delay: (ms) => new Promise(res => setTimeout(res, ms)),
-
-        async findEl(selector, xpath = false, timeout = 10000) {
-            const start = Date.now();
-
-            while (Date.now() - start < timeout) {
-                const isInteractable = (el) => {
-                    if (!el) return false;
-                    // More lenient check to allow operation in background/minimized tabs.
-                    // We only care if it's in the DOM and not explicitly removed from layout.
-                    return window.getComputedStyle(el).display !== 'none';
-                };
-
-                // Search in main document
-                if (xpath) {
-                    const res = document.evaluate(selector, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-                    for (let i = 0; i < res.snapshotLength; i++) {
-                        const el = res.snapshotItem(i);
-                        if (isInteractable(el)) return el;
-                    }
-                } else {
-                    const elements = document.querySelectorAll(selector);
-                    for (let el of elements) {
-                        if (isInteractable(el)) return el;
-                    }
-                }
-
-                // Search in iframes
-                const iframes = document.querySelectorAll('iframe');
-                for (let frame of iframes) {
-                    try {
-                        const doc = frame.contentDocument || frame.contentWindow?.document;
-                        if (!doc) continue;
-
-                        if (xpath) {
-                            const res = doc.evaluate(selector, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-                            for (let i = 0; i < res.snapshotLength; i++) {
-                                const el = res.snapshotItem(i);
-                                if (isInteractable(el)) return el;
-                            }
-                        } else {
-                            const elements = doc.querySelectorAll(selector);
-                            for (let el of elements) {
-                                if (isInteractable(el)) return el;
-                            }
-                        }
-                    } catch (e) {
-                        // Cross-origin iframe, skip
-                    }
-                }
-
-                await this.delay(250); // Faster polling
-            }
-
-            return null;
-        },
-
-        // NEW: Wait for search results to update
-        async waitForSearchResults(ticketId, timeout = 15000) {
-            const start = Date.now();
-            Utils.log(`Waiting for search results for: ${ticketId}`);
-
-            // Get initial row count
-            const getRowCount = () => document.querySelectorAll(SELECTORS.TICKET_ROW).length;
-            const initialCount = getRowCount();
-
-            Utils.log(`Initial row count: ${initialCount}`);
-
-            while (Date.now() - start < timeout) {
-                // Wait a bit for DOM to update
-                await this.delay(500);
-
-                // Check if loading indicator disappeared
-                const loading = document.querySelector(SELECTORS.LOADING_INDICATOR);
-                if (loading && window.getComputedStyle(loading).display !== 'none') {
-                    Utils.log('Still loading...');
-                    continue;
-                }
-
-                // Get current row count
-                const currentCount = getRowCount();
-                Utils.log(`Current row count: ${currentCount}`);
-
-                // If row count changed, search has updated
-                if (currentCount !== initialCount) {
-                    Utils.log(`Row count changed from ${initialCount} to ${currentCount}`, 'success');
-                    await this.delay(1000); // Extra settling time
-                    return true;
-                }
-
-                // Alternative: Check if the specific ticket appears in the DOM
-                const ticketLinks = document.querySelectorAll(SELECTORS.TICKET_LINK);
-                for (let link of ticketLinks) {
-                    const linkText = link.textContent || link.innerText || '';
-                    const serviceId = link.closest('tr')?.querySelector('[class*="Service"]')?.textContent || '';
-
-                    if (linkText.includes(ticketId) || serviceId.includes(ticketId)) {
-                        Utils.log(`Found ticket ${ticketId} in results!`, 'success');
-                        await this.delay(1000); // Extra settling time
-                        return true;
-                    }
-                }
-            }
-
-            Utils.log('Search results timeout', 'error');
-            return false;
-        },
-
-        async waitForDisappearance(selector, timeout = 10000) {
-            const start = Date.now();
-            this.log(`Waiting for ${selector} to disappear...`);
-            while (Date.now() - start < timeout) {
-                // Check across document and iframes
-                let foundVisible = false;
-                const elements = document.querySelectorAll(selector);
-                for(let el of elements) {
-                    // Use a lenient check to work in background tabs.
-                    // An element is considered "visible" for our purposes if it's in the DOM and not display:none.
-                    if (el && window.getComputedStyle(el).display !== 'none') {
-                        foundVisible = true;
-                        break;
-                    }
-                }
-
-                if (!foundVisible) {
-                    const iframes = document.querySelectorAll('iframe');
-                    for (let frame of iframes) {
-                        try {
-                            const doc = frame.contentDocument || frame.contentWindow?.document;
-                            if (doc) {
-                                const frameElements = doc.querySelectorAll(selector);
-                                for(let el of frameElements) {
-                                    if (el && window.getComputedStyle(el).display !== 'none') {
-                                        foundVisible = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (e) {}
-                        if(foundVisible) break;
-                    }
-                }
-
-                if (!foundVisible) {
-                    this.log(`Element(s) matching '${selector}' disappeared.`, 'success');
-                    return true;
-                }
-                await this.delay(150); // Faster polling
-            }
-            this.log(`Timeout waiting for '${selector}' to disappear.`, 'warn');
-            return false; // It didn't disappear in time, but we can continue
-        },
-
-        log(message, type = 'info') {
-            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
-            console.log(`${prefix} [FOB CRM Bot] ${message}`);
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
-    };
-
-    // ============================================================================
-    // BOT CLASS
-    // ============================================================================
-    class Bot {
-        constructor() {
-            this.lastUpdateId = GM_getValue('LUID', 0);
-            this.queue = GM_getValue('FOB_QUEUE', []);
-            this.isBusy = false;
-            this.currentJob = null;
-
-            Utils.log('Bot initialized', 'success');
-            this.poll();
-            // Start processing queue on startup
-            this.processNext();
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            width: 100%;
+            max-width: 550px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
         }
-
-        // New fire-and-forget function for maximum speed on status updates.
-        // This function does not return a promise and does not block execution.
-        sendTG_fireAndForget(text, targetChatId = null) {
-            const chatId = targetChatId || this.currentJob?.chatId || CONFIG.CHAT_ID;
-            const data = {
-                chat_id: chatId,
-                text: `🤖 *FOB CRM Bot*\n\n${text}`,
-                parse_mode: 'Markdown'
-            };
-
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: `${CONFIG.API_URL}${CONFIG.BOT_TOKEN}/sendMessage`,
-                headers: { 'Content-Type': 'application/json' },
-                data: JSON.stringify(data),
-                // These callbacks do not block the main thread.
-                onload: () => Utils.log(`(Fast Send) Dispatched to Telegram: ${text.substring(0, 50)}...`),
-                onerror: (err) => Utils.log(`(Fast Send) Telegram error: ${err}`, 'error')
-            });
+        h1 {
+            text-align: left;
+            margin-bottom: 8px;
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            font-weight: 700;
+            border-bottom: 2px solid var(--primary-blue);
+            display: inline-block;
+            padding-bottom: 5px;
         }
-
-        saveQueue() {
-            GM_setValue('FOB_QUEUE', this.queue);
+        p.subtitle {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
         }
-
-        async sendTG(text, keyboard = null, targetChatId = null) {
-            const chatId = targetChatId || this.currentJob?.chatId || CONFIG.CHAT_ID;
-            const data = {
-                chat_id: chatId,
-                text: `🤖 *FOB CRM Bot*\n\n${text}`,
-                parse_mode: 'Markdown'
-            };
-
-            if (keyboard) {
-                data.reply_markup = keyboard;
-            }
-
-            return new Promise((resolve) => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: `${CONFIG.API_URL}${CONFIG.BOT_TOKEN}/sendMessage`,
-                    headers: { 'Content-Type': 'application/json' },
-                    data: JSON.stringify(data),
-                    onload: (res) => {
-                        Utils.log(`Sent to Telegram (Chat ${chatId}): ${text.substring(0, 50)}...`);
-                        resolve(res);
-                    },
-                    onerror: (err) => {
-                        Utils.log(`Telegram error: ${err}`, 'error');
-                        resolve(null);
-                    }
-                });
-            });
+        .form-group {
+            margin-bottom: 24px;
         }
-
-        async notifyQueuePositions() {
-            if (this.queue.length === 0) return;
-            Utils.log(`Notifying ${this.queue.length} users of their queue position.`);
-            for (let i = 0; i < this.queue.length; i++) {
-                const job = this.queue[i];
-                const position = i + 1;
-                // Don't await here to send notifications in parallel, preventing one slow user from blocking others.
-                this.sendTG_fireAndForget(
-                    `🔔 *Queue Update*\n\nYour job for ticket \`${job.ticketId}\` has moved up.\n*New Position:* ${position} of ${this.queue.length}`,
-                    null,
-                    job.chatId
-                );
-            }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-dark);
         }
-
-        async deleteTG(messageId, targetChatId = null) {
-            const chatId = targetChatId || this.currentJob?.chatId || CONFIG.CHAT_ID;
-            const data = { chat_id: chatId, message_id: messageId };
-
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: `${CONFIG.API_URL}${CONFIG.BOT_TOKEN}/deleteMessage`,
-                headers: { 'Content-Type': 'application/json' },
-                data: JSON.stringify(data),
-                onload: () => Utils.log(`Deleted message ${messageId}`),
-                onerror: (err) => Utils.log(`Delete error: ${err}`, 'error')
-            });
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: white;
+            color: var(--text-dark);
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-
-        async answerCallback(id) {
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: `${CONFIG.API_URL}${CONFIG.BOT_TOKEN}/answerCallbackQuery`,
-                headers: { 'Content-Type': 'application/json' },
-                data: JSON.stringify({ callback_query_id: id })
-            });
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-blue);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
         }
-
-        async poll() {
-            // Explicitly request channel_post updates to ensure we see messages from the Relay Bot
-            const allowedUpdates = JSON.stringify(["message", "channel_post", "callback_query"]);
-            const url = `${CONFIG.API_URL}${CONFIG.BOT_TOKEN}/getUpdates?offset=${this.lastUpdateId + 1}&timeout=30&allowed_updates=${encodeURIComponent(allowedUpdates)}`;
-
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: url,
-                onload: async (res) => {
-                    try {
-                        const data = JSON.parse(res.responseText);
-
-                        if (data.ok && data.result) {
-                            if (data.result.length > 0) {
-                                Utils.log(`Received ${data.result.length} updates from Telegram.`);
-                            }
-                            for (let update of data.result) {
-                                this.lastUpdateId = update.update_id;
-                                GM_setValue('LUID', this.lastUpdateId);
-
-                                if (update.message?.text) {
-                                    await this.handle(update.message);
-                                }
-
-                                // Handle channel posts (Required for Bot-to-Bot communication)
-                                if (update.channel_post?.text) {
-                                    await this.handle(update.channel_post);
-                                }
-
-                                if (update.callback_query) {
-                                    // Callbacks are no longer used in the main flow, but we should still answer them to prevent UI hangs on the client.
-                                    await this.answerCallback(update.callback_query.id);
-                                    Utils.log(`Answered unused callback query: ${update.callback_query.data}`);
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        Utils.log(`Poll error: ${e.message}`, 'error');
-                    }
-
-                    setTimeout(() => this.poll(), CONFIG.POLL_INTERVAL);
-                },
-                onerror: () => {
-                    Utils.log('Poll connection error', 'error');
-                    setTimeout(() => this.poll(), CONFIG.POLL_INTERVAL);
-                }
-            });
+        textarea {
+            resize: vertical;
+            min-height: 100px;
         }
-
-        async handle(message) {
-            const text = message.text.trim();
-            const chatId = message.chat.id;
-            const messageId = message.message_id;
-            Utils.log(`Handling from chat ${chatId}: ${text}`);
-
-            // Handle messages from both users AND channels
-            // We use the chat ID which works for both private chats and channels
-            const effectiveChatId = chatId;
-
-            // Reset command
-            if (['/reset', '/cancel', '/stop', '/start'].includes(text.toLowerCase())) {
-                const initialCount = this.queue.length;
-                this.queue = this.queue.filter(job => job.chatId !== effectiveChatId);
-                const removedCount = initialCount - this.queue.length;
-                this.saveQueue();
-
-                let resetMessage = "🔄 *Reset Complete*\n\nYour pending jobs have been cleared.";
-                if (removedCount > 0) {
-                    resetMessage += ` (${removedCount} job(s) removed).`;
-                }
-                resetMessage += "\n\nYou can now submit a new job.";
-                return this.sendTG(resetMessage, null, effectiveChatId);
-            }
-
-            // Help command
-            if (text.toLowerCase() === '/help') {
-                return this.sendTG(
-                    "*Usage:*\n" +
-                    "`/process <TICKET_ID> | <RCA_TEXT> | <MODEM_CHANGE>`\n\n" +
-                    "*Example:*\n" +
-                    "`/process fob12345 | RCA: fiber cut due to construction | Yes`\n\n" +
-                    "*Parameters:*\n" +
-                    "• `<TICKET_ID>`: The ticket ID (e.g., fob12345).\n" +
-                    "• `<RCA_TEXT>`: The Root Cause Analysis text.\n" +
-                    "• `<MODEM_CHANGE>`: `Yes` or `No`.\n\n" +
-                    "*Other Commands:*\n" +
-                    "• `/reset` - Clear your jobs from the queue.\n" +
-                    "• `/help` - Show this message.",
-                    null,
-                    effectiveChatId
-                );
-            }
-
-            // Main command parsing
-            const commandRegex = /^(?:\/process\s+)?(.+?)\s*\|\s*(.+?)\s*\|\s*(.+)/i;
-            const match = text.match(commandRegex);
-
-            if (match) {
-                const [, ticketId, rca, modemChangeText] = match;
-
-                if (!ticketId || !rca) {
-                    return this.sendTG('Invalid format. Use: `/process <TICKET> | <RCA> | <Yes/No>`', null, effectiveChatId);
-                }
-
-                const job = {
-                    chatId: effectiveChatId,
-                    ticketId: ticketId.trim(),
-                    rca: rca.trim(),
-                    modemChange: modemChangeText.trim().toLowerCase() === 'yes' ? 'Yes' : 'No',
-                    timestamp: Date.now()
-                };
-
-                this.queue.push(job);
-                this.saveQueue();
-
-                // Delete the command message (from the Relay Bot) to keep chat clean
-                this.deleteTG(messageId, effectiveChatId);
-
-                // Start processing (the processNext function will send the "Starting" message)
-                this.processNext();
-
-            } else {
-                // If no match, guide the user
-                await this.sendTG(
-                    "I don't understand that command. Please use the correct format or type `/help` for instructions.",
-                    null,
-                    effectiveChatId
-                );
-            }
+        .error-field {
+            border: 1px solid var(--error-red) !important;
         }
-
-        async addJobFromWeb(ticketId, rca, modemChange) {
-            Utils.log(`Received job from web UI: ${ticketId}`);
-
-            if (!ticketId || !rca || !modemChange) {
-                alert('Submission failed: All fields (Ticket ID, RCA, Modem Change) are required.');
-                return;
-            }
-
-            const job = {
-                chatId: CONFIG.CHAT_ID, // Use the default chat ID for web submissions
-                ticketId: ticketId.trim(),
-                rca: rca.trim(),
-                modemChange: modemChange.trim().toLowerCase() === 'yes' ? 'Yes' : 'No',
-                timestamp: Date.now()
-            };
-
-            this.queue.push(job);
-            this.saveQueue();
-
-            // Provide feedback on the webpage and to Telegram
-            alert(`Job for ticket ${job.ticketId} has been added to the queue!\nPosition: ${this.queue.length}`);
-            this.sendTG_fireAndForget(
-                `📥 *Web Submission*\n\n` +
-                `New job for ticket \`${job.ticketId}\` added to queue.\n` +
-                `*Queue Position:* ${this.queue.length}`
-            );
-
-            this.processNext();
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
         }
-
-        async processNext() {
-            // Role-based execution:
-            // The Netlify page acts as a "controller" that dispatches work.
-            // The Intranet page acts as a "worker" that executes the job.
-            if (window.location.hostname.includes('netlify.app')) {
-                if (this.queue.length > 0 && !this.isBusy) {
-                    Utils.log(`Queue has work. Navigating to CRM to start processing.`);
-                    window.location.href = 'https://intranet.fob.ng/crm/type/163/list/category/23/';
-                }
-                return; // Stop further execution on the controller page.
-            }
-
-            // --- The following code only runs on the intranet.fob.ng (worker) site ---
-            if (this.isBusy || this.queue.length === 0) {
-                return; // Either busy or nothing to do
-            }
-            this.isBusy = true;
-
-            this.currentJob = this.queue.shift();
-            this.saveQueue();
-
-            Utils.log(`Processing next job for chat ${this.currentJob.chatId}: Ticket ${this.currentJob.ticketId}`);
-            // Notify other users in the queue about their new position
-            this.notifyQueuePositions();
-            // Fire-and-forget the start message to not block the automation
-            this.sendTG_fireAndForget(`🚀 *Starting your job for ticket:* \`${this.currentJob.ticketId}\``);
-
-            try {
-                await this._runJob(this.currentJob);
-
-                // Success
-                await this.sendTG(
-                    `✅ *Job Complete!* 🎉\n\n` +
-                    `Ticket \`${this.currentJob.ticketId}\` has been successfully processed and resolved.\n\n` +
-                    `*Queue length is now:* ${this.queue.length}.\n\n` +
-                    `🎯 Ready for the next job.`
-                );
-
-            } catch (error) {
-                // Failure
-                Utils.log(`Job failed for ticket ${this.currentJob.ticketId}: ${error.message}`, 'error');
-                await this.sendTG(
-                    `❌ *Job Failed*\n\n` +
-                    `Ticket: \`${this.currentJob.ticketId}\`\n` +
-                    `Error: \`${error.message}\`\n\n` +
-                    `The automation was stopped. Please check the CRM manually and use /reset before submitting a new job.`
-                );
-            } finally {
-                // Cleanup and process next
-                this.isBusy = false;
-                this.currentJob = null;
-                // Navigate back to the main list page. The script will re-initialize
-                // on the new page and call processNext() from the constructor.
-                Utils.log('Job finished. Navigating back to the list page to process the next item.');
-                window.location.href = 'https://fobsupportsystem.netlify.app/support.html';
-            }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-
-        async _runJob(job) {
-            // === PHASE 1: SEARCH ===
-            // Fire-and-forget notifications to avoid blocking the main automation thread
-            this.sendTG_fireAndForget(`1/4: 🔍 Searching for ticket...`);
-            try {
-                await SuperSearchEngine.execute(job.ticketId);
-            } catch (error) {
-                throw new Error(`Search failed: ${error.message}`);
-            }
-            this.sendTG_fireAndForget(`✅ Ticket found and opened.`);
-            await Utils.delay(150); // Minimal delay for page to settle after navigation
-
-            // === PHASE 2: COMMENT ===
-            this.sendTG_fireAndForget(`2/4: 💉 Injecting RCA comment...`);
-            const formattedRca = `RCA: ${job.rca}`;
-
-            // Click Comment tab
-            const commentTab = await Utils.findEl(SELECTORS.COMMENT_TAB_XPATH, true, 4000);
-            if (commentTab) {
-                commentTab.click();
-                await Utils.waitForDisappearance(SELECTORS.ALL_LOADERS, 4000);
-                await Utils.delay(100);
-            }
-
-            // Find and fill editor
-            let editor = await Utils.findEl(SELECTORS.EDITOR, false, 7000);
-            if (!editor) throw new Error('Comment editor not found.');
-
-            editor.click();
-            editor.focus();
-            // Reduced delay. The editor should initialize quickly.
-            await Utils.delay(500);
-
-            // Re-find editor
-            editor = await Utils.findEl(SELECTORS.EDITOR, false, 2000);
-            if (!editor) throw new Error('Editor disappeared after focus.');
-
-            // Inject text
-            if (editor.isContentEditable || editor.tagName === 'BODY') {
-                Injector.setRichText(editor, `<p>${formattedRca}</p>`);
-            } else {
-                Injector.setNativeValue(editor, formattedRca);
-            }
-            await Utils.delay(150);
-
-            // Verify injection
-            const content = editor.value || editor.innerText || editor.textContent || '';
-            if (!content.includes(job.rca)) {
-                throw new Error('RCA text injection failed verification.');
-            }
-            this.sendTG_fireAndForget(`✅ RCA injected.`);
-
-            // Click Send
-            const sendBtn = await Utils.findEl(SELECTORS.SEND_BTN_CSS, false, 2500);
-            if (!sendBtn) throw new Error('Comment "Send" button not found.');
-            sendBtn.click();
-            await Utils.waitForDisappearance(SELECTORS.ALL_LOADERS, 4000);
-            await Utils.delay(100);
-            this.sendTG_fireAndForget(`✅ Comment posted.`);
-
-            // === PHASE 3: RESOLVE ===
-            this.sendTG_fireAndForget(`3/4: 🎬 Clicking "Resolved"...`);
-            const resolvedBtn = await Utils.findEl(SELECTORS.RESOLVED_BTN_XPATH, true, 4000);
-            if (!resolvedBtn) throw new Error('"Resolved" button not found.');
-            resolvedBtn.click();
-            await Utils.waitForDisappearance(SELECTORS.ALL_LOADERS, 4000);
-            await Utils.delay(100);
-
-            // === PHASE 4: POPUP HANDLING ===
-            this.sendTG_fireAndForget(`4/4: 📝 Filling resolution details...`);
-            const popupSelect = await Utils.findEl(SELECTORS.POPUP_SELECT_XPATH, true, 4000);
-
-            // If popup appears, fill it. If not, assume it's resolved directly.
-            if (popupSelect) {
-                // Set dropdown
-                const options = Array.from(popupSelect.options);
-                let targetOption = options.find(opt => opt.text.trim().toLowerCase() === job.modemChange.toLowerCase());
-                if (!targetOption) {
-                    targetOption = options.find(opt => opt.text.trim().toLowerCase().includes(job.modemChange.toLowerCase()));
-                }
-                if (targetOption) {
-                    Injector.setNativeValue(popupSelect, targetOption.value);
-                    Utils.log(`Selected option: ${targetOption.text}`, 'success');
-                } else {
-                    Utils.log(`Could not find option for "${job.modemChange}". Skipping select.`, 'warn');
-                }
-
-                // Fill RCA input
-                const rcaInput = await Utils.findEl(SELECTORS.POPUP_RCA_INPUT_XPATH, true, 2000);
-                if (rcaInput) {
-                    Injector.setNativeValue(rcaInput, job.rca);
-                }
-
-                // Click Save
-                await Utils.delay(100);
-                const saveBtn = await Utils.findEl(SELECTORS.POPUP_SAVE_BTN_CSS, false, 2500);
-                if (!saveBtn) throw new Error('Popup "Save" button not found.');
-                saveBtn.click();
-                await Utils.waitForDisappearance(SELECTORS.ALL_LOADERS, 4000);
-                await Utils.delay(100);
-                this.sendTG_fireAndForget(`✅ Resolution details saved.`);
-            } else {
-                Utils.log('Resolution popup did not appear. Assuming ticket is resolved.', 'info');
-                this.sendTG_fireAndForget(`✅ Ticket resolved (no popup).`);
-            }
+        #send-btn {
+            background: var(--primary-blue);
+            color: white;
         }
+        #send-btn:hover {
+            background: var(--hover-blue);
+        }
+        #send-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        #clear-btn {
+            background: white;
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
+        }
+        #clear-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--text-dark);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+        .toast.error {
+            background: var(--error-red);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        /* Submission History */
+        .history {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .history h3 {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 15px;
+        }
+        #history-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .history-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>FOB CRM Portal</h1>
+    <p class="subtitle">Enter ticket details. The form will open Telegram with a pre-filled message — just tap Send.</p>
+    <form id="bot-form">
+        <div class="form-group">
+            <label for="ticket-id">Ticket ID</label>
+            <input type="text" id="ticket-id" placeholder="e.g. FOB12345" required>
+        </div>
+        <div class="form-group">
+            <label for="rca">Root Cause Analysis (RCA)</label>
+            <textarea id="rca" placeholder="Provide technical details regarding the root cause..." required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="modem-required">Modem Required</label>
+            <select id="modem-required" required>
+                <option value="" disabled selected>Select status</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+            </select>
+        </div>
+        <div class="buttons">
+            <button type="button" id="clear-btn">Clear Form</button>
+            <button type="submit" id="send-btn">Open Telegram & Submit</button>
+        </div>
+    </form>
+    <div class="history">
+        <h3>Recent Activity (This Browser)</h3>
+        <div id="history-list"></div>
+    </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+// === CONFIG - UPDATE THIS ONE LINE ONLY ===
+const CONFIG = {
+    BOT_USERNAME: 'MytrfillerBot'  // ← CHANGE THIS to your MAIN bot's username (no @, e.g. fobcrmbot_bot)
+};
+
+// DOM Elements
+const form = document.getElementById('bot-form');
+const ticketIdInput = document.getElementById('ticket-id');
+const rcaInput = document.getElementById('rca');
+const modemSelect = document.getElementById('modem-required');
+const sendBtn = document.getElementById('send-btn');
+const clearBtn = document.getElementById('clear-btn');
+const toast = document.getElementById('toast');
+const historyList = document.getElementById('history-list');
+
+// Toast
+function showToast(message, isError = false) {
+    toast.textContent = message;
+    toast.classList.toggle('error', isError);
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 5000);
+}
+
+// Validation
+function validateTicketId(value) {
+    return /^[a-zA-Z-]+[\d-]+$/i.test(value.trim());
+}
+
+// History
+function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
+    historyList.innerHTML = '';
+    history.slice(0, 10).forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<span><strong>${item.ticket}</strong> | ${item.modem}</span><span>${item.time}</span>`;
+        historyList.appendChild(div);
+    });
+}
+function saveToHistory(ticket, modem) {
+    const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
+    history.unshift({ ticket, modem, time: new Date().toLocaleTimeString('en-NG', {hour:'2-digit', minute:'2-digit'}) });
+    if (history.length > 50) history.pop();
+    localStorage.setItem('fobBotHistory', JSON.stringify(history));
+    loadHistory();
+}
+
+// Clear
+clearBtn.addEventListener('click', () => {
+    form.reset();
+    ticketIdInput.classList.remove('error-field');
+});
+
+// Submit - Deep Link to MAIN Bot (SAFE, PERSONAL REPLIES, WORKS 100%)
+form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const ticketId = ticketIdInput.value.trim();
+    const rca = rcaInput.value.trim();
+    const modem = modemSelect.value;
+
+    let valid = true;
+    if (!validateTicketId(ticketId)) {
+        ticketIdInput.classList.add('error-field');
+        valid = false;
+    } else ticketIdInput.classList.remove('error-field');
+    if (rca.length < 5 || !modem) valid = false;
+
+    if (!valid) return showToast('Fix errors: valid Ticket ID, RCA ≥5 chars, select Modem.', true);
+
+    const message = `/process ${ticketId} | ${rca} | ${modem}`;
+    const url = `https://t.me/${CONFIG.BOT_USERNAME}?text=${encodeURIComponent(message)}`;
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Opening Telegram...';
+
+    const win = window.open(url, '_blank');
+
+    if (!win || win.closed || typeof win.closed == 'undefined') {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Popup blocked – link copied! Paste into Telegram.', true);
+        });
+    } else {
+        showToast('Telegram opened – just tap Send to queue your ticket!', false);
+        saveToHistory(ticketId, modem);
+        form.reset();
     }
 
-    // ============================================================================
-    // INITIALIZE
-    // ============================================================================
+    setTimeout(() => {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Open Telegram & Submit';
+    }, 1500);
+});
 
-    // Add visual indicator
-    GM_addStyle(`
-        #fob-bot-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 13px;
-            font-weight: bold;
-            z-index: 10000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+// Init
+loadHistory();
 
-        #fob-bot-indicator.active::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            background: #4ade80;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.5;
-                transform: scale(1.2);
-            }
-        }
-    `);
-
-    const indicator = document.createElement('div');
-    indicator.id = 'fob-bot-indicator';
-    indicator.className = 'active';
-    indicator.textContent = '🤖 FOB Bot Ready';
-    document.body.appendChild(indicator);
-
-    // Start bot
-    window.FOBBot = new Bot();
-    Utils.log('🚀 FOB CRM Bot fully loaded and ready!', 'success');
-    console.log('%c🤖 FOB CRM Bot Active', 'font-size: 20px; color: #667eea; font-weight: bold;');
-
-})();
+if (CONFIG.BOT_USERNAME === 'fobcrmbot_bot') {
+    showToast('UPDATE BOT_USERNAME in code before sharing!', true);
+}
+</script>
+</body>
+</html>
