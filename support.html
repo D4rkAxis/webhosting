@@ -100,51 +100,30 @@
         .toast.success { background: var(--success-green); }
         .toast.error { background: var(--error-red); }
         .warning {
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 0.875rem;
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            line-height: 1.5;
         }
-        .history {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-        }
-        .history h3 {
-            font-size: 0.9rem;
-            color: var(--text-light);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 15px;
-        }
-        #history-list {
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        .history-item {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            font-size: 12px;
-            color: var(--text-dark);
-            display: flex;
-            justify-content: space-between;
-        }
+        .warning strong { color: #047857; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Submit ticket → command posted directly to your CHANNEL → automation runs instantly and deletes the command.</p>
+    <p class="subtitle">Submit ticket → command posted to your CHANNEL as the BOT (signed) → automation runs automatically.</p>
     
     <div class="warning">
-        <strong>Channel behavior:</strong> All messages (command + status) will appear as from the CHANNEL name (not the bot name). This is normal for Telegram channels.<br>
-        The command message will be automatically deleted after processing. Status updates remain in the channel.<br>
+        <strong>CRITICAL SETUP STEP (DO THIS ONCE):</strong><br>
+        1. Open your channel in Telegram.<br>
+        2. Go to channel settings → Manage Channel → Sign Messages → TURN ON.<br>
+        3. Make sure your bot is an admin with "Post Messages" permission.<br><br>
+        After this, every command will appear <strong>signed by your bot's name/username</strong> (e.g., "— @YourBotName").<br>
+        Automation triggers instantly, message gets deleted automatically after processing.<br><br>
         Avoid using "|" in RCA text.
     </div>
 
@@ -156,7 +135,7 @@
         </div>
         <div class="form-group">
             <label for="rca">Root Cause Analysis (RCA) *</label>
-            <textarea id="rca" placeholder="Clear description (no '|')..." required></textarea>
+            <textarea id="rca" placeholder="Clear description, no '|' character..." required></textarea>
             <div class="error-msg" id="rca-error">Too short or contains "|"</div>
         </div>
         <div class="form-group">
@@ -173,20 +152,16 @@
             <button type="submit" id="send-btn">Submit to Channel</button>
         </div>
     </form>
-    <div class="history">
-        <h3>Recent Submissions</h3>
-        <div id="history-list"></div>
-    </div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script>
-// Exact config from your setup
+// Your exact bot token and channel ID
 const BOT_TOKEN = '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38';
-const CHANNEL_ID = '-1003563647186';  // Your channel – command and status go here
+const CHANNEL_ID = '-1003563647186';  // Your channel – posts will be signed by the bot after you enable "Sign Messages"
 const API_URL = 'https://api.telegram.org/bot';
 
-// Elements
+// Elements & functions (same robust validation as before)
 const form = document.getElementById('bot-form');
 const ticketIdInput = document.getElementById('ticket-id');
 const rcaInput = document.getElementById('rca');
@@ -194,7 +169,6 @@ const modemSelect = document.getElementById('modem-required');
 const sendBtn = document.getElementById('send-btn');
 const clearBtn = document.getElementById('clear-btn');
 const toast = document.getElementById('toast');
-const historyList = document.getElementById('history-list');
 
 const ticketError = document.getElementById('ticket-error');
 const rcaError = document.getElementById('rca-error');
@@ -240,27 +214,8 @@ function validateForm() {
         valid = false;
     }
 
-    if (!valid) showToast('Fix the highlighted fields', 'error');
+    if (!valid) showToast('Fix the red fields before submitting', 'error');
     return valid;
-}
-
-// History
-function loadHistory() {
-    const history = JSON.parse(localStorage.getItem('fobChannelHistory') || '[]');
-    historyList.innerHTML = '';
-    history.slice(-10).reverse().forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'history-item';
-        div.innerHTML = `<span><strong>${item.ticket}</strong> → ${item.modem}</span><span>${item.time}</span>`;
-        historyList.appendChild(div);
-    });
-}
-function saveToHistory(ticket, modem) {
-    const history = JSON.parse(localStorage.getItem('fobChannelHistory') || '[]');
-    history.push({ ticket, modem, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) });
-    if (history.length > 50) history.shift();
-    localStorage.setItem('fobChannelHistory', JSON.stringify(history));
-    loadHistory();
 }
 
 clearBtn.addEventListener('click', () => {
@@ -296,23 +251,21 @@ form.addEventListener('submit', async e => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.description || 'Failed to post');
 
-        showToast(`✅ Command posted to channel! Automation starting now – command will auto-delete.`, 'success');
-        saveToHistory(ticketId, modem);
+        showToast(`✅ Perfect! Command posted to channel – signed by your BOT. Automation starting now...`, 'success');
+
         form.reset();
         modemSelect.value = '';
         clearErrors();
 
     } catch (error) {
-        showToast(`❌ Error: ${error.message} (Bot must be admin with posting rights)`, 'error');
+        showToast(`❌ Error: ${error.message} (check bot admin rights & Sign Messages enabled)`, 'error');
     } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Submit to Channel';
     }
 });
 
-// Init
-loadHistory();
-showToast('Portal ready – submit → command goes to channel → automation runs instantly.', 'success');
+showToast('Portal ready. After enabling "Sign Messages" in channel settings, every job will show as from your bot!', 'success');
 </script>
 </body>
 </html>
