@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOB CRM Portal</title>
+    <style>
+        /* Professional Base Styles */
+        :root {
+            --primary-blue: #1a56db;
+            --hover-blue: #1e429f;
+            --bg-gray: #f3f4f6;
+            --border-color: #d1d5db;
+            --text-dark: #111827;
+            --text-light: #6b7280;
+            --error-red: #c81e1e;
+            --success-green: #057a55;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            width: 100%;
+            max-width: 550px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+        h1 {
+            text-align: left;
+            margin-bottom: 8px;
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            font-weight: 700;
+            border-bottom: 2px solid var(--primary-blue);
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+        p.subtitle {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: white;
+            color: var(--text-dark);
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-blue);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.1);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .error-field {
+            border: 1px solid var(--error-red) !important;
+        }
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #send-btn {
+            background: var(--primary-blue);
+            color: white;
+        }
+        #send-btn:hover {
+            background: var(--hover-blue);
+        }
+        #send-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        #clear-btn {
+            background: white;
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
+        }
+        #clear-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--text-dark);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            font-size: 14px;
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+        .toast.error {
+            background: var(--error-red);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        /* Submission History */
+        .history {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .history h3 {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 15px;
+        }
+        #history-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .history-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: space-between;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>FOB CRM Portal</h1>
+    <p class="subtitle">Enter ticket details. The form will open Telegram with a pre-filled message — just tap Send.</p>
+    <form id="bot-form">
+        <div class="form-group">
+            <label for="ticket-id">Ticket ID</label>
+            <input type="text" id="ticket-id" placeholder="e.g. FOB12345" required>
+        </div>
+        <div class="form-group">
+            <label for="rca">Root Cause Analysis (RCA)</label>
+            <textarea id="rca" placeholder="Provide technical details regarding the root cause..." required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="modem-required">Modem Required</label>
+            <select id="modem-required" required>
+                <option value="" disabled selected>Select status</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+            </select>
+        </div>
+        <div class="buttons">
+            <button type="button" id="clear-btn">Clear Form</button>
+            <button type="submit" id="send-btn">Open Telegram & Submit</button>
+        </div>
+    </form>
+    <div class="history">
+        <h3>Recent Activity (This Browser)</h3>
+        <div id="history-list"></div>
+    </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+// === CONFIG - UPDATE THIS ONE LINE ONLY ===
+const CONFIG = {
+    BOT_USERNAME: 'MytrfillerBot'  // ← CHANGE THIS to your MAIN bot's username (no @, e.g. fobcrmbot_bot)
+};
+
+// DOM Elements
+const form = document.getElementById('bot-form');
+const ticketIdInput = document.getElementById('ticket-id');
+const rcaInput = document.getElementById('rca');
+const modemSelect = document.getElementById('modem-required');
+const sendBtn = document.getElementById('send-btn');
+const clearBtn = document.getElementById('clear-btn');
+const toast = document.getElementById('toast');
+const historyList = document.getElementById('history-list');
+
+// Toast
+function showToast(message, isError = false) {
+    toast.textContent = message;
+    toast.classList.toggle('error', isError);
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 5000);
+}
+
+// Validation
+function validateTicketId(value) {
+    return /^[a-zA-Z-]+[\d-]+$/i.test(value.trim());
+}
+
+// History
+function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
+    historyList.innerHTML = '';
+    history.slice(0, 10).forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerHTML = `<span><strong>${item.ticket}</strong> | ${item.modem}</span><span>${item.time}</span>`;
+        historyList.appendChild(div);
+    });
+}
+function saveToHistory(ticket, modem) {
+    const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
+    history.unshift({ ticket, modem, time: new Date().toLocaleTimeString('en-NG', {hour:'2-digit', minute:'2-digit'}) });
+    if (history.length > 50) history.pop();
+    localStorage.setItem('fobBotHistory', JSON.stringify(history));
+    loadHistory();
+}
+
+// Clear
+clearBtn.addEventListener('click', () => {
+    form.reset();
+    ticketIdInput.classList.remove('error-field');
+});
+
+// Submit - Deep Link to MAIN Bot (SAFE, PERSONAL REPLIES, WORKS 100%)
+form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    const ticketId = ticketIdInput.value.trim();
+    const rca = rcaInput.value.trim();
+    const modem = modemSelect.value;
+
+    let valid = true;
+    if (!validateTicketId(ticketId)) {
+        ticketIdInput.classList.add('error-field');
+        valid = false;
+    } else ticketIdInput.classList.remove('error-field');
+    if (rca.length < 5 || !modem) valid = false;
+
+    if (!valid) return showToast('Fix errors: valid Ticket ID, RCA ≥5 chars, select Modem.', true);
+
+    const message = `/process ${ticketId} | ${rca} | ${modem}`;
+    const url = `https://t.me/${CONFIG.BOT_USERNAME}?text=${encodeURIComponent(message)}`;
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Opening Telegram...';
+
+    const win = window.open(url, '_blank');
+
+    if (!win || win.closed || typeof win.closed == 'undefined') {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Popup blocked – link copied! Paste into Telegram.', true);
+        });
+    } else {
+        showToast('Telegram opened – just tap Send to queue your ticket!', false);
+        saveToHistory(ticketId, modem);
+        form.reset();
+    }
+
+    setTimeout(() => {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Open Telegram & Submit';
+    }, 1500);
+});
+
+// Init
+loadHistory();
+
+if (CONFIG.BOT_USERNAME === 'fobcrmbot_bot') {
+    showToast('UPDATE BOT_USERNAME in code before sharing!', true);
+}
+</script>
+</body>
+</html>
