@@ -140,6 +140,9 @@
         .toast.error {
             background: var(--error-red);
         }
+        .toast.success {
+            background: var(--success-green);
+        }
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -172,6 +175,15 @@
             display: flex;
             justify-content: space-between;
         }
+        .warning {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 20px;
+        }
         @media (max-width: 600px) {
             .container { padding: 20px; }
         }
@@ -180,7 +192,12 @@
 <body>
 <div class="container">
     <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Enter ticket details to add a job directly to the automation queue. The bot must be active on this page.</p>
+    <p class="subtitle">Submit ticket details → Bot posts the command directly to the channel → Automation processes it instantly.</p>
+    
+    <div class="warning">
+        <strong>Important:</strong> Avoid using the pipe character "|" in the RCA text, as it will break command parsing. Use "-" or other symbols instead.
+    </div>
+
     <form id="bot-form">
         <div class="form-group">
             <label for="ticket-id">Ticket ID</label>
@@ -188,7 +205,7 @@
         </div>
         <div class="form-group">
             <label for="rca">Root Cause Analysis (RCA)</label>
-            <textarea id="rca" placeholder="Provide technical details regarding the root cause..." required></textarea>
+            <textarea id="rca" placeholder="Provide technical details (avoid using '|')..." required></textarea>
         </div>
         <div class="form-group">
             <label for="modem-required">Modem Required</label>
@@ -200,17 +217,22 @@
         </div>
         <div class="buttons">
             <button type="button" id="clear-btn">Clear Form</button>
-            <button type="submit" id="send-btn">Submit Job</button>
+            <button type="submit" id="send-btn">Submit to Channel</button>
         </div>
     </form>
     <div class="history">
-        <h3>Recent Activity (This Browser)</h3>
+        <h3>Recent Submissions (This Browser)</h3>
         <div id="history-list"></div>
     </div>
 </div>
 <div id="toast" class="toast"></div>
 
 <script>
+// Telegram Config - Updated with your provided details
+const BOT_TOKEN = '8194426874:AAEO8xhAuKdPdXy4n_6rxnaXujwVOY_jG38';
+const CHANNEL_ID = '-1003563647186';  // Correct channel ID (negative)
+const API_URL = 'https://api.telegram.org/bot';
+
 // DOM Elements
 const form = document.getElementById('bot-form');
 const ticketIdInput = document.getElementById('ticket-id');
@@ -222,33 +244,38 @@ const toast = document.getElementById('toast');
 const historyList = document.getElementById('history-list');
 
 // Toast
-function showToast(message, isError = false) {
+function showToast(message, type = 'info') {
     toast.textContent = message;
-    toast.classList.toggle('error', isError);
+    toast.className = 'toast'; // reset
+    toast.classList.add(type);
     toast.style.display = 'block';
-    setTimeout(() => toast.style.display = 'none', 5000);
+    setTimeout(() => toast.style.display = 'none', 6000);
 }
 
 // Validation
 function validateTicketId(value) {
-    return /^[a-zA-Z-]+[\d-]+$/i.test(value.trim());
+    return /^[a-zA-Z0-9-]+$/i.test(value.trim()); // Stricter: letters, numbers, hyphens only
 }
 
 // History
 function loadHistory() {
     const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
     historyList.innerHTML = '';
-    history.slice(0, 10).forEach(item => {
+    history.slice(0, 10).reverse().forEach(item => {
         const div = document.createElement('div');
         div.className = 'history-item';
-        div.innerHTML = `<span><strong>${item.ticket}</strong> | ${item.modem}</span><span>${item.time}</span>`;
+        div.innerHTML = `<span><strong>${item.ticket}</strong> → ${item.modem}</span><span>${item.time}</span>`;
         historyList.appendChild(div);
     });
 }
 function saveToHistory(ticket, modem) {
     const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
-    history.unshift({ ticket, modem, time: new Date().toLocaleTimeString('en-NG', {hour:'2-digit', minute:'2-digit'}) });
-    if (history.length > 50) history.pop();
+    history.push({ 
+        ticket, 
+        modem, 
+        time: new Date().toLocaleTimeString('en-NG', {hour:'2-digit', minute:'2-digit', second:'2-digit'})
+    });
+    if (history.length > 50) history.shift();
     localStorage.setItem('fobBotHistory', JSON.stringify(history));
     loadHistory();
 }
@@ -259,56 +286,84 @@ clearBtn.addEventListener('click', () => {
     ticketIdInput.classList.remove('error-field');
 });
 
-// Submit - Direct to Userscript
-form.addEventListener('submit', e => {
+// Submit - Send command directly to the channel
+form.addEventListener('submit', async e => {
     e.preventDefault();
 
     const ticketId = ticketIdInput.value.trim();
     const rca = rcaInput.value.trim();
     const modem = modemSelect.value;
 
+    // Validation
     let valid = true;
-    if (!validateTicketId(ticketId)) {
+    if (!validateTicketId(ticketId) || ticketId.length < 5) {
         ticketIdInput.classList.add('error-field');
         valid = false;
     } else {
         ticketIdInput.classList.remove('error-field');
     }
-    if (rca.length < 5) valid = false;
-    if (!modem) valid = false;
-
-    if (!valid) {
-        return showToast('Fix errors: valid Ticket ID, RCA ≥5 chars, and select Modem status.', true);
+    if (rca.length < 10) {
+        rcaInput.classList.add('error-field');
+        valid = false;
+    } else {
+        rcaInput.classList.remove('error-field');
+    }
+    if (!modem) {
+        modemSelect.classList.add('error-field');
+        valid = false;
+    } else {
+        modemSelect.classList.remove('error-field');
+    }
+    if (rca.includes('|')) {
+        showToast('RCA contains "|" which will break parsing. Please remove it.', 'error');
+        valid = false;
     }
 
-    // Check if the bot script is running on the page
-    if (window.FOBBot && typeof window.FOBBot.addJobFromWeb === 'function') {
-        try {
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Submitting...';
+    if (!valid) {
+        showToast('Please fix the errors above before submitting.', 'error');
+        return;
+    }
 
-            // Call the function in the userscript
-            window.FOBBot.addJobFromWeb(ticketId, rca, modem);
+    try {
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending to Channel...';
 
-            showToast(`Job for ${ticketId} added to queue!`, false);
-            saveToHistory(ticketId, modem);
-            form.reset();
+        // Exact command format that the Tampermonkey script expects
+        const commandText = `/process ${ticketId} | ${rca} | ${modem}`;
 
-        } catch (error) {
-            showToast(`Error submitting job: ${error.message}`, true);
-        } finally {
-            setTimeout(() => {
-                sendBtn.disabled = false;
-                sendBtn.textContent = 'Submit Job';
-            }, 1000);
+        const response = await fetch(`${API_URL}${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHANNEL_ID,
+                text: commandText,
+                parse_mode: 'Markdown'
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.description || 'Failed to send message to channel');
         }
-    } else {
-        showToast('Automation script not detected. Please ensure Tampermonkey is active and refresh.', true);
+
+        // Success: Message posted to channel → Tampermonkey script will detect, process, and delete it
+        showToast(`✅ Success! Command posted to channel and queued for automation.`, 'success');
+        saveToHistory(ticketId, modem);
+        form.reset();
+
+    } catch (error) {
+        console.error('Telegram API Error:', error);
+        showToast(`❌ Error: ${error.message}. Check if bot is admin in channel.`, 'error');
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Submit to Channel';
     }
 });
 
 // Init
 loadHistory();
+showToast('Portal ready. Submit jobs → they appear in channel → automation runs instantly.', 'success');
 </script>
 </body>
 </html>
