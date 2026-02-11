@@ -398,9 +398,23 @@
             rca: rca,
             modem: modem,
             opName: opName,
-            opPower: opPower,
-            status: status
+            opPower: status,
+            status: opPower
         });
+
+        // If status is Unresolved, only save to sheet and skip automation
+        if (status === 'Unresolved') {
+            showToast('Saved to Sheet. Automation skipped.', 'success');
+            form.reset();
+            ticketInput.classList.remove('error-field');
+            rcaInput.classList.remove('error-field');
+            areaSelect.classList.remove('error-field');
+            modemSelect.classList.remove('error-field');
+            opNameInput.classList.remove('error-field');
+            opPowerInput.classList.remove('error-field');
+            statusSelect.classList.remove('error-field');
+            return;
+        }
 
         // Build the command string — same format the TamperMonkey bot expects
         // Format: TICKET_ID | RCA text | Yes/No
