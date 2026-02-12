@@ -299,10 +299,10 @@
     });
 
     // ─────────────────────────────────────────────
-    // POLLING (unchanged)
+    // POLLING – FASTER INTERVAL + MORE KEYWORDS
     // ─────────────────────────────────────────────
     async function pollForResponse(ticketId, startTime) {
-        const POLL_INTERVAL = 2000;
+        const POLL_INTERVAL = 500; // Fast polling
         const TIMEOUT = 300000;
         let elapsed = 0;
         let nextOffset = null;
@@ -315,14 +315,17 @@
 
                 if (data.ok && data.result.length > 0) {
                     nextOffset = data.result[data.result.length - 1].update_id + 1;
-                    for (const update of data.result) {
+                    for (const update of data.result.reverse()) { // Reverse to check newest first
                         const msg = update.channel_post || update.message;
                         if (!msg || !msg.text) continue;
                         if (msg.date >= Math.floor(startTime / 1000) && msg.text.toLowerCase().includes(ticketId.toLowerCase())) {
                             const text = msg.text.toLowerCase();
-                            if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved')) {
+                            // Success
+                            if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved') || text.includes('good dbm') || text.includes('proceeding')) {
                                 return { success: true, message: msg.text };
-                            } else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped')) {
+                            } 
+                            // Failure (expanded keywords)
+                            else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped') || text.includes('high power') || text.includes('needs work') || text.includes('not online') || text.includes('timeout') || text.includes('could not find')) {
                                 return { success: false, message: msg.text };
                             }
                         }
