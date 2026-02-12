@@ -14,6 +14,7 @@
             --text-light: #6b7280;
             --error-red: #c81e1e;
             --success-green: #057a55;
+            --warning-yellow: #ca8a04;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -105,6 +106,8 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         #clear-btn { background: white; color: var(--text-dark); border: 1px solid var(--border-color); }
         #clear-btn:hover { background: #f9fafb; border-color: #9ca3af; }
+        #cancel-btn { background: var(--error-red); color: white; display: none; }
+        #cancel-btn:hover { background: #b91c1c; }
         .toast {
             position: fixed;
             bottom: 20px;
@@ -121,10 +124,49 @@
         }
         .toast.error { background: var(--error-red); }
         .toast.success { background: var(--success-green); }
+        .toast.warning { background: var(--warning-yellow); }
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to   { transform: translateY(0); opacity: 1; }
         }
+        .popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .popup-content {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .popup-content h3 {
+            margin-bottom: 16px;
+            font-size: 1.125rem;
+        }
+        .popup-content p {
+            margin-bottom: 24px;
+            color: var(--text-light);
+        }
+        .popup-buttons { display: flex; gap: 12px; }
+        .popup-buttons button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #proceed-yes { background: var(--success-green); color: white; }
+        #proceed-no { background: var(--error-red); color: white; }
         .history { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
         .history h3 {
             font-size: 0.9rem;
@@ -215,6 +257,7 @@
                 <span class="spinner"></span>
                 <span id="btn-text">Submit Job</span>
             </button>
+            <button type="button" id="cancel-btn">Cancel</button>
         </div>
     </form>
 
@@ -224,6 +267,16 @@
     </div>
 </div>
 <div id="toast" class="toast"></div>
+<div id="popup" class="popup">
+    <div class="popup-content">
+        <h3>Automation Failed</h3>
+        <p id="popup-message"></p>
+        <div class="popup-buttons">
+            <button id="proceed-yes">Proceed to Close</button>
+            <button id="proceed-no">Mark Unresolved</button>
+        </div>
+    </div>
+</div>
 
 <script>
     // ─────────────────────────────────────────────
@@ -249,7 +302,7 @@
     }
 
     // ─────────────────────────────────────────────
-    // DOM & TOAST & HISTORY (unchanged)
+    // DOM ELEMENTS
     // ─────────────────────────────────────────────
     const form        = document.getElementById('bot-form');
     const ticketInput = document.getElementById('ticket-id');
@@ -260,9 +313,20 @@
     const statusSelect = document.getElementById('job-status');
     const sendBtn     = document.getElementById('send-btn');
     const clearBtn    = document.getElementById('clear-btn');
+    const cancelBtn   = document.getElementById('cancel-btn');
     const toast       = document.getElementById('toast');
     const historyList = document.getElementById('history-list');
+    const popup       = document.getElementById('popup');
+    const popupMsg    = document.getElementById('popup-message');
+    const proceedYes  = document.getElementById('proceed-yes');
+    const proceedNo   = document.getElementById('proceed-no');
 
+    let pollingInterval = null;
+    let isPolling = false;
+
+    // ─────────────────────────────────────────────
+    // TOAST & POPUP
+    // ─────────────────────────────────────────────
     function showToast(message, type = '') {
         toast.textContent = message;
         toast.className = 'toast ' + type;
@@ -270,6 +334,55 @@
         setTimeout(() => toast.style.display = 'none', 6000);
     }
 
+    function showPopup(message, ticketId, rca, modem) {
+        popupMsg.textContent = message;
+        popup.style.display = 'flex';
+
+        proceedYes.onclick = () => {
+            sendProcessCommand(ticketId, rca, modem);
+            popup.style.display = 'none';
+        };
+
+        proceedNo.onclick = () => {
+            showToast('Marked as Unresolved - saved to Sheet.', 'warning');
+            saveToHistory(ticketId, modem);
+            popup.style.display = 'none';
+            form.reset();
+        };
+    }
+
+    async function sendProcessCommand(ticketId, rca, modem) {
+        const command = `/process ${ticketId} | ${rca} | ${modem}`;
+        try {
+            const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHANNEL_ID,
+                    text: command
+                })
+            });
+            if ((await response.json()).ok) {
+                showToast('Proceeding to close ticket...', 'success');
+                const startTime = Date.now();
+                const outcome = await pollForResponse(ticketId, startTime);
+                if (outcome.success) {
+                    showToast(`✅ Ticket closed successfully!`, 'success');
+                    saveToHistory(ticketId, modem);
+                } else {
+                    showToast(`❌ Close failed: ${outcome.message}`, 'error');
+                }
+            } else {
+                showToast('Error sending close command.', 'error');
+            }
+        } catch (err) {
+            showToast(`Network error: ${err.message}`, 'error');
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // HISTORY
+    // ─────────────────────────────────────────────
     function loadHistory() {
         const history = JSON.parse(localStorage.getItem('fobBotHistory') || '[]');
         historyList.innerHTML = '';
@@ -293,53 +406,76 @@
         loadHistory();
     }
 
+    // ─────────────────────────────────────────────
+    // CLEAR & CANCEL
+    // ─────────────────────────────────────────────
     clearBtn.addEventListener('click', () => {
         form.reset();
         [ticketInput, rcaInput, areaSelect, modemSelect, opNameInput, statusSelect].forEach(el => el.classList.remove('error-field'));
     });
 
-    // ─────────────────────────────────────────────
-    // POLLING – FASTER INTERVAL + MORE KEYWORDS
-    // ─────────────────────────────────────────────
-    async function pollForResponse(ticketId, startTime) {
-        const POLL_INTERVAL = 500; // Fast polling
-        const TIMEOUT = 300000;
-        let elapsed = 0;
-        let nextOffset = null;
+    cancelBtn.addEventListener('click', () => {
+        if (pollingInterval) clearInterval(pollingInterval);
+        isPolling = false;
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('loading');
+        document.getElementById('btn-text').textContent = 'Submit Job';
+        cancelBtn.style.display = 'none';
+        showToast('Operation cancelled.', 'warning');
+        form.reset();
+    });
 
-        while (elapsed < TIMEOUT) {
-            try {
-                const url = `${TG_API}${RELAY_BOT_TOKEN}/getUpdates?allowed_updates=${encodeURIComponent('["channel_post","message"]')}` + (nextOffset ? `&offset=${nextOffset}` : '');
-                const res = await fetch(url);
-                const data = await res.json();
+    // ─────────────────────────────────────────────
+    // POLLING – ADVANCED WITH INTERVAL
+    // ─────────────────────────────────────────────
+    function pollForResponse(ticketId, startTime) {
+        return new Promise((resolve, reject) => {
+            let elapsed = 0;
+            let nextOffset = null;
+            isPolling = true;
 
-                if (data.ok && data.result.length > 0) {
-                    nextOffset = data.result[data.result.length - 1].update_id + 1;
-                    for (const update of data.result.reverse()) { // Reverse to check newest first
-                        const msg = update.channel_post || update.message;
-                        if (!msg || !msg.text) continue;
-                        if (msg.date >= Math.floor(startTime / 1000) && msg.text.toLowerCase().includes(ticketId.toLowerCase())) {
-                            const text = msg.text.toLowerCase();
-                            // Success
-                            if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved') || text.includes('good dbm') || text.includes('proceeding')) {
-                                return { success: true, message: msg.text };
-                            } 
-                            // Failure (expanded keywords)
-                            else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped') || text.includes('high power') || text.includes('needs work') || text.includes('not online') || text.includes('timeout') || text.includes('could not find')) {
-                                return { success: false, message: msg.text };
+            pollingInterval = setInterval(async () => {
+                if (!isPolling) return;
+
+                try {
+                    const url = `${TG_API}${RELAY_BOT_TOKEN}/getUpdates?allowed_updates=${encodeURIComponent('["channel_post","message"]')}` + (nextOffset ? `&offset=${nextOffset}` : '');
+                    const res = await fetch(url);
+                    const data = await res.json();
+
+                    if (data.ok && data.result.length > 0) {
+                        nextOffset = data.result[data.result.length - 1].update_id + 1;
+                        for (const update of data.result.reverse()) {
+                            const msg = update.channel_post || update.message;
+                            if (!msg || !msg.text) continue;
+                            if (msg.date >= Math.floor(startTime / 1000) && msg.text.toLowerCase().includes(ticketId.toLowerCase())) {
+                                const text = msg.text.toLowerCase();
+                                if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved') || text.includes('good dbm') || text.includes('proceeding')) {
+                                    clearInterval(pollingInterval);
+                                    isPolling = false;
+                                    resolve({ success: true, message: msg.text });
+                                    return;
+                                } else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped') || text.includes('high power') || text.includes('needs work') || text.includes('not online') || text.includes('timeout') || text.includes('could not find')) {
+                                    clearInterval(pollingInterval);
+                                    isPolling = false;
+                                    resolve({ success: false, message: msg.text });
+                                    return;
+                                }
                             }
                         }
                     }
+                } catch (e) { console.error("Polling error:", e); }
+                elapsed += 500;
+                if (elapsed >= 300000) {
+                    clearInterval(pollingInterval);
+                    isPolling = false;
+                    reject(new Error("Timeout: No response from automation bot."));
                 }
-            } catch (e) { console.error("Polling error:", e); }
-            await new Promise(r => setTimeout(r, POLL_INTERVAL));
-            elapsed += POLL_INTERVAL;
-        }
-        throw new Error("Timeout: No response from automation bot.");
+            }, 500); // 0.5s interval
+        });
     }
 
     // ─────────────────────────────────────────────
-    // SUBMIT – SEND /tik COMMAND FOR CHAINING
+    // SUBMIT – WITH POPUP ON FAIL
     // ─────────────────────────────────────────────
     form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -358,7 +494,7 @@
 
         if (!valid) return;
 
-        // Always save to sheet
+        // Save to sheet
         sendToGoogleSheet({
             timestamp: new Date().toISOString(),
             area, ticketId, rca, modem, opName, status
@@ -372,12 +508,13 @@
             return;
         }
 
-        // Resolved → send /tik command to start chain
+        // Resolved → send /tik
         const command = `/tik ${ticketId} | ${rca} | ${modem}`;
 
         sendBtn.disabled = true;
         sendBtn.classList.add('loading');
-        document.getElementById('btn-text').textContent = 'Sending...';
+        document.getElementById('btn-text').textContent = 'Processing...';
+        cancelBtn.style.display = 'block';
 
         try {
             const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
@@ -396,10 +533,10 @@
                 const startTime = Date.now();
                 const outcome = await pollForResponse(ticketId, startTime);
                 if (outcome.success) {
-                    showToast(`✅ Ticket closed successfully!`, 'success');
+                    showToast(`✅ ${outcome.message}`, 'success');
                     saveToHistory(ticketId, modem);
                 } else {
-                    showToast(`❌ Failed: ${outcome.message}`, 'error');
+                    showPopup(outcome.message, ticketId, rca, modem);
                 }
             } else {
                 showToast(`Telegram error: ${result.description}`, 'error');
@@ -407,10 +544,15 @@
         } catch (err) {
             showToast(`Network error: ${err.message}`, 'error');
         } finally {
+            if (isPolling) {
+                clearInterval(pollingInterval);
+                isPolling = false;
+            }
             sendBtn.disabled = false;
             sendBtn.classList.remove('loading');
             document.getElementById('btn-text').textContent = 'Submit Job';
-            form.reset();
+            cancelBtn.style.display = 'none';
+            if (!popup.style.display === 'flex') form.reset();
         }
     });
 
