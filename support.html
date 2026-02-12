@@ -15,6 +15,7 @@
             --error-red: #c81e1e;
             --success-green: #057a55;
             --warning-yellow: #ca8a04;
+            --light-gray: #f0f0f0;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -29,102 +30,104 @@
         }
         .container {
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 40px;
             width: 100%;
-            max-width: 550px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            max-width: 560px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             border: 1px solid #e5e7eb;
         }
         h1 {
             text-align: left;
             margin-bottom: 8px;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             color: var(--text-dark);
             font-weight: 700;
-            border-bottom: 2px solid var(--primary-blue);
+            border-bottom: 3px solid var(--primary-blue);
             display: inline-block;
-            padding-bottom: 5px;
+            padding-bottom: 6px;
         }
         p.subtitle {
             color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 30px;
+            font-size: 0.95rem;
+            margin-bottom: 32px;
         }
-        .form-group { margin-bottom: 24px; }
+        .form-group { margin-bottom: 26px; }
         label {
             display: block;
             margin-bottom: 8px;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: var(--text-dark);
         }
         input, textarea, select {
             width: 100%;
-            padding: 10px 14px;
+            padding: 12px 16px;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 8px;
             background: white;
             color: var(--text-dark);
-            font-size: 14px;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            font-size: 15px;
+            transition: all 0.2s;
         }
         input:focus, textarea:focus, select:focus {
             border-color: var(--primary-blue);
             outline: none;
-            box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+            box-shadow: 0 0 0 4px rgba(26,86,219,0.15);
         }
-        textarea { resize: vertical; min-height: 100px; }
-        .error-field { border: 1px solid var(--error-red) !important; }
-        .buttons { display: flex; gap: 12px; margin-top: 10px; }
+        textarea { resize: vertical; min-height: 110px; }
+        .error-field { border: 1.5px solid var(--error-red) !important; }
+        .buttons { display: flex; gap: 14px; margin-top: 12px; }
         button {
             flex: 1;
-            padding: 12px;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            font-size: 14px;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.25s;
         }
         #send-btn { background: var(--primary-blue); color: white; }
-        #send-btn:hover { background: var(--hover-blue); }
-        #send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
-        #send-btn.loading { cursor: wait; opacity: 0.9; }
+        #send-btn:hover { background: var(--hover-blue); transform: translateY(-1px); }
+        #send-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+        #send-btn.loading { cursor: wait; opacity: 0.92; }
         .spinner {
             display: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.5);
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid rgba(255,255,255,0.4);
             border-radius: 50%;
             border-top-color: #fff;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
+            animation: spin 0.9s linear infinite;
+            margin-right: 10px;
             vertical-align: middle;
         }
         #send-btn.loading .spinner { display: inline-block; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        #clear-btn { background: white; color: var(--text-dark); border: 1px solid var(--border-color); }
-        #clear-btn:hover { background: #f9fafb; border-color: #9ca3af; }
+        #clear-btn { background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border-color); }
+        #clear-btn:hover { background: #e2e8f0; }
         #cancel-btn { background: var(--error-red); color: white; display: none; }
         #cancel-btn:hover { background: #b91c1c; }
         .toast {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: 24px;
+            right: 24px;
             background: var(--text-dark);
             color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            padding: 14px 28px;
+            border-radius: 8px;
+            box-shadow: 0 12px 20px rgba(0,0,0,0.15);
             z-index: 1000;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 500;
             display: none;
-            animation: slideUp 0.3s ease-out;
+            animation: slideUp 0.35s ease-out;
+            max-width: 90%;
         }
         .toast.error { background: var(--error-red); }
         .toast.success { background: var(--success-green); }
-        .toast.warning { background: var(--warning-yellow); }
+        .toast.warning { background: var(--warning-yellow); color: white; }
         @keyframes slideUp {
             from { transform: translateY(100%); opacity: 0; }
             to   { transform: translateY(0); opacity: 1; }
@@ -135,65 +138,77 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.55);
             display: none;
             justify-content: center;
             align-items: center;
             z-index: 2000;
+            backdrop-filter: blur(4px);
         }
         .popup-content {
             background: white;
-            padding: 24px;
-            border-radius: 8px;
-            max-width: 400px;
+            padding: 32px;
+            border-radius:)v 12px;
+            max-width: 420px;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
         .popup-content h3 {
             margin-bottom: 16px;
-            font-size: 1.125rem;
+            font-size: 1.3rem;
+            color: var(--error-red);
         }
         .popup-content p {
-            margin-bottom: 24px;
+            margin-bottom: 28px;
             color: var(--text-light);
+            line-height: 1.5;
+            font-size: 0.95rem;
         }
-        .popup-buttons { display: flex; gap: 12px; }
+        .popup-buttons { display: flex; gap: 16px; }
         .popup-buttons button {
             flex: 1;
-            padding: 10px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
         }
         #proceed-yes { background: var(--success-green); color: white; }
-        #proceed-no { background: var(--error-red); color: white; }
-        .history { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        #proceed-yes:hover { background: #04724d; }
+        #proceed-no { background: var(--light-gray); color: var(--text-dark); border: 1px solid var(--border-color); }
+        #proceed-no:hover { background: #e0e0e0; }
+        .history { margin-top: 44px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
         .history h3 {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: var(--text-light);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 15px;
+            letter-spacing: 0.06em;
+            margin-bottom: 16px;
         }
-        #history-list { max-height: 150px; overflow-y: auto; }
+        #history-list { max-height: 160px; overflow-y: auto; }
         .history-item {
             background: #f9fafb;
             border: 1px solid #e5e7eb;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 8px;
-            font-size: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 13px;
             color: var(--text-dark);
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
-        @media (max-width: 600px) { .container { padding: 20px; } }
+        @media (max-width: 600px) { .container { padding: 24px; } }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>FOB CRM Portal</h1>
-    <p class="subtitle">Submit a ticket job. Will auto-check SmartOLT signal before closing.</p>
+    <p class="subtitle">Auto-check SmartOLT signal before closing ticket.</p>
 
     <form id="bot-form">
         <div class="form-group">
@@ -233,7 +248,7 @@
         </div>
         <div class="form-group">
             <label for="rca">Root Cause Analysis (RCA)</label>
-            <textarea id="rca" placeholder="Provide technical details for SmartOLT/CRM..." required></textarea>
+            <textarea id="rca" placeholder="Provide technical details..." required></textarea>
         </div>
         <div class="form-group">
             <label for="modem-required">Modem Required</label>
@@ -269,7 +284,7 @@
 <div id="toast" class="toast"></div>
 <div id="popup" class="popup">
     <div class="popup-content">
-        <h3>Automation Failed</h3>
+        <h3>Signal Check Failed</h3>
         <p id="popup-message"></p>
         <div class="popup-buttons">
             <button id="proceed-yes">Proceed to Close</button>
@@ -323,6 +338,9 @@
 
     let pollingInterval = null;
     let isPolling = false;
+    let currentTicketId = '';
+    let currentRca = '';
+    let currentModem = '';
 
     // ─────────────────────────────────────────────
     // TOAST & POPUP
@@ -331,28 +349,19 @@
         toast.textContent = message;
         toast.className = 'toast ' + type;
         toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 6000);
+        setTimeout(() => toast.style.display = 'none', 5000);
     }
 
     function showPopup(message, ticketId, rca, modem) {
+        currentTicketId = ticketId;
+        currentRca = rca;
+        currentModem = modem;
         popupMsg.textContent = message;
         popup.style.display = 'flex';
-
-        proceedYes.onclick = () => {
-            sendProcessCommand(ticketId, rca, modem);
-            popup.style.display = 'none';
-        };
-
-        proceedNo.onclick = () => {
-            showToast('Marked as Unresolved - saved to Sheet.', 'warning');
-            saveToHistory(ticketId, modem);
-            popup.style.display = 'none';
-            form.reset();
-        };
     }
 
-    async function sendProcessCommand(ticketId, rca, modem) {
-        const command = `/process ${ticketId} | ${rca} | ${modem}`;
+    async function sendProcessCommand() {
+        const command = `/process ${currentTicketId} | ${currentRca} | ${currentModem}`;
         try {
             const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
@@ -365,18 +374,18 @@
             if ((await response.json()).ok) {
                 showToast('Proceeding to close ticket...', 'success');
                 const startTime = Date.now();
-                const outcome = await pollForResponse(ticketId, startTime);
+                const outcome = await pollForResponse(currentTicketId, startTime);
                 if (outcome.success) {
-                    showToast(`✅ Ticket closed successfully!`, 'success');
-                    saveToHistory(ticketId, modem);
+                    showToast('Success: Ticket closed!', 'success');
+                    saveToHistory(currentTicketId, currentModem);
                 } else {
-                    showToast(`❌ Close failed: ${outcome.message}`, 'error');
+                    showToast('Failed: Close failed', 'error');
                 }
             } else {
-                showToast('Error sending close command.', 'error');
+                showToast('Failed: Error sending command', 'error');
             }
         } catch (err) {
-            showToast(`Network error: ${err.message}`, 'error');
+            showToast('Failed: Network error', 'error');
         }
     }
 
@@ -426,10 +435,10 @@
     });
 
     // ─────────────────────────────────────────────
-    // POLLING – ADVANCED WITH INTERVAL
+    // POLLING – ULTRA FAST & CLEAN
     // ─────────────────────────────────────────────
     function pollForResponse(ticketId, startTime) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             let elapsed = 0;
             let nextOffset = null;
             isPolling = true;
@@ -452,7 +461,7 @@
                                 if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved') || text.includes('good dbm') || text.includes('proceeding')) {
                                     clearInterval(pollingInterval);
                                     isPolling = false;
-                                    resolve({ success: true, message: msg.text });
+                                    resolve({ success: true });
                                     return;
                                 } else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped') || text.includes('high power') || text.includes('needs work') || text.includes('not online') || text.includes('timeout') || text.includes('could not find')) {
                                     clearInterval(pollingInterval);
@@ -464,18 +473,18 @@
                         }
                     }
                 } catch (e) { console.error("Polling error:", e); }
-                elapsed += 500;
+                elapsed += 400;
                 if (elapsed >= 300000) {
                     clearInterval(pollingInterval);
                     isPolling = false;
-                    reject(new Error("Timeout: No response from automation bot."));
+                    resolve({ success: false, message: "Timeout" });
                 }
-            }, 500); // 0.5s interval
+            }, 400); // Ultra-fast 0.4s
         });
     }
 
     // ─────────────────────────────────────────────
-    // SUBMIT – WITH POPUP ON FAIL
+    // SUBMIT – CLEAN SUCCESS/FAIL + POPUP
     // ─────────────────────────────────────────────
     form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -502,7 +511,7 @@
 
         // Unresolved → save only
         if (status === 'Unresolved') {
-            showToast('Saved to Sheet (Unresolved - no automation)', 'success');
+            showToast('Saved to Sheet (Unresolved)', 'success');
             saveToHistory(ticketId, modem);
             form.reset();
             return;
@@ -529,20 +538,21 @@
             const result = await response.json();
 
             if (result.ok) {
-                showToast('Command sent – checking signal & closing...', 'success');
+                showToast('Signal check in progress...', 'success');
                 const startTime = Date.now();
                 const outcome = await pollForResponse(ticketId, startTime);
                 if (outcome.success) {
-                    showToast(`✅ ${outcome.message}`, 'success');
+                    showToast('Success: Ticket closed!', 'success');
                     saveToHistory(ticketId, modem);
                 } else {
-                    showPopup(outcome.message, ticketId, rca, modem);
+                    showToast('Failed', 'error');
+                    showPopup(outcome.message || "Signal check failed", ticketId, rca, modem);
                 }
             } else {
-                showToast(`Telegram error: ${result.description}`, 'error');
+                showToast('Failed: Telegram error', 'error');
             }
         } catch (err) {
-            showToast(`Network error: ${err.message}`, 'error');
+            showToast('Failed: Network error', 'error');
         } finally {
             if (isPolling) {
                 clearInterval(pollingInterval);
@@ -552,9 +562,24 @@
             sendBtn.classList.remove('loading');
             document.getElementById('btn-text').textContent = 'Submit Job';
             cancelBtn.style.display = 'none';
-            if (!popup.style.display === 'flex') form.reset();
+            if (popup.style.display !== 'flex') form.reset();
         }
     });
+
+    // ─────────────────────────────────────────────
+    // POPUP HANDLING
+    // ─────────────────────────────────────────────
+    proceedYes.onclick = () => {
+        popup.style.display = 'none';
+        sendProcessCommand();
+    };
+
+    proceedNo.onclick = () => {
+        popup.style.display = 'none';
+        showToast('Marked Unresolved', 'warning');
+        saveToHistory(currentTicketId, currentModem);
+        form.reset();
+    };
 
     loadHistory();
 </script>
