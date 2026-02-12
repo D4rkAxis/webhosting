@@ -45,6 +45,29 @@
             display: inline-block;
             padding-bottom: 5px;
         }
+        /* TABS */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: var(--primary-blue); }
+        .tab.active {
+            color: var(--primary-blue);
+            border-bottom: 2px solid var(--primary-blue);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         p.subtitle {
             color: var(--text-light);
             font-size: 0.9rem;
@@ -89,6 +112,10 @@
         #send-btn { background: var(--primary-blue); color: white; }
         #send-btn:hover { background: var(--hover-blue); }
         #send-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        
+        #check-only-btn { background: #7e22ce; color: white; } /* Purple for Check Only */
+        #check-only-btn:hover { background: #6b21a8; }
+
         #send-btn.loading { cursor: wait; opacity: 0.9; }
         .spinner {
             display: none;
@@ -153,7 +180,15 @@
     <h1>FOB CRM Portal</h1>
     <p class="subtitle">Submit a ticket job. ida CRM</p>
 
+    <div class="tabs">
+        <div class="tab active" data-mode="smart">📡 Smart Signal (Check & Close)</div>
+        <div class="tab" data-mode="direct">⚡ Direct Close (Force)</div>
+    </div>
+
     <form id="bot-form">
+        <!-- Hidden input to track mode -->
+        <input type="hidden" id="mode-input" value="smart">
+
         <div class="form-group">
             <label for="area-select">Operational Area</label>
             <select id="area-select" required>
@@ -215,6 +250,7 @@
         </div>
         <div class="buttons">
             <button type="button" id="clear-btn">Clear Form</button>
+            <button type="button" id="check-only-btn">Check Signal Only</button>
             <button type="submit" id="send-btn">
                 <span class="spinner"></span>
                 <span id="btn-text">Submit Job</span>
@@ -271,6 +307,31 @@
     const clearBtn    = document.getElementById('clear-btn');
     const toast       = document.getElementById('toast');
     const historyList = document.getElementById('history-list');
+    const checkOnlyBtn = document.getElementById('check-only-btn');
+    const modeInput   = document.getElementById('mode-input');
+    const tabs        = document.querySelectorAll('.tab');
+    const btnText     = document.getElementById('btn-text');
+
+    // ─────────────────────────────────────────────
+    // TABS LOGIC
+    // ─────────────────────────────────────────────
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const mode = tab.getAttribute('data-mode');
+            modeInput.value = mode;
+            
+            // Update Button Text
+            if (mode === 'smart') {
+                btnText.textContent = 'Check Signal & Resolve';
+                checkOnlyBtn.style.display = 'block';
+            } else {
+                btnText.textContent = 'Force Resolve (No Check)';
+                checkOnlyBtn.style.display = 'none';
+            }
+        });
+    });
 
     // ─────────────────────────────────────────────
     // TOAST
@@ -348,7 +409,7 @@
                             const text = msg.text.toLowerCase();
                             
                             // Check for definitive success keywords
-                            if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved')) {
+                            if (text.includes('job complete') || text.includes('ticket resolved')) {
                                 return { success: true, message: msg.text };
                             } 
                             // Check for definitive failure keywords (e.g., "failed", "error", "invalid ticket")
@@ -367,8 +428,79 @@
     }
 
     // ─────────────────────────────────────────────
+    // CHECK ONLY BUTTON
+    // ─────────────────────────────────────────────
+    checkOnlyBtn.addEventListener('click', async () => {
+        const ticketId = ticketInput.value.trim();
+        if (!ticketId) {
+            ticketInput.classList.add('error-field');
+            return showToast('Please enter a Ticket ID to check.', 'error');
+        }
+        
+        // Send /tik ID | CHECK_ONLY | No
+        const command = `/tik ${ticketId} | CHECK_ONLY | No`;
+        
+        checkOnlyBtn.disabled = true;
+        checkOnlyBtn.textContent = 'Checking...';
+        
+        try {
+            await sendCommand(command, ticketId);
+        } catch (e) {
+            showToast(e.message, 'error');
+        } finally {
+            checkOnlyBtn.disabled = false;
+            checkOnlyBtn.textContent = 'Check Signal Only';
+        }
+    });
+
+    // ─────────────────────────────────────────────
     // SUBMIT — Relay bot sends command to channel
     // ─────────────────────────────────────────────
+    async function sendCommand(command, ticketId) {
+        // Disable button while sending
+        sendBtn.disabled = true;
+        sendBtn.classList.add('loading');
+        
+        try {
+            const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHANNEL_ID,
+                    text: command
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                const startTime = Date.now();
+                try {
+                    const outcome = await pollForResponse(ticketId, startTime);
+                    if (outcome.success) {
+                        showToast(`✅ ${outcome.message}`, 'success');
+                        // Only save history if it was a full resolve job
+                        if (!command.includes('CHECK_ONLY')) {
+                            saveToHistory(ticketId, document.getElementById('modem-required').value);
+                            form.reset();
+                        }
+                    } else {
+                        showToast(`❌ ${outcome.message}`, 'error');
+                    }
+                } catch (pollErr) {
+                    showToast(`⚠️ ${pollErr.message}`, 'error');
+                }
+            } else {
+                showToast(`Telegram error: ${result.description}`, 'error');
+            }
+        } catch (err) {
+            showToast(`Network error: ${err.message}`, 'error');
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.classList.remove('loading');
+        }
+    }
+
     form.addEventListener('submit', async e => {
         e.preventDefault();
 
@@ -433,54 +565,19 @@
             return;
         }
 
-        // Build the command string — same format the TamperMonkey bot expects
-        // Format: TICKET_ID | RCA text | Yes/No
-        const command = `${ticketId} | ${rca} | ${modem}`;
-
-        // Disable button while sending
-        sendBtn.disabled = true;
-        sendBtn.classList.add('loading');
-        const btnText = document.getElementById('btn-text');
-        btnText.textContent = 'Processing...';
-
-        try {
-            const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: CHANNEL_ID,
-                    text: command
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.ok) {
-                // Message sent, now wait for confirmation
-                const startTime = Date.now();
-                try {
-                    const outcome = await pollForResponse(ticketId, startTime);
-                    if (outcome.success) {
-                        showToast(`✅ ${outcome.message}`, 'success');
-                        saveToHistory(ticketId, modem);
-                        form.reset();
-                    } else {
-                        showToast(`❌ ${outcome.message}`, 'error');
-                    }
-                } catch (pollErr) {
-                    showToast(`⚠️ ${pollErr.message}`, 'error');
-                }
-            } else {
-                showToast(`Telegram error: ${result.description}`, 'error');
-            }
-
-        } catch (err) {
-            showToast(`Network error: ${err.message}`, 'error');
-        } finally {
-            sendBtn.disabled = false;
-            sendBtn.classList.remove('loading');
-            btnText.textContent = 'Submit Job';
+        // Build Command based on Mode
+        const mode = modeInput.value;
+        let command = '';
+        
+        if (mode === 'smart') {
+            // Smart Mode: /tik ID | RCA | Modem
+            command = `/tik ${ticketId} | ${rca} | ${modem}`;
+        } else {
+            // Direct Mode: /process ID | RCA | Modem
+            command = `/process ${ticketId} | ${rca} | ${modem}`;
         }
+
+        await sendCommand(command, ticketId);
     });
 
     // Init
