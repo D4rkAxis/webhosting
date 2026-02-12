@@ -148,7 +148,7 @@
         .popup-content {
             background: white;
             padding: 32px;
-            border-radius:)v 12px;
+            border-radius: 12px;
             max-width: 420px;
             text-align: center;
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
@@ -167,7 +167,8 @@
             margin-bottom: 28px;
             color: var(--text-light);
             line-height: 1.5;
-            font-size: 0.95rem;
+            font-size: 1rem;
+            font-weight: 500;
         }
         .popup-buttons { display: flex; gap: 16px; }
         .popup-buttons button {
@@ -285,7 +286,7 @@
 <div id="popup" class="popup">
     <div class="popup-content">
         <h3>Signal Check Failed</h3>
-        <p id="popup-message"></p>
+        <p id="popup-message">Reason will appear here</p>
         <div class="popup-buttons">
             <button id="proceed-yes">Proceed to Close</button>
             <button id="proceed-no">Mark Unresolved</button>
@@ -298,18 +299,27 @@
     // CONFIG
     // ─────────────────────────────────────────────
     const RELAY_BOT_TOKEN = '8588686796:AAEseHMdM_zr_9MMwg2Bt3BGh2viKtryDTc';
-    const CHANNEL_ID      = '-1003563647186';
-    const TG_API          = 'https://api.telegram.org/bot';
+    const CHANNEL_ID = '-1003563647186';
+    const TG_API = 'https://api.telegram.org/bot';
     const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwWuX_XZ9VRlYhVBAb8vcXchla9-FhVaihpcVqVGAJo-4R5G1QZv9ukNJoyj-__LmNO/exec';
 
-    async function sendToGoogleSheet(formData) {
+    // Delayed sheet save function
+    async function saveToSheetWithStatus(area, ticketId, rca, modem, opName, finalStatus) {
         try {
             await fetch(GOOGLE_SHEET_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 cache: 'no-cache',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    area,
+                    ticketId,
+                    rca,
+                    modem,
+                    opName,
+                    status: finalStatus
+                })
             });
         } catch (err) {
             console.error("Sheet error:", err);
@@ -319,28 +329,26 @@
     // ─────────────────────────────────────────────
     // DOM ELEMENTS
     // ─────────────────────────────────────────────
-    const form        = document.getElementById('bot-form');
+    const form = document.getElementById('bot-form');
     const ticketInput = document.getElementById('ticket-id');
-    const rcaInput    = document.getElementById('rca');
-    const areaSelect  = document.getElementById('area-select');
+    const rcaInput = document.getElementById('rca');
+    const areaSelect = document.getElementById('area-select');
     const modemSelect = document.getElementById('modem-required');
     const opNameInput = document.getElementById('operator-name');
     const statusSelect = document.getElementById('job-status');
-    const sendBtn     = document.getElementById('send-btn');
-    const clearBtn    = document.getElementById('clear-btn');
-    const cancelBtn   = document.getElementById('cancel-btn');
-    const toast       = document.getElementById('toast');
+    const sendBtn = document.getElementById('send-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const toast = document.getElementById('toast');
     const historyList = document.getElementById('history-list');
-    const popup       = document.getElementById('popup');
-    const popupMsg    = document.getElementById('popup-message');
-    const proceedYes  = document.getElementById('proceed-yes');
-    const proceedNo   = document.getElementById('proceed-no');
+    const popup = document.getElementById('popup');
+    const popupMsg = document.getElementById('popup-message');
+    const proceedYes = document.getElementById('proceed-yes');
+    const proceedNo = document.getElementById('proceed-no');
 
     let pollingInterval = null;
     let isPolling = false;
-    let currentTicketId = '';
-    let currentRca = '';
-    let currentModem = '';
+    let currentData = {};
 
     // ─────────────────────────────────────────────
     // TOAST & POPUP
@@ -352,16 +360,13 @@
         setTimeout(() => toast.style.display = 'none', 5000);
     }
 
-    function showPopup(message, ticketId, rca, modem) {
-        currentTicketId = ticketId;
-        currentRca = rca;
-        currentModem = modem;
+    function showPopup(message) {
         popupMsg.textContent = message;
         popup.style.display = 'flex';
     }
 
     async function sendProcessCommand() {
-        const command = `/process ${currentTicketId} | ${currentRca} | ${currentModem}`;
+        const command = `/process ${currentData.ticketId} | ${currentData.rca} | ${currentData.modem}`;
         try {
             const response = await fetch(`${TG_API}${RELAY_BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
@@ -372,12 +377,13 @@
                 })
             });
             if ((await response.json()).ok) {
-                showToast('Proceeding to close ticket...', 'success');
+                showToast('Proceeding to close...', 'success');
                 const startTime = Date.now();
-                const outcome = await pollForResponse(currentTicketId, startTime);
+                const outcome = await pollForResponse(currentData.ticketId, startTime);
                 if (outcome.success) {
                     showToast('Success: Ticket closed!', 'success');
-                    saveToHistory(currentTicketId, currentModem);
+                    saveToHistory(currentData.ticketId, currentData.modem);
+                    saveToSheetWithStatus(currentData.area, currentData.ticketId, currentData.rca, currentData.modem, currentData.opName, 'Resolved');
                 } else {
                     showToast('Failed: Close failed', 'error');
                 }
@@ -430,12 +436,12 @@
         sendBtn.classList.remove('loading');
         document.getElementById('btn-text').textContent = 'Submit Job';
         cancelBtn.style.display = 'none';
-        showToast('Operation cancelled.', 'warning');
+        showToast('Cancelled', 'warning');
         form.reset();
     });
 
     // ─────────────────────────────────────────────
-    // POLLING – ULTRA FAST & CLEAN
+    // POLLING – CLEAN & FAST
     // ─────────────────────────────────────────────
     function pollForResponse(ticketId, startTime) {
         return new Promise((resolve) => {
@@ -458,12 +464,12 @@
                             if (!msg || !msg.text) continue;
                             if (msg.date >= Math.floor(startTime / 1000) && msg.text.toLowerCase().includes(ticketId.toLowerCase())) {
                                 const text = msg.text.toLowerCase();
-                                if (text.includes('success') || text.includes('done') || text.includes('completed') || text.includes('resolved') || text.includes('good dbm') || text.includes('proceeding')) {
+                                if (text.includes('success') || text.includes('good signal')) {
                                     clearInterval(pollingInterval);
                                     isPolling = false;
                                     resolve({ success: true });
                                     return;
-                                } else if (text.includes('fail') || text.includes('error') || text.includes('invalid') || text.includes('closed') || text.includes('stopped') || text.includes('high power') || text.includes('needs work') || text.includes('not online') || text.includes('timeout') || text.includes('could not find')) {
+                                } else if (text.includes('failed')) {
                                     clearInterval(pollingInterval);
                                     isPolling = false;
                                     resolve({ success: false, message: msg.text });
@@ -473,28 +479,28 @@
                         }
                     }
                 } catch (e) { console.error("Polling error:", e); }
-                elapsed += 400;
-                if (elapsed >= 300000) {
+                elapsed += 300;
+                if (elapsed >= 180000) {
                     clearInterval(pollingInterval);
                     isPolling = false;
                     resolve({ success: false, message: "Timeout" });
                 }
-            }, 400); // Ultra-fast 0.4s
+            }, 300);
         });
     }
 
     // ─────────────────────────────────────────────
-    // SUBMIT – CLEAN SUCCESS/FAIL + POPUP
+    // SUBMIT – FIXED SHEET SAVE + POPUP LOGIC
     // ─────────────────────────────────────────────
     form.addEventListener('submit', async e => {
         e.preventDefault();
 
         const ticketId = ticketInput.value.trim().toUpperCase();
-        const rca      = rcaInput.value.trim();
-        const area     = areaSelect.value;
-        const modem    = modemSelect.value;
-        const opName   = opNameInput.value.trim();
-        const status   = statusSelect.value;
+        const rca = rcaInput.value.trim();
+        const area = areaSelect.value;
+        const modem = modemSelect.value;
+        const opName = opNameInput.value.trim();
+        const status = statusSelect.value;
 
         // Validation
         let valid = true;
@@ -503,15 +509,13 @@
 
         if (!valid) return;
 
-        // Save to sheet
-        sendToGoogleSheet({
-            timestamp: new Date().toISOString(),
-            area, ticketId, rca, modem, opName, status
-        });
+        // Store data for later use
+        currentData = { area, ticketId, rca, modem, opName, status };
 
-        // Unresolved → save only
+        // Unresolved → save as Unresolved immediately
         if (status === 'Unresolved') {
-            showToast('Saved to Sheet (Unresolved)', 'success');
+            saveToSheetWithStatus(area, ticketId, rca, modem, opName, 'Unresolved');
+            showToast('Saved as Unresolved', 'success');
             saveToHistory(ticketId, modem);
             form.reset();
             return;
@@ -522,7 +526,7 @@
 
         sendBtn.disabled = true;
         sendBtn.classList.add('loading');
-        document.getElementById('btn-text').textContent = 'Processing...';
+        document.getElementById('btn-text').textContent = 'Checking...';
         cancelBtn.style.display = 'block';
 
         try {
@@ -538,15 +542,16 @@
             const result = await response.json();
 
             if (result.ok) {
-                showToast('Signal check in progress...', 'success');
                 const startTime = Date.now();
                 const outcome = await pollForResponse(ticketId, startTime);
                 if (outcome.success) {
+                    // Save as Resolved on success
+                    saveToSheetWithStatus(area, ticketId, rca, modem, opName, 'Resolved');
                     showToast('Success: Ticket closed!', 'success');
                     saveToHistory(ticketId, modem);
                 } else {
                     showToast('Failed', 'error');
-                    showPopup(outcome.message || "Signal check failed", ticketId, rca, modem);
+                    showPopup(outcome.message || "Signal check failed");
                 }
             } else {
                 showToast('Failed: Telegram error', 'error');
@@ -567,17 +572,18 @@
     });
 
     // ─────────────────────────────────────────────
-    // POPUP HANDLING
+    // POPUP HANDLING – FIXED SHEET SAVE
     // ─────────────────────────────────────────────
     proceedYes.onclick = () => {
         popup.style.display = 'none';
-        sendProcessCommand();
+        sendProcessCommand(); // This will save as Resolved on success
     };
 
     proceedNo.onclick = () => {
         popup.style.display = 'none';
+        saveToSheetWithStatus(currentData.area, currentData.ticketId, currentData.rca, currentData.modem, currentData.opName, 'Unresolved');
         showToast('Marked Unresolved', 'warning');
-        saveToHistory(currentTicketId, currentModem);
+        saveToHistory(currentData.ticketId, currentData.modem);
         form.reset();
     };
 
