@@ -122,11 +122,26 @@
                   <select id="recipientSelect" class="form-select"></select>
                 </div>
                 <div class="col-12 col-md-3">
-                  <input id="ticketArea" class="form-control" value="GENERAL AREA" readonly>
+                  <select id="ticketArea" class="form-select"><option value="GENERAL AREA">GENERAL AREA</option></select>
                 </div>
               </div>
               <textarea id="issues" class="form-control mt-3" rows="3" placeholder="Describe the issue with the machine..."></textarea>
               <button onclick="createTicket()" class="btn btn-primary mt-3 w-100">Submit Ticket to Technician</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket History -->
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header teal fw-bold">My Ticket History</div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="clientTicketsTable">
+                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Machine</th><th>Technician</th><th>Status</th><th>Opened</th><th>Closed</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -140,13 +155,19 @@
       <!-- Nav tabs -->
       <ul class="nav nav-tabs mt-3 nav-justified" id="techTab" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tickets-tab" data-bs-toggle="tab" data-bs-target="#tickets-tab-pane" type="button" role="tab">My Tickets</button>
+          <button class="nav-link active" id="tickets-tab" data-bs-toggle="tab" data-bs-target="#tickets-tab-pane" type="button" role="tab" onclick="loadTechnicianTickets()">My Tickets</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-tab-pane" type="button" role="tab" onclick="loadClosedTickets()">Ticket History</button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="clients-tab" data-bs-toggle="tab" data-bs-target="#clients-tab-pane" type="button" role="tab">Manage Clients</button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-tab-pane" type="button" role="tab">Register User</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="areas-tab" data-bs-toggle="tab" data-bs-target="#areas-tab-pane" type="button" role="tab" onclick="loadAreasList()">Manage Areas</button>
         </li>
       </ul>
 
@@ -159,7 +180,30 @@
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-hover mb-0" id="techTicketsTable">
-                  <thead class="navy text-white"><tr><th>Area</th><th>Machine</th><th>Serial</th><th>Ticket ID</th><th>Opened</th><th>Issues</th></tr></thead>
+                  <thead class="navy text-white"><tr><th>Area</th><th>Machine</th><th>Client</th><th>Ticket ID</th><th>Opened</th><th>Action</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket History Pane -->
+        <div class="tab-pane fade" id="history-tab-pane" role="tabpanel">
+          <div class="card mt-3">
+            <div class="card-header teal fw-bold">Closed Ticket History</div>
+            <div class="card-body">
+              <div class="row g-2 mb-3">
+                <div class="col-md-8">
+                  <input type="text" id="historySearch" class="form-control" placeholder="Search Client, Machine, or ID..." onkeyup="filterHistory()">
+                </div>
+                <div class="col-md-4">
+                  <input type="date" id="historyDate" class="form-control" onchange="filterHistory()">
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="historyTable">
+                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Client</th><th>Machine</th><th>Closed Date</th><th>Resolution/Issues</th></tr></thead>
                   <tbody></tbody>
                 </table>
               </div>
@@ -193,6 +237,20 @@
             </div>
           </div>
         </div>
+
+        <!-- Manage Areas Pane -->
+        <div class="tab-pane fade" id="areas-tab-pane" role="tabpanel">
+          <div class="card mt-3">
+            <div class="card-header teal fw-bold">Manage Service Areas</div>
+            <div class="card-body">
+              <div class="input-group mb-3">
+                <input type="text" id="newAreaName" class="form-control" placeholder="Enter new area name (e.g. Lagos Factory)">
+                <button class="btn btn-success" onclick="addNewArea()">Add Area</button>
+              </div>
+              <ul class="list-group" id="areasList"></ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -202,6 +260,7 @@
 const API_URL = "https://script.google.com/macros/s/AKfycby27ze7Lh9MeL77DMF2M7zcb3IvrfMbm8NaA9VSMXchg4hv00fdxCGS8KotBf1Pj3hWvg/exec";
 
 let currentUser = null;
+let allClosedTickets = []; // Store closed tickets for filtering
 
 // =============== LOGIN ===============
 async function login() {
@@ -320,6 +379,8 @@ async function loadClientData() {
 
   // Load recipient technicians
   loadRecipientDropdown();
+  loadAreasDropdown(); // Load areas for client
+  loadClientTickets();
 }
 
 function updateTicketSerial() {
@@ -340,6 +401,42 @@ async function loadRecipientDropdown() {
     opt.value = t.fullName;
     opt.textContent = t.fullName;
     select.appendChild(opt);
+  });
+}
+
+async function loadAreasDropdown() {
+  const res = await fetch(`${API_URL}?action=getAreas`);
+  const areas = await res.json();
+  const select = document.getElementById("ticketArea");
+  select.innerHTML = "<option value='GENERAL AREA'>GENERAL AREA</option>";
+  areas.forEach(a => {
+    const opt = document.createElement("option");
+    opt.value = a; opt.textContent = a;
+    select.appendChild(opt);
+  });
+}
+
+async function loadClientTickets() {
+  const tbody = document.querySelector("#clientTicketsTable tbody");
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading history...</td></tr>';
+
+  const res = await fetch(`${API_URL}?action=getClientTickets&username=${encodeURIComponent(currentUser.username)}`);
+  const tickets = await res.json();
+
+  tbody.innerHTML = "";
+  if (!tickets.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No tickets found.</td></tr>';
+    return;
+  }
+
+  tickets.forEach(t => {
+    const statusClass = t.status === "CLOSED" ? "status-closed" : "status-open";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${t.ticketId}</strong></td><td>${t.machine}</td><td>${t.technician}</td>
+      <td><span class="badge ${statusClass}">${t.status}</span></td>
+      <td><small>${t.opened}</small></td><td><small>${t.closed || '-'}</small></td>`;
+    tbody.appendChild(tr);
   });
 }
 
@@ -372,6 +469,7 @@ async function createTicket() {
   const machineObj = JSON.parse(machineSelect);
   const recipient = document.getElementById("recipientSelect").value;
   const issues = document.getElementById("issues").value.trim();
+  const area = document.getElementById("ticketArea").value;
 
   if (!recipient || !issues) return alert("Please choose recipient and describe the issue");
 
@@ -381,7 +479,7 @@ async function createTicket() {
       action: "createTicket",
       clientUsername: currentUser.username,
       ticketData: {
-        area: "GENERAL AREA",
+        area: area,
         machineName: machineObj.name,
         serialNumber: machineObj.serial,
         recipient: recipient,
@@ -395,6 +493,7 @@ async function createTicket() {
   document.getElementById("ticketMachine").value = "";
   document.getElementById("ticketSerialDisplay").value = "";
   document.getElementById("recipientSelect").value = "";
+  loadClientTickets(); // Refresh history
 }
 
 // =============== TECHNICIAN FUNCTIONS ===============
@@ -405,23 +504,89 @@ async function loadTechnicianTickets() {
   const tbody = document.querySelector("#techTicketsTable tbody");
   tbody.innerHTML = "";
 
-  if (tickets.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">No tickets assigned yet</td></tr>`;
+  // Filter for OPEN tickets only
+  const openTickets = tickets.filter(t => t.status === "OPEN");
+
+  if (openTickets.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4">No tickets assigned yet</td></tr>`;
     return;
   }
 
-  tickets.forEach(t => {
+  openTickets.forEach(t => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${t.area}</td>
-      <td>${t.machine}</td>
-      <td>${t.serial}</td>
+      <td>${t.machine}<br><small class="text-muted">${t.serial}</small></td>
+      <td>${t.client || 'N/A'}</td>
       <td><strong>${t.ticketId}</strong></td>
-      <td>${t.opened}</td>
-      <td><small>${t.issues}</small></td>
+      <td><small>${t.opened}</small></td>
+      <td><button class="btn btn-sm btn-success" onclick="closeTicket('${t.ticketId}')">Close Ticket</button></td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+async function loadClosedTickets() {
+  const tbody = document.querySelector("#historyTable tbody");
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">Loading history...</td></tr>`;
+
+  const res = await fetch(`${API_URL}?action=getAssignedTickets&username=${encodeURIComponent(currentUser.username)}`);
+  const tickets = await res.json();
+
+  // Filter for CLOSED tickets
+  allClosedTickets = tickets.filter(t => t.status === "CLOSED");
+  filterHistory(); // Render the list
+}
+
+function filterHistory() {
+  const search = document.getElementById("historySearch").value.toLowerCase();
+  const dateFilter = document.getElementById("historyDate").value; // YYYY-MM-DD
+  const tbody = document.querySelector("#historyTable tbody");
+  tbody.innerHTML = "";
+
+  const filtered = allClosedTickets.filter(t => {
+    const matchesSearch = (t.client && t.client.toLowerCase().includes(search)) || 
+                          t.machine.toLowerCase().includes(search) || 
+                          t.ticketId.toLowerCase().includes(search);
+    
+    // Date check (t.closed is DD/MM/YYYY HH:mm:ss)
+    let matchesDate = true;
+    if (dateFilter) {
+      // Convert DD/MM/YYYY to YYYY-MM-DD for comparison
+      const parts = t.closed.split(" ")[0].split("/");
+      const ticketDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      matchesDate = ticketDate === dateFilter;
+    }
+    return matchesSearch && matchesDate;
+  });
+
+  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">No closed tickets found</td></tr>`; return; }
+
+  filtered.forEach(t => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><strong>${t.ticketId}</strong></td><td>${t.client || 'N/A'}</td><td>${t.machine}</td><td>${t.closed}</td><td><small>${t.issues}</small></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function closeTicket(ticketId) {
+  const notes = prompt("Enter resolution notes (optional):");
+  if (notes === null) return; // Cancelled
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "closeTicket",
+        ticketId: ticketId,
+        technicianName: currentUser.fullName,
+        notes: notes
+      })
+    });
+    const data = await res.json();
+    if (data.success) { alert("Ticket Closed!"); loadTechnicianTickets(); }
+    else { alert("Error: " + data.error); }
+  } catch(e) { alert("Connection error"); }
 }
 
 async function loadAllClients() {
@@ -477,6 +642,31 @@ async function deleteUser(userId, fullName) {
   } catch (e) {
     alert("Connection error while trying to delete user.");
   }
+}
+
+async function loadAreasList() {
+  const list = document.getElementById("areasList");
+  list.innerHTML = "<li class='list-group-item'>Loading...</li>";
+  const res = await fetch(`${API_URL}?action=getAreas`);
+  const areas = await res.json();
+  list.innerHTML = "";
+  if (areas.length === 0) list.innerHTML = "<li class='list-group-item text-muted'>No custom areas added yet.</li>";
+  areas.forEach(a => {
+    list.innerHTML += `<li class="list-group-item">${a}</li>`;
+  });
+}
+
+async function addNewArea() {
+  const name = document.getElementById("newAreaName").value.trim();
+  if (!name) return alert("Enter area name");
+  
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "addArea", areaName: name, addedBy: currentUser.username })
+  });
+  const data = await res.json();
+  if (data.success) { alert("Area added!"); document.getElementById("newAreaName").value = ""; loadAreasList(); }
+  else { alert("Error: " + data.error); }
 }
 
 // =============== LOGOUT ===============
