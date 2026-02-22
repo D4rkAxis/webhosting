@@ -13,6 +13,7 @@
     .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: rgba(255, 255, 255, 0.95); }
     .status-open { background: #fee2e2; color: #991b1b; }
     .status-closed { background: #d1fae5; color: #166534; }
+    .status-resolved { background: #ffedd5; color: #c2410c; }
     .hero { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; padding: 3rem 0; }
     .watermark {
       position: fixed;
@@ -138,7 +139,7 @@
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-hover mb-0" id="clientTicketsTable">
-                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Machine</th><th>Technician</th><th>Status</th><th>Opened</th><th>Closed</th></tr></thead>
+                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Machine</th><th>Technician</th><th>Status</th><th>Opened</th><th>Action</th></tr></thead>
                   <tbody></tbody>
                 </table>
               </div>
@@ -203,7 +204,7 @@
               </div>
               <div class="table-responsive">
                 <table class="table table-hover mb-0" id="historyTable">
-                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Client</th><th>Machine</th><th>Closed Date</th><th>Resolution/Issues</th></tr></thead>
+                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Client</th><th>Machine</th><th>Closed Date</th><th>Resolution/Issues</th><th>Action</th></tr></thead>
                   <tbody></tbody>
                 </table>
               </div>
@@ -230,6 +231,7 @@
             <div class="card-body">
               <input type="text" id="newUserUsername" class="form-control mb-2" placeholder="Username"><input type="password" id="newUserPassword" class="form-control mb-2" placeholder="Password">
               <input type="text" id="newUserFullname" class="form-control mb-2" placeholder="Full Name"><input type="email" id="newUserEmail" class="form-control mb-2" placeholder="Email">
+              <input type="text" id="newUserPhone" class="form-control mb-2" placeholder="Phone Number">
               <select id="newUserRole" class="form-select mb-3">
                 <option value="CLIENT">Client</option><option value="TECHNICIAN">Technician</option>
               </select>
@@ -252,6 +254,27 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Client Details Modal -->
+<div class="modal fade" id="clientModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header navy text-white">
+        <h5 class="modal-title">Client Details: <span id="modalClientName"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Username:</strong> <span id="modalClientUser"></span> &nbsp;|&nbsp; <strong>Email:</strong> <span id="modalClientEmail"></span></p>
+        <hr>
+        <h6 class="fw-bold teal p-2">Registered Machines</h6>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm"><thead class="table-light"><tr><th>Machine Name</th><th>Serial Number</th><th>Date Added</th></tr></thead><tbody id="modalMachinesBody"></tbody></table>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
     </div>
   </div>
 </div>
@@ -301,9 +324,10 @@ async function registerNewUser() {
   const password = document.getElementById("newUserPassword").value.trim();
   const fullName = document.getElementById("newUserFullname").value.trim();
   const email = document.getElementById("newUserEmail").value.trim();
+  const phone = document.getElementById("newUserPhone").value.trim();
   const role = document.getElementById("newUserRole").value;
 
-  if (!username || !password || !fullName) {
+  if (!username || !password || !fullName || !phone) {
     return alert("Please fill all fields");
   }
 
@@ -312,7 +336,7 @@ async function registerNewUser() {
       method: "POST",
       body: JSON.stringify({
         action: "register",
-        username, password, fullName, email, role,
+        username, password, fullName, email, phone, role,
         addedBy: currentUser.username // Pass current tech as the creator
       })
     });
@@ -325,6 +349,7 @@ async function registerNewUser() {
       document.getElementById("newUserPassword").value = "";
       document.getElementById("newUserFullname").value = "";
       document.getElementById("newUserEmail").value = "";
+      document.getElementById("newUserPhone").value = "";
     } else {
       alert("Error: " + data.error);
     }
@@ -430,12 +455,23 @@ async function loadClientTickets() {
   }
 
   tickets.forEach(t => {
-    const statusClass = t.status === "CLOSED" ? "status-closed" : "status-open";
+    let statusClass = "status-open";
+    if (t.status === "CLOSED") statusClass = "status-closed";
+    if (t.status === "RESOLVED") statusClass = "status-resolved";
+
+    let actionHtml = `<small>${t.closed || '-'}</small>`;
+    if (t.status === "RESOLVED") {
+      actionHtml = `
+        <button class="btn btn-sm btn-success me-1" onclick="verifyTicket('${t.ticketId}', true)">✅ Confirm</button>
+        <button class="btn btn-sm btn-danger" onclick="verifyTicket('${t.ticketId}', false)">❌ Reject</button>
+      `;
+    }
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${t.ticketId}</strong></td><td>${t.machine}</td><td>${t.technician}</td>
       <td><span class="badge ${statusClass}">${t.status}</span></td>
-      <td><small>${t.opened}</small></td><td><small>${t.closed || '-'}</small></td>`;
+      <td><small>${t.opened}</small></td><td>${actionHtml}</td>`;
     tbody.appendChild(tr);
   });
 }
@@ -496,6 +532,23 @@ async function createTicket() {
   loadClientTickets(); // Refresh history
 }
 
+async function verifyTicket(ticketId, isConfirmed) {
+  let feedback = "";
+  if (!isConfirmed) {
+    feedback = prompt("Please describe why the work is not satisfactory:");
+    if (!feedback) return; // Cancelled
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "confirmTicket", ticketId, isConfirmed, feedback })
+    });
+    const data = await res.json();
+    if (data.success) { alert(isConfirmed ? "Ticket Closed!" : "Ticket Returned to Technician!"); loadClientTickets(); }
+  } catch(e) { alert("Connection error"); }
+}
+
 // =============== TECHNICIAN FUNCTIONS ===============
 async function loadTechnicianTickets() {
   const res = await fetch(`${API_URL}?action=getAssignedTickets&username=${encodeURIComponent(currentUser.username)}`);
@@ -520,7 +573,10 @@ async function loadTechnicianTickets() {
       <td>${t.client || 'N/A'}</td>
       <td><strong>${t.ticketId}</strong></td>
       <td><small>${t.opened}</small></td>
-      <td><button class="btn btn-sm btn-success" onclick="closeTicket('${t.ticketId}')">Close Ticket</button></td>
+      <td>
+        <button class="btn btn-sm btn-success me-1" onclick="closeTicket('${t.ticketId}')" title="Close Ticket"><i class="fas fa-check"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="deleteTicket('${t.ticketId}')" title="Delete Ticket"><i class="fas fa-trash"></i></button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -534,7 +590,7 @@ async function loadClosedTickets() {
   const tickets = await res.json();
 
   // Filter for CLOSED tickets
-  allClosedTickets = tickets.filter(t => t.status === "CLOSED");
+  allClosedTickets = tickets.filter(t => t.status === "CLOSED" || t.status === "RESOLVED");
   filterHistory(); // Render the list
 }
 
@@ -564,7 +620,10 @@ function filterHistory() {
 
   filtered.forEach(t => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td><strong>${t.ticketId}</strong></td><td>${t.client || 'N/A'}</td><td>${t.machine}</td><td>${t.closed}</td><td><small>${t.issues}</small></td>`;
+    tr.innerHTML = `<td><strong>${t.ticketId}</strong></td><td>${t.client || 'N/A'}</td><td>${t.machine}</td><td>${t.closed}</td><td><small>${t.issues}</small></td>
+    <td>
+      <button class="btn btn-sm btn-danger" onclick="deleteTicket('${t.ticketId}')" title="Delete Ticket"><i class="fas fa-trash"></i></button>
+    </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -585,6 +644,20 @@ async function closeTicket(ticketId) {
     });
     const data = await res.json();
     if (data.success) { alert("Ticket Closed!"); loadTechnicianTickets(); }
+    else { alert("Error: " + data.error); }
+  } catch(e) { alert("Connection error"); }
+}
+
+async function deleteTicket(ticketId) {
+  if (!confirm(`Are you sure you want to DELETE Ticket ${ticketId}?\nThis cannot be undone.`)) return;
+  
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "deleteTicket", ticketId: ticketId, technicianName: currentUser.username })
+    });
+    const data = await res.json();
+    if (data.success) { alert("Ticket Deleted"); loadTechnicianTickets(); loadClosedTickets(); }
     else { alert("Error: " + data.error); }
   } catch(e) { alert("Connection error"); }
 }
@@ -614,12 +687,36 @@ async function loadAllClients() {
       <td class="align-middle">${client.username}</td>
       <td class="align-middle">${client.email || 'N/A'}</td>
       <td>
-        <button class="btn btn-danger btn-sm" onclick="deleteUser('${client.userId}', '${client.fullName}')">
-          <i class="fas fa-trash-alt"></i> Delete
+        <button class="btn btn-info btn-sm text-white me-1" onclick='viewClient(${JSON.stringify(client)})' title="View Machines">
+          <i class="fas fa-eye"></i> Machines
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser('${client.userId}', '${client.fullName}')" title="Delete User">
+          <i class="fas fa-trash-alt"></i>
         </button>
       </td>
     `;
     tbody.appendChild(tr);
+  });
+}
+
+async function viewClient(client) {
+  document.getElementById("modalClientName").textContent = client.fullName;
+  document.getElementById("modalClientUser").textContent = client.username;
+  document.getElementById("modalClientEmail").textContent = client.email || "N/A";
+  
+  const tbody = document.getElementById("modalMachinesBody");
+  tbody.innerHTML = "<tr><td colspan='3' class='text-center'>Loading machines...</td></tr>";
+  
+  new bootstrap.Modal(document.getElementById('clientModal')).show();
+
+  const res = await fetch(`${API_URL}?action=getUserMachines&userId=${client.userId}`);
+  const machines = await res.json();
+  
+  tbody.innerHTML = "";
+  if (machines.length === 0) { tbody.innerHTML = "<tr><td colspan='3' class='text-center text-muted'>No machines registered.</td></tr>"; return; }
+  
+  machines.forEach(m => {
+    tbody.innerHTML += `<tr><td>${m.machine}</td><td>${m.serial}</td><td>${m.added ? m.added.substring(0,10) : '-'}</td></tr>`;
   });
 }
 
