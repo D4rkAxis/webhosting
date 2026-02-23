@@ -94,7 +94,7 @@
             <div class="card-body">
               <input id="machineName" class="form-control mb-3" placeholder="Machine Name">
               <input id="serialNumber" class="form-control mb-3" placeholder="Serial Number">
-              <button onclick="addMachine()" class="btn btn-success w-100">Add Machine</button>
+              <button id="btnAddMachine" onclick="addMachine()" class="btn btn-success w-100">Add Machine</button>
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@
                 </div>
               </div>
               <textarea id="issues" class="form-control mt-3" rows="3" placeholder="Describe the issue with the machine..."></textarea>
-              <button onclick="createTicket()" class="btn btn-primary mt-3 w-100">Submit Ticket to Technician</button>
+              <button id="btnCreateTicket" onclick="createTicket()" class="btn btn-primary mt-3 w-100">Submit Ticket to Technician</button>
             </div>
           </div>
         </div>
@@ -269,9 +269,17 @@
       <div class="modal-body">
         <p><strong>Username:</strong> <span id="modalClientUser"></span> &nbsp;|&nbsp; <strong>Email:</strong> <span id="modalClientEmail"></span></p>
         <hr>
+        
+        <!-- Technician Add Machine Control -->
+        <div class="input-group mb-3">
+          <input type="text" id="techAddMachineName" class="form-control" placeholder="Machine Name">
+          <input type="text" id="techAddMachineSerial" class="form-control" placeholder="Serial #">
+          <button class="btn btn-success" onclick="addClientMachine()">Add</button>
+        </div>
+
         <h6 class="fw-bold teal p-2">Registered Machines</h6>
         <div class="table-responsive">
-          <table class="table table-bordered table-sm"><thead class="table-light"><tr><th>Machine Name</th><th>Serial Number</th><th>Date Added</th></tr></thead><tbody id="modalMachinesBody"></tbody></table>
+          <table class="table table-bordered table-sm"><thead class="table-light"><tr><th>Machine Name</th><th>Serial Number</th><th>Date Added</th><th>Action</th></tr></thead><tbody id="modalMachinesBody"></tbody></table>
         </div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
@@ -482,20 +490,27 @@ async function addMachine() {
 
   if (!machineName || !serialNumber) return alert("Fill both fields");
 
-  await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "addMachine",
-      userId: currentUser.userId,
-      machineName,
-      serialNumber
-    })
-  });
+  const btn = document.getElementById("btnAddMachine");
+  const originalText = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
 
-  alert("Machine added successfully!");
-  loadClientData();
-  document.getElementById("machineName").value = "";
-  document.getElementById("serialNumber").value = "";
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "addMachine",
+        userId: currentUser.userId,
+        machineName,
+        serialNumber,
+        requestingUsername: currentUser.username
+      })
+    });
+    alert("Machine added successfully!");
+    loadClientData();
+    document.getElementById("machineName").value = "";
+    document.getElementById("serialNumber").value = "";
+  } catch (e) { alert("Connection error"); }
+  finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
 
 async function createTicket() {
@@ -509,27 +524,33 @@ async function createTicket() {
 
   if (!recipient || !issues) return alert("Please choose recipient and describe the issue");
 
-  await fetch(API_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "createTicket",
-      clientUsername: currentUser.username,
-      ticketData: {
-        area: area,
-        machineName: machineObj.name,
-        serialNumber: machineObj.serial,
-        recipient: recipient,
-        issues: issues
-      }
-    })
-  });
+  const btn = document.getElementById("btnCreateTicket");
+  const originalText = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
 
-  alert("Ticket submitted successfully! The technician will receive it.");
-  document.getElementById("issues").value = "";
-  document.getElementById("ticketMachine").value = "";
-  document.getElementById("ticketSerialDisplay").value = "";
-  document.getElementById("recipientSelect").value = "";
-  loadClientTickets(); // Refresh history
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "createTicket",
+        clientUsername: currentUser.username,
+        ticketData: {
+          area: area,
+          machineName: machineObj.name,
+          serialNumber: machineObj.serial,
+          recipient: recipient,
+          issues: issues
+        }
+      })
+    });
+    alert("Ticket submitted successfully! The technician will receive it.");
+    document.getElementById("issues").value = "";
+    document.getElementById("ticketMachine").value = "";
+    document.getElementById("ticketSerialDisplay").value = "";
+    document.getElementById("recipientSelect").value = "";
+    loadClientTickets(); // Refresh history
+  } catch (e) { alert("Connection error"); }
+  finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
 
 async function verifyTicket(ticketId, isConfirmed) {
@@ -666,7 +687,7 @@ async function loadAllClients() {
   const tbody = document.getElementById("allClientsTbody");
   tbody.innerHTML = '<tr><td colspan="4" class="text-center p-4">Loading clients...</td></tr>';
 
-  const res = await fetch(`${API_URL}?action=getAllClients`);
+  const res = await fetch(`${API_URL}?action=getAllClients&username=${encodeURIComponent(currentUser.username)}`);
   const clients = await res.json();
 
   if (clients.error) {
@@ -704,6 +725,9 @@ async function viewClient(client) {
   document.getElementById("modalClientUser").textContent = client.username;
   document.getElementById("modalClientEmail").textContent = client.email || "N/A";
   
+  // Store client ID in the modal for the Add button to use
+  document.getElementById("clientModal").dataset.clientId = client.userId;
+  
   const tbody = document.getElementById("modalMachinesBody");
   tbody.innerHTML = "<tr><td colspan='3' class='text-center'>Loading machines...</td></tr>";
   
@@ -713,11 +737,73 @@ async function viewClient(client) {
   const machines = await res.json();
   
   tbody.innerHTML = "";
-  if (machines.length === 0) { tbody.innerHTML = "<tr><td colspan='3' class='text-center text-muted'>No machines registered.</td></tr>"; return; }
+  if (machines.length === 0) { tbody.innerHTML = "<tr><td colspan='4' class='text-center text-muted'>No machines registered.</td></tr>"; return; }
   
   machines.forEach(m => {
-    tbody.innerHTML += `<tr><td>${m.machine}</td><td>${m.serial}</td><td>${m.added ? m.added.substring(0,10) : '-'}</td></tr>`;
+    tbody.innerHTML += `
+      <tr>
+        <td>${m.machine}</td>
+        <td>${m.serial}</td>
+        <td>${m.added ? m.added.substring(0,10) : '-'}</td>
+        <td><button class="btn btn-sm btn-danger" onclick='deleteClientMachine("${client.userId}", "${m.machine}", "${m.serial}")'>Delete</button></td>
+      </tr>`;
   });
+}
+
+async function addClientMachine() {
+  const userId = document.getElementById("clientModal").dataset.clientId;
+  const name = document.getElementById("techAddMachineName").value.trim();
+  const serial = document.getElementById("techAddMachineSerial").value.trim();
+  
+  if (!name || !serial) return alert("Enter name and serial");
+  
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "addMachine",
+        userId: userId,
+        machineName: name,
+        serialNumber: serial,
+        requestingUsername: currentUser.username
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Machine added!");
+      // Refresh the view
+      viewClient({userId: userId, fullName: document.getElementById("modalClientName").textContent, username: document.getElementById("modalClientUser").textContent});
+      document.getElementById("techAddMachineName").value = "";
+      document.getElementById("techAddMachineSerial").value = "";
+    } else {
+      alert("Error: " + (data.error || "Permission Denied"));
+    }
+  } catch(e) { alert("Connection error"); }
+}
+
+async function deleteClientMachine(userId, machine, serial) {
+  if (!confirm("Delete this machine?")) return;
+  
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "deleteMachine",
+        userId: userId,
+        machineName: machine,
+        serialNumber: serial,
+        requestingUsername: currentUser.username
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Machine deleted");
+      // Refresh view
+      viewClient({userId: userId, fullName: document.getElementById("modalClientName").textContent, username: document.getElementById("modalClientUser").textContent});
+    } else {
+      alert("Error: " + (data.error || "Permission Denied"));
+    }
+  } catch(e) { alert("Connection error"); }
 }
 
 async function deleteUser(userId, fullName) {
