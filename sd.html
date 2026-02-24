@@ -5273,38 +5273,9 @@
             return;
         }
 
-        // Sort by highest ID first
+        // Sort by highest ID and pick the top one
         allMatches.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-
-        let bestTicket = null;
-
-        // Try to find a ticket that has both escalated and resolved dates
-        for (const candidate of allMatches) {
-            try {
-                const { escalatedDate, resolvedDate } = await calculateTicketDates(
-                    candidate,
-                    candidate.config,   // config is stored in the match object
-                    candidate.typeKey   // typeKey is also stored
-                );
-                if (escalatedDate && resolvedDate) {
-                    bestTicket = candidate;
-                    console.log(`✅ Found completed ticket #${candidate.id} (dates present)`);
-                    break;
-                } else {
-                    console.log(`⏳ Ticket #${candidate.id} is incomplete – skipping`);
-                }
-            } catch (e) {
-                console.warn(`Error checking ticket #${candidate.id}:`, e);
-                // continue to next candidate
-            }
-        }
-
-        // If no completed ticket was found, fallback to the highest ID
-        if (!bestTicket) {
-            bestTicket = allMatches[0];
-            console.log(`⚠️ No completed ticket found, using highest ID #${bestTicket.id}`);
-        }
-
+        const bestTicket = allMatches[0];
         console.log(`%c🏆 Best match: #${bestTicket.id} (${bestTicket.typeKey})`, 'color:lime; font-weight:bold;');
 
         // Update dropdown
