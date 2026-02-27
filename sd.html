@@ -690,20 +690,31 @@
     @media (max-width: 768px) {
         /* 1. Header Transformation */
         .desktop-title { display: none; }
-        .mobile-title { display: inline; }
+        .mobile-title { display: inline; font-weight: 700; letter-spacing: -0.5px; }
         header { 
             justify-content: center !important; 
-            padding: 1rem !important;
+            padding: 12px 16px !important;
+            min-height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+            box-shadow: none !important;
         }
         h1 { 
-            font-size: 1.3rem !important; 
+            font-size: 1.1rem !important; 
             margin: 0 !important; 
             text-align: center;
             width: 100%;
+            color: #1a1a1a;
         }
         .header-controls, #status { display: none !important; }
 
-        /* 2. Layout Reset */
+        /* 2. Layout Reset & Background */
+        body { background-color: #f2f4f6; }
         .container { display: block !important; }
         aside { display: none !important; }
         main { padding: 0 !important; overflow-y: visible !important; }
@@ -711,32 +722,191 @@
         /* 3. Hide Data Section */
         #dataSection { display: none !important; }
 
-        /* 4. Force Bitrix Workspace Visibility & Styling */
+        /* 4. Bitrix Workspace - App Container */
         #bitrixWorkspaceSection { 
             display: block !important; 
-            padding: 1.5rem 1rem !important;
-            background: #fff !important;
+            padding: 0 !important;
+            background: transparent !important;
             min-height: auto !important;
         }
-        .workspace-header { display: none !important; } /* Hide "CRM Workspace" & Back button */
-        .workspace-grid { display: block !important; }
+        .workspace-header { display: none !important; }
+        .workspace-grid { display: block !important; gap: 0 !important; }
         
-        /* 5. Hide Side Panels & Tabs */
+        /* 5. Hide Side Panels */
         .workspace-panel:not(.full-width) { display: none !important; }
-        .workspace-tabs { display: none !important; }
         
-        /* 6. Show ONLY Close Ticket Content */
+        /* 6. Main Content Panel - Remove Card Styling to blend with bg */
         .workspace-panel.full-width {
             box-shadow: none !important;
             border: none !important;
             padding: 0 !important;
+            background: transparent !important;
+            border-radius: 0 !important;
         }
-        #findTicketTab, #outagesTab { display: none !important; }
-        #closeTicketTab { display: block !important; padding-top: 0 !important; }
-        #closeTicketTab h4 { display: none !important; } /* Hide duplicate heading */
         
-        /* 7. Hide other dynamic panels */
-        #ticketSelectionPanel, #ticketDashboard, #bitrixLoading { display: none !important; }
+        /* 7. Modern Tabs (Chips) */
+        .workspace-tabs { 
+            display: flex !important;
+            overflow-x: auto;
+            white-space: nowrap;
+            background: #fff;
+            margin: 0 !important;
+            padding: 12px 16px !important;
+            gap: 10px;
+            position: sticky;
+            top: 56px; /* Below header */
+            z-index: 990;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+        .workspace-tabs::-webkit-scrollbar { display: none; }
+        
+        .workspace-tab-btn {
+            padding: 8px 16px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            flex: 0 0 auto;
+            border-radius: 20px !important;
+            background: #f0f2f5 !important;
+            color: #65676b !important;
+            border: none !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .workspace-tab-btn.active {
+            background: #000 !important; /* High contrast active state */
+            color: #fff !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .workspace-tab-btn.active::after { display: none !important; }
+
+        /* 8. Content Cards */
+        .workspace-tab-content {
+            padding: 16px !important;
+        }
+        /* Wrap inputs in white cards */
+        .workspace-tab-content > div {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 16px;
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        /* 9. Modern Inputs */
+        .bitrix-input, select.bitrix-input, textarea.bitrix-input {
+            font-size: 16px !important; /* Prevent iOS zoom */
+            padding: 14px 16px !important;
+            border-radius: 12px !important;
+            border: 1px solid #e4e6eb !important;
+            background: #f7f8fa !important;
+            width: 100%;
+            margin-bottom: 0 !important;
+            transition: border-color 0.2s;
+        }
+        .bitrix-input:focus {
+            background: #fff !important;
+            border-color: #3bc8f5 !important;
+            box-shadow: 0 0 0 4px rgba(59, 200, 245, 0.1) !important;
+        }
+        label {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #65676b !important;
+            margin-bottom: 8px !important;
+            margin-left: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 10. Modern Buttons */
+        .bitrix-btn-primary {
+            width: 100%;
+            padding: 16px !important;
+            border-radius: 14px !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            margin-top: 12px;
+            box-shadow: 0 8px 20px rgba(59, 200, 245, 0.25) !important;
+            background: linear-gradient(135deg, #3bc8f5, #2067b0) !important;
+            border: none !important;
+        }
+        .bitrix-btn-primary:active {
+            transform: scale(0.98);
+        }
+        
+        /* 11. Adjust Charts & Tables */
+        .average-table, .bulk-table {
+            display: block;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid #eee;
+        }
+        #outageChart, #outageStageChart {
+            max-height: 250px;
+        }
+
+        /* 12. Outage Map on Mobile */
+        #outageMapContent > div {
+            height: 50vh !important;
+            border-radius: 16px !important;
+        }
+
+        /* 13. FOB Resolution Mobile Adjustments */
+        #fobAdvancedResolution {
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            margin-top: 0 !important;
+        }
+        #fobAdvancedResolution > div {
+            background: #fff;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 16px;
+        }
+        .fob-badge-row {
+            gap: 8px !important;
+            margin-bottom: 20px !important;
+        }
+        .fob-badge-row .badge {
+            font-size: 12px !important;
+            padding: 6px 12px !important;
+            border-radius: 8px !important;
+        }
+        #fobAdvancedResolution > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+            display: flex !important;
+            flex-direction: column;
+        }
+        #fobExecuteClosure, #fobCancelResolution {
+            padding: 16px !important;
+            font-size: 16px !important;
+            border-radius: 14px !important;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        /* 14. Ticket History List */
+        .bitrix-history-row {
+            padding: 16px !important;
+            background: #fff;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #f0f0f0 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .bitrix-history-row:hover { background: #fff !important; }
+        
+        /* 15. Checkbox Toggle */
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #3bc8f5;
+        }
     }
     .cesium-widget-credits { display: none !important; }
 
@@ -816,7 +986,7 @@
   <header>
     <h1>
       <span class="desktop-title">SD Workspace</span>
-      <span class="mobile-title">Close Support Ticket</span>
+      <span class="mobile-title">SD Mobile Workspace</span>
     </h1>
     <div class="header-controls">
       <select id="spreadsheetSelect" class="header-select">
@@ -929,6 +1099,12 @@
                     <option value="188">Installation</option>
                     <option value="relocation">Relocation</option>
                   </select>
+                </div>
+                <div style="align-self: center; margin-top: 15px;">
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; color: #535c69; font-weight: 500;">
+                    <input type="checkbox" id="manualTicketSelectionToggle" style="accent-color: #3bc8f5; transform: scale(1.2);">
+                    Show All Matches
+                  </label>
                 </div>
                 <div style="align-self: flex-end;">
                   <button id="bitrixGoBtn" class="bitrix-btn-primary">OPEN TICKET</button>
@@ -5116,6 +5292,7 @@
         if (dashboard) dashboard.style.display = 'none';
         if (selectionPanel) selectionPanel.style.display = 'none';
 
+        // --- Bulk search for multiple comma‑separated IDs ---
         if (ids.length > 1) {
             bulkContainer.style.display = 'block';
             bulkBody.innerHTML = '';
@@ -5143,7 +5320,7 @@
             return;
         }
 
-        // Use the parsed ID to ensure no hidden characters/spaces
+        // --- Single ID search ---
         const input = ids[0];
         console.log(`%c🔍 Searching for: "${input}"`, 'color:#00b4d8; font-weight:bold;');
 
@@ -5152,103 +5329,77 @@
         bitrixGoBtn.disabled = true;
         await verifyLock();
 
-        // Prioritize the selected type, then try others
-        const selectedType = bitrixTypeSelect.value;
-        const allTypes = ['163', '188', 'relocation'];
-        const typesToTry = [selectedType, ...allTypes.filter(t => t !== selectedType)];
+        const allTypes = ['163', '188', 'relocation']; // Support, Installation, Relocation
         let allMatches = [];
 
-        // Sequential search (like the working console script)
-        for (const typeKey of typesToTry) {
+        // Search all types in parallel – each type may have multiple queries (primary, fallback, title)
+        const searchPromises = [];
+
+        for (const typeKey of allTypes) {
             const config = BITRIX_CONFIG[typeKey];
             const entityTypeId = config.entityTypeId || parseInt(typeKey);
+            const queries = [];
 
-            // 1. Exact match (Service ID or Ticket ID)
-            let filter = {};
+            // 1. Primary Service ID / Ticket ID (using wildcard for case‑insensitive)
             if (/^\d+$/.test(input)) {
-                filter['id'] = input;
+                queries.push({ filter: { id: input }, type: 'primary' });
             } else {
-                filter[config.serviceIdField] = input.toUpperCase();
+                queries.push({ filter: { [config.serviceIdField]: `%${input}%` }, type: 'primary' });
             }
 
-            console.log(`🔎 Checking type ${typeKey} with filter:`, JSON.stringify(filter));
-
-            try {
-                const response = await fetch(`${WEBHOOK}crm.item.list`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ entityTypeId, filter, order: { id: 'DESC' }, limit: 20 }),
-                });
-                const data = await response.json();
-
-                if (data.error) {
-                    console.error(`❌ API error for ${typeKey}:`, data.error);
-                    showToast(`API error for ${typeKey}: ${data.error.error_description || data.error.message}`, 'error');
-                }
-
-                let itemsFound = (data.result && data.result.items && data.result.items.length > 0);
-
-                if (itemsFound) {
-                    console.log(`✅ Found ${data.result.items.length} exact matches in ${typeKey} (primary field).`);
-                    data.result.items.forEach(item => allMatches.push({ ...item, typeKey, config }));
-                }
-
-                // Fallback to old service ID field for type 163
-                if (!itemsFound && typeKey === '163' && !/^\d+$/.test(input)) {
-                    const oldServiceIdField = 'ufCrm11_1674594881';
-                    const fallbackFilter = { [oldServiceIdField]: input.toUpperCase() };
-                    console.log(`No match in ${typeKey} with primary field, trying fallback field:`, JSON.stringify(fallbackFilter));
-
-                    const fallbackResponse = await fetch(`${WEBHOOK}crm.item.list`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entityTypeId, filter: fallbackFilter, order: { id: 'DESC' }, limit: 20 }),
-                    });
-                    const fallbackData = await fallbackResponse.json();
-
-                    if (fallbackData.error) {
-                        console.error(`❌ API error for ${typeKey} (fallback field):`, fallbackData.error);
-                        showToast(`API error for ${typeKey} (fallback): ${fallbackData.error.error_description || fallbackData.error.message}`, 'error');
-                    }
-
-                    if (fallbackData.result && fallbackData.result.items && fallbackData.result.items.length > 0) {
-                        console.log(`✅ Found ${fallbackData.result.items.length} exact matches in ${typeKey} (fallback field).`);
-                        fallbackData.result.items.forEach(item => allMatches.push({ ...item, typeKey, config }));
-                        itemsFound = true; // Mark as found
-                    }
-                }
-
-                if (!itemsFound) {
-                    // 2. Title fallback if no exact match was found
-                    console.log(`No exact match in ${typeKey}, trying title search...`);
-                    const titleFilter = { title: `%${input}%` };
-                    const responseTitle = await fetch(`${WEBHOOK}crm.item.list`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ entityTypeId, filter: titleFilter, order: { id: 'DESC' }, limit: 20 }),
-                    });
-                    const dataTitle = await responseTitle.json();
-    
-                    if (dataTitle.error) {
-                        console.error(`❌ API error for ${typeKey} (title search):`, dataTitle.error);
-                        showToast(`API error for ${typeKey}: ${dataTitle.error.error_description || dataTitle.error.message}`, 'error');
-                    }
-    
-                    if (dataTitle.result && dataTitle.result.items && dataTitle.result.items.length > 0) {
-                        console.log(`✅ Found ${dataTitle.result.items.length} title matches in ${typeKey}.`);
-                        dataTitle.result.items.forEach(item => allMatches.push({ ...item, typeKey, config }));
-                    } else {
-                        console.log(`❌ No matches in ${typeKey}`);
-                    }
-                }
-
-                // If we found matches in this prioritized type, stop searching others
-                if (allMatches.length > 0) break;
-            } catch (e) {
-                console.error(`❌ Network/other error for type ${typeKey}:`, e);
-                showToast(`Search error for ${typeKey}: ${e.message}`, 'error');
+            // 2. Fallback old Service ID for Support (type 163)
+            if (typeKey === '163' && !/^\d+$/.test(input)) {
+                const oldServiceIdField = 'ufCrm11_1674594881';
+                queries.push({ filter: { [oldServiceIdField]: `%${input}%` }, type: 'fallback' });
             }
+
+            // 3. Title search (always, but skip if input is just a number)
+            if (!/^\d+$/.test(input)) {
+                queries.push({ filter: { title: `%${input}%` }, type: 'title' });
+            }
+
+            // Create a promise for each query
+            queries.forEach(q => {
+                searchPromises.push(
+                    safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            entityTypeId,
+                            filter: q.filter,
+                            order: { id: 'DESC' },
+                            limit: 100   // Increased to catch all
+                        })
+                    }))
+                    .then(res => res.json())
+                    .then(data => ({ data, typeKey, config, queryType: q.type }))
+                    .catch(err => ({ error: err, typeKey }))
+                );
+            });
         }
+
+        // Wait for all parallel searches
+        const results = await Promise.allSettled(searchPromises);
+
+        // Collect all items, de‑duplicate by ID
+        const seenIds = new Set();
+        results.forEach(result => {
+            if (result.status === 'fulfilled' && result.value.data && result.value.data.result && result.value.data.result.items) {
+                const { items } = result.value.data.result;
+                const { typeKey, config } = result.value;
+                items.forEach(item => {
+                    if (!seenIds.has(item.id)) {
+                        seenIds.add(item.id);
+                        allMatches.push({ ...item, typeKey, config });
+                    }
+                });
+                console.log(`✅ ${result.value.typeKey} (${result.value.queryType}): found ${items.length} items`);
+            } else if (result.status === 'rejected') {
+                console.error('❌ Search promise rejected:', result.reason);
+            } else if (result.value && result.value.data && result.value.data.error) {
+                console.error(`❌ API error for ${result.value.typeKey}:`, result.value.data.error);
+            }
+        });
 
         if (loading) loading.style.display = 'none';
         bitrixGoBtn.disabled = false;
@@ -5275,6 +5426,19 @@
 
         // Sort by highest ID and pick the top one
         allMatches.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+
+        // Check for manual selection toggle
+        const manualToggle = document.getElementById('manualTicketSelectionToggle');
+        if (manualToggle && manualToggle.checked) {
+            const first = allMatches[0];
+            showTicketSelection(allMatches, first.config, first.typeKey);
+            const elapsed = Date.now() - searchStartTime;
+            if (minSearchDurationMs > elapsed) {
+                await new Promise(resolve => setTimeout(resolve, minSearchDurationMs - elapsed));
+            }
+            return;
+        }
+
         const bestTicket = allMatches[0];
         console.log(`%c🏆 Best match: #${bestTicket.id} (${bestTicket.typeKey})`, 'color:lime; font-weight:bold;');
 
@@ -5318,71 +5482,247 @@
         return `${m}/${d}/${y} ${h}:${min}:${s}`;
     }
     
-    async function processBulkItem(input, typeSelection, config, container) {
-        try {
-            let entityTypeId = typeSelection === 'relocation' ? BITRIX_CONFIG.relocation.entityTypeId : parseInt(typeSelection);
-            let filter = {};
-            if (/^\d+$/.test(input)) {
-                filter['id'] = input;
-            } else {
-                filter[config.serviceIdField] = input.toUpperCase();
-            }
+    function renderBulkRow(ticket, escalatedDate, resolvedDate, config, typeSelection, container, wasReplaced = false) {
+        const serviceId = ticket[config.serviceIdField] || 'N/A';
+        const created = new Date(ticket.createdTime);
 
+        let mttr = 'NIL';
+        let sla = 'N/A';
+        let slaClass = 'badge-neutral';
+
+        if (escalatedDate && resolvedDate) {
+            const diffMs = resolvedDate - escalatedDate;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            mttr = formatDuration(diffMs);
+            const isMet = diffHours <= config.slaHours;
+            sla = isMet ? 'YES' : 'NO';
+            slaClass = isMet ? 'badge-yes' : 'badge-no';
+        }
+
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Click to view details or replace (if "Show All Matches" is checked)';
+
+        if (wasReplaced) {
+            tr.style.backgroundColor = '#d4edda'; // Light green for replaced rows
+        }
+
+        tr.onclick = async () => {
+            const manualToggle = document.getElementById('manualTicketSelectionToggle');
+            if (manualToggle && manualToggle.checked) {
+                await handleBulkReplacement(ticket, config, typeSelection, tr);
+            } else {
+                displayTicketDetails(ticket, config, typeSelection);
+            }
+        };
+
+        const replacedIcon = wasReplaced ? '<span title="Manually Replaced" style="color: green; margin-right: 5px;">🔄</span>' : '';
+
+        tr.innerHTML = `
+            <td><span style="color:#2067b0; font-weight:500;">${replacedIcon}${serviceId}</span></td>
+            <td>${ticket.id}</td>
+            <td>${formatDateForExcel(created)}</td>
+            <td>${formatDateForExcel(escalatedDate)}</td>
+            <td>${formatDateForExcel(resolvedDate)}</td>
+            <td style="font-family:monospace;">${mttr}</td>
+            <td><span class="badge ${slaClass}">${sla}</span></td>
+        `;
+        container.appendChild(tr);
+    }
+
+    async function handleBulkReplacement(currentTicket, config, typeSelection, rowElement) {
+        const serviceId = currentTicket[config.serviceIdField];
+        if (!serviceId) {
+            showToast("No Service ID found for this ticket.", "error");
+            return;
+        }
+
+        showToast(`Searching for alternatives for ${serviceId}...`, "info");
+
+        const entityTypeId = currentTicket.entityTypeId;
+        const filter = {};
+        filter[config.serviceIdField] = serviceId; 
+
+        try {
             const response = await safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ entityTypeId, filter, order: { id: 'DESC' }, limit: 1 })
+                body: JSON.stringify({ entityTypeId, filter, order: { id: 'DESC' }, limit: 50 })
             }));
             const data = await response.json();
             
-            if (!data.result || data.result.items.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="7" style="color:red;">${input}: Not Found</td>`;
-                container.appendChild(tr);
-                return;
-            }
-            
-            const ticket = data.result.items[0];
-            const { escalatedDate, resolvedDate } = await calculateTicketDates(ticket, config, typeSelection);
-            
-            const serviceId = ticket[config.serviceIdField] || 'N/A';
-            const created = new Date(ticket.createdTime);
-            
-            let mttr = 'NIL';
-            let sla = 'N/A';
-            let slaClass = 'badge-neutral';
-            
-            if (escalatedDate && resolvedDate) {
-                const diffMs = resolvedDate - escalatedDate;
-                const diffHours = diffMs / (1000 * 60 * 60);
-                mttr = formatDuration(diffMs);
-                const isMet = diffHours <= config.slaHours;
-                sla = isMet ? 'YES' : 'NO';
-                slaClass = isMet ? 'badge-yes' : 'badge-no';
-            }
-            
-            const tr = document.createElement('tr');
-            tr.style.cursor = 'pointer';
-            tr.title = 'Click to view details';
-            tr.onclick = () => displayTicketDetails(ticket, config, typeSelection);
+            if (data.result && data.result.items && data.result.items.length > 0) {
+                const matches = data.result.items.map(item => ({...item, config, typeKey: typeSelection}));
+                
+                showTicketSelection(matches, config, typeSelection, async (selectedTickets) => {
+                    const ticketsToCheck = Array.isArray(selectedTickets) ? selectedTickets : [selectedTickets];
+                    showToast(`Analyzing ${ticketsToCheck.length} selected tickets...`, 'info');
 
-            tr.innerHTML = `
-                <td><span style="color:#2067b0; font-weight:500;">${serviceId}</span></td>
-                <td>${ticket.id}</td>
-                <td>${formatDateForExcel(created)}</td>
-                <td>${formatDateForExcel(escalatedDate)}</td>
-                <td>${formatDateForExcel(resolvedDate)}</td>
-                <td style="font-family:monospace;">${mttr}</td>
-                <td><span class="badge ${slaClass}">${sla}</span></td>
-            `;
-            container.appendChild(tr);
-            
+                    let bestTicket = null;
+                    let bestDates = { escalatedDate: null, resolvedDate: null };
+
+                    for (const t of ticketsToCheck) {
+                        const dates = await calculateTicketDates(t, config, typeSelection);
+                        if (dates.escalatedDate && dates.resolvedDate) {
+                            bestTicket = t;
+                            bestDates = dates;
+                            break; 
+                        }
+                    }
+
+                    if (!bestTicket && ticketsToCheck.length > 0) {
+                        bestTicket = ticketsToCheck[0];
+                        bestDates = await calculateTicketDates(bestTicket, config, typeSelection);
+                    }
+                    
+                    if (!bestTicket) return;
+
+                    const { escalatedDate, resolvedDate } = bestDates;
+                    const newServiceId = bestTicket[config.serviceIdField] || 'N/A';
+                    const created = new Date(bestTicket.createdTime);
+                    
+                    let mttr = 'NIL';
+                    let sla = 'N/A';
+                    let slaClass = 'badge-neutral';
+                    
+                    if (escalatedDate && resolvedDate) {
+                        const diffMs = resolvedDate - escalatedDate;
+                        const diffHours = diffMs / (1000 * 60 * 60);
+                        mttr = formatDuration(diffMs);
+                        const isMet = diffHours <= config.slaHours;
+                        sla = isMet ? 'YES' : 'NO';
+                        slaClass = isMet ? 'badge-yes' : 'badge-no';
+                    }
+
+                    // Update Row
+                    const replacedIcon = '<span title="Manually Replaced" style="color: green; margin-right: 5px;">🔄</span>';
+                    rowElement.innerHTML = `
+                        <td><span style="color:#2067b0; font-weight:500;">${replacedIcon}${newServiceId}</span></td>
+                        <td>${bestTicket.id}</td>
+                        <td>${formatDateForExcel(created)}</td>
+                        <td>${formatDateForExcel(escalatedDate)}</td>
+                        <td>${formatDateForExcel(resolvedDate)}</td>
+                        <td style="font-family:monospace;">${mttr}</td>
+                        <td><span class="badge ${slaClass}">${sla}</span></td>
+                    `;
+                    
+                    // Update click handler for the new ticket state
+                    rowElement.onclick = async () => {
+                        const manualToggle = document.getElementById('manualTicketSelectionToggle');
+                        if (manualToggle && manualToggle.checked) {
+                            await handleBulkReplacement(bestTicket, config, typeSelection, rowElement);
+                        } else {
+                            displayTicketDetails(bestTicket, config, typeSelection);
+                        }
+                    };
+
+                    document.getElementById('ticketSelectionPanel').style.display = 'none';
+                    
+                    // Visual feedback
+                    const originalBg = rowElement.style.backgroundColor;
+                    rowElement.style.backgroundColor = '#d4edda';
+                    setTimeout(() => rowElement.style.backgroundColor = originalBg, 500);
+                });
+
+            } else {
+                showToast("No other tickets found.", "warning");
+            }
         } catch (e) {
             console.error(e);
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="7" style="color:red;">${input}: Error</td>`;
-            container.appendChild(tr);
+            showToast("Error searching for replacements: " + e.message, "error");
         }
+    }
+
+    async function processBulkItem(input, typeSelection, config, container) {
+        return new Promise(async (resolve) => {
+            try {
+                let entityTypeId = typeSelection === 'relocation' ? BITRIX_CONFIG.relocation.entityTypeId : parseInt(typeSelection);
+                let filter = {};
+                if (/^\d+$/.test(input)) {
+                    filter['id'] = input;
+                } else {
+                    filter[config.serviceIdField] = input.toUpperCase();
+                }
+
+                // Find the latest ticket for this input
+                const response = await safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entityTypeId, filter, order: { id: 'DESC' }, limit: 5 }) // Fetch a few in case the first is bad
+                }));
+                const data = await response.json();
+
+                if (!data.result || data.result.items.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td colspan="7" style="color:red;">${input}: Not Found</td>`;
+                    container.appendChild(tr);
+                    resolve();
+                    return;
+                }
+
+                let ticket = data.result.items[0];
+                let { escalatedDate, resolvedDate } = await calculateTicketDates(ticket, config, typeSelection);
+
+                // If dates are incomplete AND "Show All Matches" is checked, trigger replacement flow
+                const manualToggle = document.getElementById('manualTicketSelectionToggle');
+                if ((!escalatedDate || !resolvedDate) && manualToggle && manualToggle.checked) {
+                    showToast(`Incomplete data for ${input}. Please select a replacement.`, 'warning');
+                    
+                    const serviceId = ticket[config.serviceIdField];
+                    if (!serviceId) {
+                        renderBulkRow(ticket, null, null, config, typeSelection, container);
+                        resolve();
+                        return;
+                    }
+
+                    const altFilter = { [config.serviceIdField]: serviceId };
+                    const altResponse = await safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ entityTypeId, filter: altFilter, order: { id: 'DESC' }, limit: 50 })
+                    }));
+                    const altData = await altResponse.json();
+
+                    if (altData.result && altData.result.items && altData.result.items.length > 1) {
+                        const matches = altData.result.items.map(item => ({ ...item, config, typeKey: typeSelection }));
+                        showTicketSelection(matches, config, typeSelection, async (selectedTickets) => {
+                            const ticketsToCheck = Array.isArray(selectedTickets) ? selectedTickets : [selectedTickets];
+                            let bestTicket = null;
+                            let bestDates = { escalatedDate: null, resolvedDate: null };
+
+                            for (const t of ticketsToCheck) {
+                                const dates = await calculateTicketDates(t, config, typeSelection);
+                                if (dates.escalatedDate && dates.resolvedDate) {
+                                    bestTicket = t;
+                                    bestDates = dates;
+                                    break; 
+                                }
+                            }
+                            if (!bestTicket && ticketsToCheck.length > 0) {
+                                bestTicket = ticketsToCheck[0];
+                                bestDates = await calculateTicketDates(bestTicket, config, typeSelection);
+                            }
+
+                            if (bestTicket) renderBulkRow(bestTicket, bestDates.escalatedDate, bestDates.resolvedDate, config, typeSelection, container, true);
+                            document.getElementById('ticketSelectionPanel').style.display = 'none';
+                            resolve(); // Un-pause the bulk process
+                        });
+                    } else {
+                        renderBulkRow(ticket, null, null, config, typeSelection, container);
+                        resolve();
+                    }
+                } else {
+                    renderBulkRow(ticket, escalatedDate, resolvedDate, config, typeSelection, container);
+                    resolve();
+                }
+            } catch (e) {
+                console.error(e);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="7" style="color:red;">${input}: Error during processing</td>`;
+                container.appendChild(tr);
+                resolve(); // Resolve on error to not block the queue
+            }
+        });
     }
     
     // Copy Bulk Results (Advanced & Robust)
@@ -5465,7 +5805,7 @@
         document.body.removeChild(link);
     });
 
-    function showTicketSelection(items, config, typeSelection) {
+    function showTicketSelection(items, config, typeSelection, onSelectCallback = null) {
       const dashboard = document.getElementById('ticketDashboard');
       const selectionPanel = document.getElementById('ticketSelectionPanel');
       const selectionList = document.getElementById('ticketSelectionList');
@@ -5474,22 +5814,100 @@
       selectionPanel.style.display = 'block';
       selectionList.innerHTML = '';
 
+      // --- NEW MULTI-SELECT LOGIC ---
+      const isMultiSelect = !!onSelectCallback;
+      let selectedItems = [];
+      
+      let confirmBtn = document.getElementById('confirmSelectionBtn');
+      if (confirmBtn) confirmBtn.remove();
+      
+      if (isMultiSelect) {
+          confirmBtn = document.createElement('button');
+          confirmBtn.id = 'confirmSelectionBtn';
+          confirmBtn.className = 'bitrix-btn-primary';
+          confirmBtn.style.marginTop = '1rem';
+          confirmBtn.style.marginRight = '1rem';
+          confirmBtn.innerText = 'Use Selected (0)';
+          
+          confirmBtn.onclick = () => {
+              if (selectedItems.length === 0) {
+                  alert("Please select at least one ticket.");
+                  return;
+              }
+              onSelectCallback(selectedItems);
+          };
+          
+          const backBtn = document.getElementById('backToSearchBtn');
+          if (backBtn && backBtn.parentNode) {
+              backBtn.parentNode.insertBefore(confirmBtn, backBtn);
+          }
+      }
+
       items.forEach(ticket => {
-        const serviceId = ticket[config.serviceIdField] || 'N/A';
+        const itemConfig = ticket.config || config;
+        const itemType = ticket.typeKey || typeSelection;
+
+        const serviceId = ticket[itemConfig.serviceIdField] || 'N/A';
         const created = ticket.createdTime ? formatDateForExcel(new Date(ticket.createdTime)) : '?';
+        
+        let typeLabel = itemType;
+        if (itemType === '163') typeLabel = 'Support';
+        else if (itemType === '188') typeLabel = 'Installation';
+        else if (itemType === 'relocation') typeLabel = 'Relocation';
+
         const div = document.createElement('div');
         div.className = 'bitrix-history-row';
         div.style.cursor = 'pointer';
+        
+        const checkboxHtml = isMultiSelect ? `<input type="checkbox" class="ticket-select-cb" style="margin-right:10px; transform: scale(1.2);">` : '';
+
         div.innerHTML = `
-          <div>
-            <div class="history-id">Ticket #${ticket.id}</div>
-            <div class="history-meta">${serviceId} • Created: ${created}</div>
+          <div style="display:flex; align-items:center;">
+            ${checkboxHtml}
+            <div>
+                <div class="history-id">Ticket #${ticket.id} <span style="font-size:0.8em; color:#2067b0; font-weight:500; border:1px solid #cce5ff; background:#e8f4ff; padding:1px 4px; border-radius:4px;">${typeLabel}</span></div>
+                <div class="history-meta">${serviceId} • Created: ${created}</div>
+            </div>
           </div>
           <span style="color:#ccc;">➡</span>
         `;
-        div.addEventListener('click', () => {
-          displayTicketDetails(ticket, config, typeSelection);
-          selectionPanel.style.display = 'none';
+
+        const updateSelection = () => {
+            const cb = div.querySelector('.ticket-select-cb');
+            const idx = selectedItems.findIndex(i => i.id === ticket.id);
+            
+            if (idx > -1) {
+                selectedItems.splice(idx, 1);
+                if (cb) cb.checked = false;
+                div.style.backgroundColor = '';
+            } else {
+                selectedItems.push(ticket);
+                if (cb) cb.checked = true;
+                div.style.backgroundColor = '#f0f8ff';
+            }
+            if (confirmBtn) confirmBtn.innerText = `Use Selected (${selectedItems.length})`;
+        };
+
+        div.addEventListener('click', (e) => {
+          if (isMultiSelect) {
+              if (e.target.type === 'checkbox') {
+                  const cb = e.target;
+                  const idx = selectedItems.findIndex(i => i.id === ticket.id);
+                  if (cb.checked) {
+                      if (idx === -1) selectedItems.push(ticket);
+                      div.style.backgroundColor = '#f0f8ff';
+                  } else {
+                      if (idx > -1) selectedItems.splice(idx, 1);
+                      div.style.backgroundColor = '';
+                  }
+                  if (confirmBtn) confirmBtn.innerText = `Use Selected (${selectedItems.length})`;
+              } else {
+                  updateSelection();
+              }
+          } else {
+              displayTicketDetails(ticket, itemConfig, itemType);
+              selectionPanel.style.display = 'none';
+          }
         });
         selectionList.appendChild(div);
       });
@@ -5570,6 +5988,14 @@
 
       loading.style.display = 'block';
       dashboard.style.display = 'none';
+
+      // Update Input with Full Service ID
+      if (ticket[config.serviceIdField]) {
+          bitrixIdInput.value = ticket[config.serviceIdField];
+      }
+      if (typeSelection) {
+          bitrixTypeSelect.value = typeSelection;
+      }
 
       try {
         currentTicketData = ticket; // Store for raw inspection
