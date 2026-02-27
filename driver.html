@@ -4,132 +4,536 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Driver App</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { background: #121212; color: #fff; font-family: sans-serif; }
-    .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #1e1e1e; position: relative; }
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900;1000&family=Roboto:wght@300;400;500;700&display=swap");
+
+    *, *::before, *::after { box-sizing: border-box; padding: 0; margin: 0; }
     
-    /* Login Screen */
-    .login-box { padding: 2rem; text-align: center; padding-top: 30vh; }
-    .form-control { background: #333; border: none; color: white; margin-bottom: 1rem; padding: 15px; }
-    .form-control:focus { background: #444; color: white; box-shadow: none; }
-    
-    /* Dashboard */
-    .top-bar { padding: 15px; background: #000; display: flex; justify-content: space-between; align-items: center; }
-    .driver-info { font-size: 0.9rem; color: #aaa; }
-    .driver-name { font-weight: bold; color: white; font-size: 1.1rem; }
-    
-    .main-action { padding: 2rem; text-align: center; }
-    
-    .btn-circle {
-      width: 200px; height: 200px; border-radius: 50%; border: 8px solid #333;
-      font-size: 2rem; font-weight: bold; text-transform: uppercase;
-      display: flex; align-items: center; justify-content: center; flex-direction: column;
-      margin: 0 auto; transition: 0.2s;
-    }
-    .btn-start { background: #06d6a0; color: #000; box-shadow: 0 0 20px rgba(6, 214, 160, 0.4); }
-    .btn-start:active { transform: scale(0.95); }
-    
-    .btn-stop { background: #ef476f; color: white; box-shadow: 0 0 20px rgba(239, 71, 111, 0.4); animation: pulse 2s infinite; }
-    
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(239, 71, 111, 0.7); }
-      70% { box-shadow: 0 0 0 20px rgba(239, 71, 111, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(239, 71, 111, 0); }
+    body {
+      font-family: "Nunito", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image: url(https://github.com/ecemgo/mini-samples-great-tricks/assets/13468728/5baf8325-ed69-40b0-b9d2-d8c5d2bde3b0);
+      background-repeat: no-repeat;
+      background-size: cover;
+      color: #484b57;
     }
 
-    .timer-display { font-size: 3rem; font-family: monospace; margin-top: 20px; font-weight: bold; }
-    .status-text { color: #888; margin-bottom: 20px; }
+    /* UTILITIES */
+    .d-none { display: none !important; }
+    .text-center { text-align: center; }
+    .w-100 { width: 100%; }
+    .mb-4 { margin-bottom: 1.5rem; }
+    .mt-3 { margin-top: 1rem; }
+    .text-danger { color: #dc3545; }
     
-    .history-list { padding: 15px; }
-    .trip-card { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #06d6a0; }
-    .trip-card.ongoing { border-left: 5px solid #ef476f; }
+    /* LOGIN STYLES */
+    .login-container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+      backdrop-filter: blur(10px);
+    }
+    .form-control {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-family: inherit;
+      outline: none;
+    }
+    .form-control:focus { border-color: #7c88e0; }
+    .btn-primary {
+      background: rgb(73, 57, 113);
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      transition: 0.3s;
+    }
+    .btn-primary:hover { background: rgb(58, 45, 90); }
+
+    /* DASHBOARD LAYOUT */
+    main {
+      display: grid;
+      grid-template-columns: 13% 87%;
+      width: 95%;
+      max-width: 1400px;
+      height: 90vh;
+      background: rgb(254, 254, 254);
+      box-shadow: 0 0.5px 0 1px rgba(255, 255, 255, 0.23) inset, 0 1px 0 0 rgba(255, 255, 255, 0.66) inset, 0 4px 16px rgba(0, 0, 0, 0.12);
+      border-radius: 15px;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    .main-menu {
+      background: rgb(73, 57, 113);
+      padding-top: 10px;
+      border-radius: 15px 0 0 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-menu h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      text-align: center;
+      margin: 20px 0 30px;
+      color: #fff;
+    }
+
+    .nav-item { position: relative; display: block; margin-bottom: 5px; }
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1rem;
+      padding: 15px 0;
+      margin-left: 10px;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+      text-decoration: none;
+    }
+    .nav-item.active a { background: rgb(254, 254, 254); color: #000; }
     
-    .nav-bottom { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: #000; display: flex; justify-content: space-around; padding: 15px; border-top: 1px solid #333; }
-    .nav-item { color: #666; text-align: center; font-size: 0.8rem; cursor: pointer; }
-    .nav-item.active { color: #06d6a0; }
-    .nav-item i { font-size: 1.2rem; display: block; margin-bottom: 5px; }
+    /* Curves for active nav item */
+    .nav-item b:nth-child(1), .nav-item b:nth-child(2) { position: absolute; height: 15px; width: 100%; background: #fff; display: none; }
+    .nav-item b:nth-child(1) { top: -15px; }
+    .nav-item b:nth-child(2) { bottom: -15px; }
+    .nav-item b:nth-child(1)::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-bottom-right-radius: 20px; background: rgb(73, 57, 113); }
+    .nav-item b:nth-child(2)::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-top-right-radius: 20px; background: rgb(73, 57, 113); }
+    .nav-item.active b:nth-child(1), .nav-item.active b:nth-child(2) { display: block; }
+
+    .nav-icon { width: 40px; text-align: center; font-size: 1.2rem; }
+    .nav-text { display: block; width: 100px; }
+
+    /* CONTENT AREA */
+    .content { position: relative; height: 100%; overflow: hidden; background: #f6f7fb; }
+    
+    /* VIEWS */
+    .view-section { display: none; width: 100%; height: 100%; overflow-y: auto; padding: 20px; animation: fadeIn 0.3s ease-in-out; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* NEW PROFILE HEADER STYLES */
+    .profile-header {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    .profile-header:hover { transform: translateY(-2px); }
+    .profile-header::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: linear-gradient(180deg, #7c88e0 0%, #a18cd1 100%);
+    }
+    
+    .profile-left { display: flex; align-items: center; gap: 25px; }
+    
+    .profile-details h2 { margin: 0 0 8px 0; font-size: 1.6rem; color: #2d3748; font-weight: 700; }
+    .profile-meta { display: flex; gap: 15px; flex-wrap: wrap; }
+    .meta-tag { 
+      background: #f7fafc; padding: 6px 12px; border-radius: 8px; 
+      font-size: 0.9rem; color: #718096; 
+      display: flex; align-items: center; gap: 8px; border: 1px solid #edf2f7;
+    }
+    .meta-tag i { color: #7c88e0; }
+    .meta-tag b { color: #4a5568; }
+
+    .status-badge {
+      padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .status-idle { background: #edf2f7; color: #718096; }
+    .status-active { background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%); color: white; box-shadow: 0 4px 15px rgba(72, 198, 239, 0.4); }
+
+    /* DASHBOARD STATS ROW */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+
+    /* JOURNEY SCREEN */
+    .journey-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+
+    /* CONTROL PANEL (Top Left) */
+    .control-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .control-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .control-card:hover { transform: translateY(-2px); }
+
+    .btn-action {
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      border: none;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+    .btn-start { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .btn-stop { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); animation: pulse 2s infinite; }
+    
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 154, 158, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 154, 158, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 154, 158, 0); } }
+
+    .timer-display { font-size: 3rem; font-weight: 800; color: #484b57; font-family: 'Roboto', monospace; }
+    .gps-status { margin-top: 10px; color: #888; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
+
+    /* HISTORY LIST (Bottom Left) */
+    .history-section h2 { margin-bottom: 15px; font-size: 1.3rem; color: #484b57; }
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+    
+    .trip-item {
+      display: grid;
+      grid-template-columns: 10% 60% 30%;
+      align-items: center;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      transition: 0.2s;
+    }
+    .trip-item:hover { transform: scale(1.01); }
+    
+    .trip-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: #e0f7fa;
+      color: #00bcd4;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .trip-details h4 { font-size: 1rem; margin-bottom: 2px; }
+    .trip-details p { font-size: 0.8rem; color: #888; }
+    .trip-stat { text-align: right; font-weight: bold; color: #7c88e0; }
+
+    /* RIGHT SIDEBAR */
+    .right-content {
+      background: #f6f7fb;
+      margin: 15px 15px 15px 0;
+      padding: 20px;
+      border-radius: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .user-avatar {
+      width: 80px; height: 80px; border-radius: 50%; background: #e0e0e0; 
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: #fff; background: linear-gradient(to right, #a18cd1 0%, #fbc2eb 100%);
+      cursor: pointer; overflow: hidden; position: relative; flex-shrink: 0;
+    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .stats-box {
+      background: rgb(214, 227, 248);
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+    }
+    .stats-box h3 { font-size: 1rem; margin-bottom: 15px; color: #5b5f6f; }
+    .stat-circle {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: white;
+      margin: 0 auto;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 5px solid #7c88e0;
+    }
+    .stat-circle span { font-size: 1.5rem; font-weight: bold; color: #7c88e0; }
+    .stat-circle small { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      /* RESET DESKTOP LAYOUT */
+      main { 
+        display: block;
+        width: 100%; 
+        height: 100vh; 
+        margin: 0; 
+        border-radius: 0; 
+        font-size: 16px; /* Better readability on mobile */
+      }
+      
+      /* BOTTOM NAVIGATION BAR (App Style) */
+      .main-menu { 
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 70px;
+        padding: 0;
+        border-radius: 20px 20px 0 0;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 1000;
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+      }
+      
+      .main-menu h1 { display: none; }
+      
+      .nav-item { 
+        margin: 0; 
+        width: 100%; 
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      
+      /* Reset Link Styles for Bottom Bar */
+      .nav-item a {
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        border-radius: 0;
+        background: transparent !important;
+        color: rgba(255,255,255,0.5);
+        font-size: 0.75rem;
+        gap: 6px;
+        width: 100%;
+        height: 100%;
+      }
+      
+      .nav-item.active a { color: #fff; }
+      .nav-item.active a i { transform: translateY(-3px); color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.6); transition: 0.3s; }
+      
+      /* Hide Desktop Curves */
+      .nav-item b { display: none !important; }
+      
+      .nav-icon { font-size: 1.4rem; width: auto; margin: 0; }
+      .nav-text { display: block; width: auto; }
+
+      /* CONTENT AREA */
+      .content { 
+        height: calc(100vh - 70px); /* Subtract Nav Height */
+        border-radius: 0;
+        overflow: hidden;
+      }
+      
+      .view-section { 
+        padding: 20px; 
+        padding-bottom: 40px; /* Extra space at bottom */
+      }
+      
+      /* PROFILE HEADER MOBILE */
+      .profile-header { 
+        flex-direction: column; 
+        text-align: center; 
+        padding: 25px 20px; 
+        gap: 20px; 
+      }
+      .profile-header::before { width: 100%; height: 5px; bottom: auto; top: 0; left: 0; }
+      .profile-left { flex-direction: column; gap: 15px; }
+      .profile-meta { justify-content: center; }
+      .status-badge { width: 100%; justify-content: center; margin-top: 5px; }
+      
+      /* Control Panel Cards */
+      .control-panel { grid-template-columns: 1fr; gap: 15px; }
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 15px; }
+      
+      /* Journey Screen */
+      .journey-container { justify-content: center; padding-top: 0; }
+      .btn-action { width: 200px; height: 200px; margin-bottom: 30px; font-size: 2rem; }
+      .timer-display { font-size: 3.5rem; }
+      
+      /* LOGIN SCREEN */
+      .login-container { width: 90%; padding: 30px 20px; }
+    }
   </style>
 </head>
 <body>
 
-<div class="app-container">
-
   <!-- LOGIN SCREEN -->
-  <div id="loginScreen">
-    <div class="login-box">
-      <h2 class="mb-4"><i class="fas fa-car"></i> DRIVER APP</h2>
+  <div id="loginScreen" class="login-container">
+      <div class="text-center mb-4">
+        <i class="fas fa-shipping-fast fa-3x" style="color: rgb(73, 57, 113);"></i>
+        <h2 class="mt-3">Driver Portal</h2>
+      </div>
       <input type="text" id="username" class="form-control" placeholder="Username">
       <input type="password" id="password" class="form-control" placeholder="Password">
-      <button onclick="login()" class="btn btn-success w-100 py-3 fw-bold">LOGIN</button>
-      <p class="mt-3 text-muted" onclick="showRegister()">New Driver? Register here</p>
+      <button onclick="login()" class="btn btn-primary w-100 py-3 fw-bold">LOGIN</button>
+      <p class="mt-3 text-center" style="cursor:pointer; color: #666;" onclick="showRegister()">New Driver? Register here</p>
       <div id="loginMsg" class="mt-3"></div>
-    </div>
   </div>
 
   <!-- REGISTER SCREEN -->
-  <div id="registerScreen" class="d-none">
-    <div class="login-box" style="padding-top: 10vh;">
-      <h3 class="mb-4">New Driver</h3>
+  <div id="registerScreen" class="login-container d-none">
+      <h3 class="mb-4 text-center">New Driver</h3>
       <input type="text" id="regUsername" class="form-control" placeholder="Username">
       <input type="password" id="regPassword" class="form-control" placeholder="Password">
       <input type="text" id="regFullname" class="form-control" placeholder="Full Name">
       <input type="text" id="regPlate" class="form-control" placeholder="Car Plate Number">
       <input type="text" id="regPhone" class="form-control" placeholder="Phone Number">
       <button onclick="register()" class="btn btn-primary w-100 py-3 fw-bold">REGISTER</button>
-      <p class="mt-3 text-muted" onclick="showLogin()">Back to Login</p>
-    </div>
+      <p class="mt-3 text-center" style="cursor:pointer; color: #666;" onclick="showLogin()">Back to Login</p>
   </div>
 
-  <!-- MAIN APP -->
-  <div id="appScreen" class="d-none">
-    <div class="top-bar">
-      <div>
-        <div class="driver-name" id="displayDriverName">Driver</div>
-        <div class="driver-info" id="displayPlate">ABC-123</div>
-      </div>
-      <button onclick="logout()" class="btn btn-sm btn-outline-secondary">Logout</button>
-    </div>
+  <!-- MAIN DASHBOARD -->
+  <main id="appScreen" class="d-none">
+    <nav class="main-menu">
+      <h1>Fleet App</h1>
+      <ul>
+        <li class="nav-item active" id="nav-home">
+          <b></b><b></b>
+          <a href="#" onclick="switchTab('home'); return false;">
+            <i class="fa fa-house nav-icon"></i>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item" id="nav-journey">
+          <b></b><b></b>
+          <a href="#" onclick="switchTab('journey'); return false;">
+            <i class="fa fa-road nav-icon"></i>
+            <span class="nav-text">Journey</span>
+          </a>
+        </li>
+        <li class="nav-item" id="nav-history">
+          <b></b><b></b>
+          <a href="#" onclick="switchTab('history'); return false;">
+            <i class="fa fa-clock-rotate-left nav-icon"></i>
+            <span class="nav-text">History</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <b></b><b></b>
+          <a href="#" onclick="logout(); return false;">
+            <i class="fa fa-right-from-bracket nav-icon"></i>
+            <span class="nav-text">Logout</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
 
-    <!-- HOME TAB -->
-    <div id="tabHome" class="main-action">
-      <div class="status-text" id="statusText">Ready to start?</div>
+    <section class="content">
       
-      <!-- START BUTTON -->
-      <div id="btnStart" class="btn-circle btn-start" onclick="startTrip()">
-        <i class="fas fa-play mb-2"></i> START
+      <!-- VIEW: HOME DASHBOARD -->
+      <div id="view-home" class="view-section active">
+        
+        <!-- 1. SLICK PROFILE HEADER -->
+        <div class="profile-header">
+          <div class="profile-left">
+            <div class="user-avatar" onclick="document.getElementById('avatarInput').click()">
+              <i class="fas fa-camera" id="avatarIcon"></i>
+              <img id="avatarImg" src="" class="d-none" alt="Profile">
+            </div>
+            <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleProfileUpload(this)">
+            
+            <div class="profile-details">
+              <h2 id="displayDriverName">Driver Name</h2>
+              <div class="profile-meta">
+                <div class="meta-tag"><i class="fas fa-car"></i> <b id="displayPlate">---</b></div>
+                <div class="meta-tag"><i class="fas fa-phone"></i> <b id="displayPhone">---</b></div>
+                <div class="meta-tag"><i class="fas fa-calendar"></i> <span id="displayJoined">---</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="driverStatus" class="status-badge status-idle">
+            <i class="fas fa-power-off"></i> IDLE
+          </div>
+        </div>
+
+        <!-- 2. WELCOME BANNER -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 20px;">
+          <h2 id="welcomeMsg">Welcome back!</h2>
+          <p style="opacity: 0.8;">Here is your fleet activity overview.</p>
+        </div>
+
+        <!-- 3. STATS ROW -->
+        <div class="stats-row">
+          <div class="control-card">
+            <div class="stat-circle" style="border-color: #4facfe;"><span id="totalTrips">0</span><small>TRIPS</small></div>
+            <h4 class="mt-3">Total Trips</h4>
+          </div>
+          <div class="control-card">
+            <div class="stat-circle" style="border-color: #00f2fe;"><span id="totalDist">0</span><small>KM</small></div>
+            <h4 class="mt-3">Total Distance</h4>
+          </div>
+        </div>
       </div>
 
-      <!-- STOP BUTTON (Hidden) -->
-      <div id="btnStop" class="btn-circle btn-stop d-none" onclick="stopTrip()">
-        <i class="fas fa-stop mb-2"></i> STOP
+      <!-- VIEW: JOURNEY (START/STOP) -->
+      <div id="view-journey" class="view-section">
+        <div class="journey-container">
+          <h2 class="mb-4">Current Journey</h2>
+          
+          <div id="btnStart" class="btn-action btn-start" onclick="startTrip()">
+            <i class="fas fa-play"></i>
+            <span style="font-size: 1rem; margin-top: 5px;">START</span>
+          </div>
+          
+          <div id="btnStop" class="btn-action btn-stop d-none" onclick="stopTrip()">
+            <i class="fas fa-stop"></i>
+            <span style="font-size: 1rem; margin-top: 5px;">STOP</span>
+          </div>
+
+          <div class="timer-display mt-3" id="timer">00:00:00</div>
+          <p class="mt-3" style="color:#888; font-weight:600;" id="statusText">Ready to Drive?</p>
+          <div class="gps-status" id="gpsStatus"><i class="fas fa-satellite-dish"></i> GPS Ready</div>
+        </div>
       </div>
 
-      <div class="timer-display" id="timer">00:00:00</div>
-      <div class="mt-3 text-muted" id="gpsStatus"><i class="fas fa-satellite"></i> GPS Ready</div>
-    </div>
-
-    <!-- HISTORY TAB -->
-    <div id="tabHistory" class="d-none">
-      <h4 class="p-3 mb-0">My Trips</h4>
-      <div class="history-list" id="historyList">
-        <!-- Items go here -->
+      <!-- VIEW: HISTORY -->
+      <div id="view-history" class="view-section">
+        <h2 class="mb-4">Trip History</h2>
+        <div class="history-list" id="historyList">
+          <div class="text-center p-5">Loading history...</div>
+        </div>
       </div>
-    </div>
-
-    <!-- BOTTOM NAV -->
-    <div class="nav-bottom">
-      <div class="nav-item active" onclick="switchTab('home')">
-        <i class="fas fa-road"></i> Drive
-      </div>
-      <div class="nav-item" onclick="switchTab('history')">
-        <i class="fas fa-history"></i> History
-      </div>
-    </div>
-
-  </div>
-</div>
+    </section>
+  </main>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbx-i0Bye9VtcRBN59-IRPEPyEZeS3jehtZ0wovcgZHKtEksaQQ-jIPEx1T900oSni0j/exec";
@@ -195,12 +599,29 @@ function logout() {
   location.reload();
 }
 
+function switchTab(tabName) {
+  // Hide all views
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+  // Show selected
+  document.getElementById('view-' + tabName).classList.add('active');
+  document.getElementById('nav-' + tabName).classList.add('active');
+
+  if(tabName === 'history' || tabName === 'home') {
+    loadHistory();
+  }
+}
+
 // ================= APP LOGIC =================
 function initApp() {
   document.getElementById('loginScreen').classList.add('d-none');
   document.getElementById('appScreen').classList.remove('d-none');
-  document.getElementById('displayDriverName').innerText = currentUser.fullName;
-  document.getElementById('displayPlate').innerText = currentUser.carPlate;
+  
+  // 1. Show cached data immediately
+  updateProfileUI();
+  // 2. Fetch fresh data from Sheet (CarPlate, Phone, etc.)
+  refreshProfile();
   
   // Check if trip is active
   const savedTrip = localStorage.getItem("activeTrip");
@@ -208,6 +629,124 @@ function initApp() {
     currentTrip = JSON.parse(savedTrip);
     showStopButton();
     startTimer();
+    switchTab('journey'); // Auto go to journey if active
+  }
+}
+
+function updateProfileUI() {
+  if(!currentUser) return;
+  document.getElementById('displayDriverName').innerText = currentUser.fullName;
+  document.getElementById('displayPlate').innerText = currentUser.carPlate || "NO PLATE";
+  document.getElementById('welcomeMsg').innerText = "Welcome, " + currentUser.fullName.split(' ')[0];
+  
+  document.getElementById('displayPhone').innerText = currentUser.phone || "---";
+  
+  // Update Status Badge
+  const statusEl = document.getElementById('driverStatus');
+  if (localStorage.getItem("activeTrip")) {
+    statusEl.className = "status-badge status-active";
+    statusEl.innerHTML = '<i class="fas fa-steering-wheel"></i> ON TRIP';
+  } else {
+    statusEl.className = "status-badge status-idle";
+    statusEl.innerHTML = '<i class="fas fa-power-off"></i> IDLE';
+  }
+  
+  if(currentUser.dateJoined) {
+    document.getElementById('displayJoined').innerText = String(currentUser.dateJoined).split('T')[0];
+  }
+  
+  if(currentUser.profilePic) {
+    document.getElementById('avatarIcon').classList.add('d-none');
+    document.getElementById('avatarImg').src = currentUser.profilePic;
+    document.getElementById('avatarImg').classList.remove('d-none');
+  }
+}
+
+async function refreshProfile() {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getDriver", driverId: currentUser.driverId }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if(data.success) {
+      currentUser = { ...currentUser, ...data };
+      localStorage.setItem("driverUser", JSON.stringify(currentUser));
+      updateProfileUI(); // Update UI with fresh data from sheet
+    }
+  } catch(e) { console.log("Background refresh failed", e); }
+}
+
+function handleProfileUpload(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    // Show loading state
+    document.getElementById('avatarIcon').className = "fas fa-spinner fa-spin";
+    document.getElementById('avatarIcon').classList.remove('d-none');
+    document.getElementById('avatarImg').classList.add('d-none');
+
+    // Resize Image using Canvas
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize to 150x150 max
+        const MAX_SIZE = 150;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+        } else {
+          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Get Base64
+        const dataUrl = canvas.toDataURL(file.type);
+        const base64Data = dataUrl.split(',')[1];
+        
+        // Send to Backend
+        fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "uploadPic",
+            driverId: currentUser.driverId,
+            image: base64Data,
+            mimeType: file.type
+          }),
+          headers: { "Content-Type": "text/plain;charset=utf-8" }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            currentUser.profilePic = data.url;
+            localStorage.setItem("driverUser", JSON.stringify(currentUser));
+            initApp(); 
+          } else {
+            alert("Upload failed: " + data.error);
+          }
+        })
+        .catch(err => alert("Error uploading: " + err.message))
+        .finally(() => {
+           // Reset icon if failed
+           if(!currentUser.profilePic) {
+             document.getElementById('avatarIcon').className = "fas fa-camera";
+             document.getElementById('avatarImg').classList.add('d-none');
+           }
+        });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 }
 
@@ -236,6 +775,7 @@ function startTrip() {
       
       showStopButton();
       startTimer();
+      updateProfileUI(); // Update status to Active
       document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-check"></i> Trip Started';
     } catch(e) {
       alert("Error starting trip: " + e.message);
@@ -270,6 +810,7 @@ function stopTrip() {
       document.getElementById('timer').innerText = "00:00:00";
       
       showStartButton();
+      updateProfileUI(); // Update status to Idle
       document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-satellite"></i> GPS Ready';
     } catch(e) {
       alert("Error stopping trip: " + e.message);
@@ -303,7 +844,6 @@ function startTimer() {
 }
 
 async function loadHistory() {
-  document.getElementById('historyList').innerHTML = "Loading...";
   const res = await fetch(API_URL, {
     method: "POST",
     body: JSON.stringify({ action: "getHistory", driverId: currentUser.driverId }),
@@ -312,33 +852,35 @@ async function loadHistory() {
   const trips = await res.json();
   
   let html = "";
+  let totalKm = 0;
+
   trips.forEach(t => {
     // t: TripID, DriverID, Name, Start, StartGPS, Stop, StopGPS, Duration, Dist, Status
     const dist = t[8] || 0;
+    const duration = t[7] || 0;
     const status = t[9];
+    const date = t[3].split(' ')[0];
+    const time = t[3].split(' ')[1];
+    totalKm += parseFloat(dist);
+    
     html += `
-      <div class="trip-card ${status === 'ONGOING' ? 'ongoing' : ''}">
-        <div class="d-flex justify-content-between">
-          <strong>${t[3].split(' ')[0]}</strong>
-          <span>${dist} km</span>
+      <div class="trip-item">
+        <div class="trip-icon" style="background: ${status === 'ONGOING' ? '#ffebee; color: #f44336' : '#e0f7fa; color: #00bcd4'}">
+          <i class="fas ${status === 'ONGOING' ? 'fa-car-side' : 'fa-check'}"></i>
         </div>
-        <div class="small text-muted">${t[3].split(' ')[1]} - ${t[5] ? t[5].split(' ')[1] : '...'}</div>
-        <div class="small mt-1 text-uppercase">${status}</div>
+        <div class="trip-details">
+          <h4>${date}</h4>
+          <p>${time} • ${duration} mins</p>
+        </div>
+        <div class="trip-stat">${dist} km</div>
       </div>
     `;
   });
   document.getElementById('historyList').innerHTML = html || "No trips yet.";
-}
-
-function switchTab(tab) {
-  if (tab === 'home') {
-    document.getElementById('tabHome').classList.remove('d-none');
-    document.getElementById('tabHistory').classList.add('d-none');
-  } else {
-    document.getElementById('tabHome').classList.add('d-none');
-    document.getElementById('tabHistory').classList.remove('d-none');
-    loadHistory();
-  }
+  
+  // Update Home Stats
+  document.getElementById('totalTrips').innerText = trips.length;
+  document.getElementById('totalDist').innerText = totalKm.toFixed(1);
 }
 
 // ================= INIT =================
@@ -347,10 +889,10 @@ window.onload = () => {
   if (saved) {
     currentUser = JSON.parse(saved);
     initApp();
+    loadHistory(); // Auto load history on init
   }
 };
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
