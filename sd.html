@@ -907,6 +907,32 @@
             height: 20px;
             accent-color: #3bc8f5;
         }
+
+        /* Advanced Outage Mobile Optimization */
+        #outagesTab .stats-bar {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
+        }
+        #outagesTab .stat-box {
+            padding: 16px !important;
+            text-align: left !important;
+        }
+        #outagesTab .stat-val {
+            font-size: 24px !important;
+        }
+        /* Stack filters in Outage Tab */
+        #outagesTab > div[style*="display: flex"] {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+        }
+        #outagesTab input, #outagesTab select, #outagesTab button {
+            width: 100% !important;
+            margin: 0 !important;
+        }
+        #outageMapContent > div {
+            height: 60vh !important;
+        }
     }
     .cesium-widget-credits { display: none !important; }
 
@@ -1253,7 +1279,7 @@
                 <h4 style="margin:0; color:#535c69;">Network Outages Dashboard <span class="badge badge-yes" style="font-size:0.7rem; vertical-align:middle; margin-left:8px; animation: pulse 2s infinite;">LIVE</span></h4>
                 <div>
                   <button id="toggleOutageViewBtn" class="bitrix-btn-primary" style="padding:0 1rem; margin-right: 10px;">Show Map View</button>
-                  <button id="refreshOutagesBtn" class="bitrix-btn-primary" style="padding:0 1rem;">⟳ Refresh</button>
+                  <button id="refreshOutagesBtn" class="bitrix-btn-primary" style="padding:0 1rem;">Refresh</button>
                 </div>
               </div>
 
@@ -1348,13 +1374,13 @@
                   <div style="position: relative; height: 750px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #e6e9eb; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                       <div style="position: absolute; top: 10px; left: 50px; z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                         <input type="text" id="mapSearchInput" placeholder="Search Place (e.g. Opebi)" style="width: 160px; padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
-                        <button id="mapSearchBtn" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">🔍</button>
-                        <button id="addPinBtn" style="padding: 6px 12px; background: #f39c12; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">➕ Add Pin</button>
+                        <button id="mapSearchBtn" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">Search</button>
+                        <button id="addPinBtn" style="padding: 6px 12px; background: #f39c12; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">+ Add Pin</button>
                         <div style="width: 1px; height: 20px; background: #ccc; margin: 0 5px;"></div>
                         <input type="number" id="latInput" placeholder="Lat" style="width: 90px; padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
                         <input type="number" id="lonInput" placeholder="Lon" style="width: 90px; padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
                         <button id="flyToCoordBtn" style="padding: 6px 12px; background: #00b4d8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">Go</button>
-                        <button id="myLocationBtn" style="padding: 6px 12px; background: #2a9d8f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">📍 My Loc</button>
+                        <button id="myLocationBtn" style="padding: 6px 12px; background: #2a9d8f; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight:bold;">Loc</button>
                       </div>
                       <div id="leafletMap" style="height: 100%; width: 100%;"></div>
                   </div>
@@ -1365,7 +1391,7 @@
             <div id="fobOutageTab" class="workspace-tab-content" style="display: none; padding-top: 1.5rem;">
                 <div class="fob-advanced-container">
                     <div class="fob-header">
-                        <h4 style="margin-top:0; margin-bottom:1.5rem; color:#535c69;">⚡ FOB Outage Resolution</h4>
+                        <h4 style="margin-top:0; margin-bottom:1.5rem; color:#535c69;">FOB Outage Resolution</h4>
                     </div>
             
                     <!-- Ticket Selection Area -->
@@ -1381,7 +1407,7 @@
                             </select>
                         </div>
                         <div style="align-self: flex-end;">
-                            <button id="fobSearchBtn" class="bitrix-btn-primary">🔍 Find & Resolve</button>
+                            <button id="fobSearchBtn" class="bitrix-btn-primary">Find & Resolve</button>
                         </div>
                     </div>
             
@@ -1397,7 +1423,7 @@
                             <!-- Left Column -->
                             <div>
                                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #444;">RCA Notes (Resolution)</label>
-                                <textarea id="fobRcaNote" class="bitrix-input" rows="4" placeholder="Example: RCA: Damaged pigtail at customer premises. Replaced and resolved✅" style="height: 100px;"></textarea>
+                                <textarea id="fobRcaNote" class="bitrix-input" rows="4" placeholder="Example: RCA: Damaged pigtail at customer premises. Replaced and resolved" style="height: 100px;"></textarea>
                                 
                                 <label style="display: block; margin-top: 20px; margin-bottom: 8px; font-weight: 600; color: #444;">Preventive Measures</label>
                                 <input type="text" id="fobPreventiveMeasure" class="bitrix-input" placeholder="e.g. Re-routed cable to avoid tension">
@@ -1431,7 +1457,7 @@
                         </div>
             
                         <div style="display: flex; gap: 15px; margin-top: 30px;">
-                            <button id="fobExecuteClosure" class="bitrix-btn-primary" style="flex: 2; padding: 14px; font-size: 16px;">✅ Finalize & Close Ticket</button>
+                            <button id="fobExecuteClosure" class="bitrix-btn-primary" style="flex: 2; padding: 14px; font-size: 16px;">Finalize & Close Ticket</button>
                             <button id="fobCancelResolution" class="header-btn" style="flex: 1; background: #6c757d; color: white;">Cancel</button>
                         </div>
                         <div id="fobCloseStatus" style="margin-top: 15px; text-align: center; font-weight: 500;"></div>
@@ -1462,7 +1488,7 @@
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button id="inspectRawBtn" class="header-btn" style="padding:0.5rem 1rem; font-size:0.85rem; background:#6c757d; color:white; border:none;">Inspect Raw Data</button>
-                    <button id="jumpBtn" class="header-btn" style="padding:0.5rem 1rem; font-size:0.85rem; background:#fff; color:#555; border:1px solid #c6cdd3;">Open in Bitrix ↗</button>
+                    <button id="jumpBtn" class="header-btn" style="padding:0.5rem 1rem; font-size:0.85rem; background:#fff; color:#555; border:1px solid #c6cdd3;">Open in Bitrix &nearr;</button>
                     <button id="copySingleExcelBtn" class="header-btn" style="padding:0.5rem 1rem; font-size:0.85rem; background:#2a9d8f; color:white; border:none;">Copy Excel String</button>
                 </div>
             </div>
@@ -1559,7 +1585,7 @@
   <div id="chartModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 95%; width: 1100px; max-height: 95vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 16px;">
       <div style="padding: 1.2rem 2rem; border-bottom: 1px solid var(--border); background: #fff; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-        <h2 style="margin: 0; font-size: 1.5rem; color: #2c3e50; display: flex; align-items: center; gap: 10px;">📊 Advanced Analytics Dashboard</h2>
+        <h2 style="margin: 0; font-size: 1.5rem; color: #2c3e50; display: flex; align-items: center; gap: 10px;">Advanced Analytics Dashboard</h2>
         <button id="closeChartIconBtn" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#999; line-height: 1; transition: color 0.2s;">&times;</button>
       </div>
       <div style="padding: 2rem; overflow-y: auto; flex: 1; background: #fcfcfc;">
@@ -5595,7 +5621,7 @@
                     }
 
                     // Update Row
-                    const replacedIcon = '<span title="Manually Replaced" style="color: green; margin-right: 5px;">🔄</span>';
+                    const replacedIcon = '<span title="Manually Replaced" style="color: green; margin-right: 5px;">&#x21bb;</span>';
                     rowElement.innerHTML = `
                         <td><span style="color:#2067b0; font-weight:500;">${replacedIcon}${newServiceId}</span></td>
                         <td>${bestTicket.id}</td>
@@ -5869,7 +5895,7 @@
                 <div class="history-meta">${serviceId} • Created: ${created}</div>
             </div>
           </div>
-          <span style="color:#ccc;">➡</span>
+          <span style="color:#ccc;">&gt;</span>
         `;
 
         const updateSelection = () => {
@@ -6207,12 +6233,12 @@
     async function closeTicket() {
       const input = closeTicketIdInput.value.trim();
       if (!input) {
-        closeStatus.textContent = '❌ Please enter a Ticket ID or Service ID.';
+        closeStatus.textContent = 'Error: Please enter a Ticket ID or Service ID.';
         return;
       }
       const rootCauseValue = closeTicketRootCauseInput.value.trim();
       if (!rootCauseValue) {
-        closeStatus.textContent = '❌ Please enter a Root Cause.';
+        closeStatus.textContent = 'Error: Please enter a Root Cause.';
         return;
       }
       
@@ -6221,7 +6247,7 @@
       const opPower = closeTicketOpPower.value.trim();
       const jobStatus = closeTicketJobStatus.value;
 
-      if (!operator || !area || !opPower) { closeStatus.textContent = '❌ Please fill Operator, Area, and OP Power.'; return; }
+      if (!operator || !area || !opPower) { closeStatus.textContent = 'Error: Please fill Operator, Area, and OP Power.'; return; }
 
       const rcaText = closeTicketRcaText.value.trim();
       const additionalComment = closeTicketComment.value.trim();
@@ -6328,7 +6354,7 @@
         const updateData = await updateRes.json();
         if (updateData.error) throw new Error('Failed to update ticket: ' + (updateData.error.error_description || JSON.stringify(updateData.error)));
 
-        closeStatus.innerHTML = '<strong>Ticket closed & sent to Sheet!</strong>';
+        closeStatus.innerHTML = '<strong>Success: Ticket closed & sent to Sheet!</strong>';
         // Optionally clear the form
         closeTicketIdInput.value = '';
         closeTicketRootCauseInput.value = '';
@@ -6983,7 +7009,7 @@
             return;
         }
 
-        statusEl.innerHTML = '🔍 Searching for ticket...';
+        statusEl.innerHTML = 'Searching for ticket...';
         resolutionPanel.style.display = 'none';
 
         try {
@@ -7009,7 +7035,7 @@
             if (data.error) throw new Error(data.error.error_description || data.error.message);
 
             if (!data.result || data.result.items.length === 0) {
-                statusEl.innerHTML = '❌ Ticket not found';
+                statusEl.innerHTML = 'Error: Ticket not found';
                 return;
             }
 
@@ -7030,12 +7056,12 @@
             }
 
             resolutionPanel.style.display = 'block';
-            statusEl.innerHTML = `✅ Ticket found: ${ticket.title.substring(0, 50)}...`;
+            statusEl.innerHTML = `Success: Ticket found: ${ticket.title.substring(0, 50)}...`;
             resolutionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         } catch (error) {
             console.error('Search error:', error);
-            statusEl.innerHTML = `❌ Error: ${error.message}`;
+            statusEl.innerHTML = `Error: ${error.message}`;
         }
     }
 
@@ -7054,16 +7080,16 @@
         const entityType = document.getElementById('fobEntityType').value;
     
         if (!rcaNote) { 
-            statusEl.innerHTML = '❌ Please enter RCA Notes'; 
+            statusEl.innerHTML = 'Error: Please enter RCA Notes'; 
             return; 
         }
     
         if (!rcaDropdown) {
-            statusEl.innerHTML = '❌ Please select a Root Cause from the dropdown';
+            statusEl.innerHTML = 'Error: Please select a Root Cause from the dropdown';
             return;
         }
     
-        statusEl.innerHTML = '⏳ Processing...';
+        statusEl.innerHTML = 'Processing...';
         document.getElementById('fobExecuteClosure').disabled = true;
     
         try {
@@ -7083,7 +7109,7 @@
             const currentTicket = ticketData.result.item;
     
             // Build a comprehensive timeline comment (User requested format)
-            let timelineComment = `🔧 **OUTAGE RESOLUTION REPORT**\n`;
+            let timelineComment = `OUTAGE RESOLUTION REPORT\n`;
             timelineComment += `━━━━━━━━━━━━━━━━━━━━\n`;
             timelineComment += `**RCA Notes:** ${rcaNote}\n`;
             timelineComment += `**Root Cause:** ${rcaDropdown}\n`;
@@ -7094,7 +7120,7 @@
                 timelineComment += `**Additional Notes:** ${additionalComment}\n`;
             }
             timelineComment += `━━━━━━━━━━━━━━━━━━━━\n`;
-            timelineComment += `✅ Ticket resolved via FOB Dashboard by ${currentTicket.ufCrm15_1763984127 || 'Operator'}`;
+            timelineComment += `Ticket resolved via FOB Dashboard by ${currentTicket.ufCrm15_1763984127 || 'Operator'}`;
     
             // 1. Add comment to timeline
             const commentRes = await safeApiCall(() => fetch(`${WEBHOOK}crm.timeline.comment.add`, {
@@ -7155,7 +7181,7 @@
             }
     
             const port = document.getElementById('fobModalPort').innerText;
-            statusEl.innerHTML = `✅✅ SUCCESS! Ticket for Port ${port} closed successfully!`;
+            statusEl.innerHTML = `Success: Ticket for Port ${port} closed successfully!`;
             
             // Clear form but keep the parsed data visible
             document.getElementById('fobRcaNote').value = '';
@@ -7170,7 +7196,7 @@
     
         } catch (error) {
             console.error('Closure error:', error);
-            statusEl.innerHTML = `❌ Error: ${error.message}`;
+            statusEl.innerHTML = `Error: ${error.message}`;
         } finally {
             document.getElementById('fobExecuteClosure').disabled = false;
         }
@@ -7303,11 +7329,11 @@
 
             // 2. Search API
             const btn = document.getElementById('mapSearchBtn');
-            btn.innerHTML = '⏳';
+            btn.innerHTML = 'Loading...';
             fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
                 .then(res => res.json())
                 .then(data => {
-                    btn.innerHTML = '🔍';
+                    btn.innerHTML = 'Search';
                     if(data && data.length > 0) {
                         const lat = parseFloat(data[0].lat);
                         const lon = parseFloat(data[0].lon);
@@ -7318,7 +7344,7 @@
                         alert("Place not found.");
                     }
                 })
-                .catch(() => { btn.innerHTML = '🔍'; alert("Search failed."); });
+                .catch(() => { btn.innerHTML = 'Search'; alert("Search failed."); });
         });
 
         // Add Pin Logic
@@ -7328,11 +7354,11 @@
             isAddingPin = !isAddingPin;
             if (isAddingPin) {
                 addPinBtn.style.background = '#e74c3c';
-                addPinBtn.innerText = '❌ Cancel';
+                addPinBtn.innerText = 'Cancel';
                 leafletMap.getContainer().style.cursor = 'crosshair';
             } else {
                 addPinBtn.style.background = '#f39c12';
-                addPinBtn.innerText = '➕ Add Pin';
+                addPinBtn.innerText = '+ Add Pin';
                 leafletMap.getContainer().style.cursor = '';
             }
         });
@@ -7364,7 +7390,7 @@
             }
 
             const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Locating...';
+            btn.innerHTML = 'Locating...';
             btn.disabled = true;
 
                 // Success Handler
@@ -7396,7 +7422,7 @@
 
                     const popupContent = `
                             <div style="text-align:center; min-width:120px;">
-                                <strong style="color:${color};">📍 You are Here</strong><br>
+                                <strong style="color:${color};">You are Here</strong><br>
                                 ${sourceLabel}
                                 <div style="margin:5px 0; font-size:0.9rem;">
                                     Lat: ${lat.toFixed(6)}<br>
@@ -7562,7 +7588,7 @@
             // Update popup to show it's a manual position
             currentMarker.bindPopup(`
                 <div style="text-align:center; min-width:120px;">
-                    <strong style="color:#f39c12;">✍️ Manually Set Location</strong><br>
+                    <strong style="color:#f39c12;">Manually Set Location</strong><br>
                     <div style="margin:5px 0; font-size:0.9rem;">
                         Lat: ${position.lat.toFixed(6)}<br>
                         Lon: ${position.lon.toFixed(6)}
