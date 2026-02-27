@@ -1,440 +1,356 @@
-/**
- * DRIVER JOURNEY TRACKER v7.0 - FINAL EDITION
- * Features: GPS Tracking, Distance Calculation, Trip History, Admin Dashboard
- * Linked Sheet: https://docs.google.com/spreadsheets/d/1-s5soOLFAT6K5Scq6mtBZqIZ6Bh5ffzlutEQ7BxoKs4/edit
- */
-
-const SHEET_ID = "1-s5soOLFAT6K5Scq6mtBZqIZ6Bh5ffzlutEQ7BxoKs4"; // The ID from your link
-
-function getDb() {
-  // Tries to open by ID first (better for standalone scripts), falls back to Active if bound
-  try {
-    return SpreadsheetApp.openById(SHEET_ID);
-  } catch (e) {
-    return SpreadsheetApp.getActiveSpreadsheet();
-  }
-}
-
-function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('FLEET ADMIN')
-    .addItem('Refresh System', 'refreshSystem')
-    .addItem('Add Driver (Manual)', 'showAddDriverUi')
-    .addItem('Re-run Setup', 'setup')
-    .addToUi();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Driver App</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background: #121212; color: #fff; font-family: sans-serif; }
+    .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #1e1e1e; position: relative; }
     
-  // Auto-refresh on load
-  refreshSystem();
-}
-
-function refreshSystem() {
-  const ss = getDb();
-  updateDriverDropdown(ss);
-  refreshDashboard();
-}
-
-function onEdit(e) {
-  const sheet = e.range.getSheet();
-  if (sheet.getName() === "DASHBOARD") {
-    // Watch for changes in Driver Select (C4) or Date Select (E4)
-    const r = e.range;
-    if (r.getRow() === 4 && (r.getColumn() === 3 || r.getColumn() === 5)) {
-      refreshDashboard();
+    /* Login Screen */
+    .login-box { padding: 2rem; text-align: center; padding-top: 30vh; }
+    .form-control { background: #333; border: none; color: white; margin-bottom: 1rem; padding: 15px; }
+    .form-control:focus { background: #444; color: white; box-shadow: none; }
+    
+    /* Dashboard */
+    .top-bar { padding: 15px; background: #000; display: flex; justify-content: space-between; align-items: center; }
+    .driver-info { font-size: 0.9rem; color: #aaa; }
+    .driver-name { font-weight: bold; color: white; font-size: 1.1rem; }
+    
+    .main-action { padding: 2rem; text-align: center; }
+    
+    .btn-circle {
+      width: 200px; height: 200px; border-radius: 50%; border: 8px solid #333;
+      font-size: 2rem; font-weight: bold; text-transform: uppercase;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      margin: 0 auto; transition: 0.2s;
     }
-  }
-}
-
-function setup(isInteractive) {
-  if (typeof isInteractive === 'undefined') isInteractive = true;
-  const ss = getDb();
-  // 1. DRIVERS SHEET
-  let drivers = ss.getSheetByName("DRIVERS");
-  if (!drivers) {
-    drivers = ss.insertSheet("DRIVERS");
-    drivers.appendRow(["DriverID", "Username", "Password", "FullName", "CarPlate", "Phone", "DateJoined"]);
-    drivers.getRange("A1:G1").setFontWeight("bold").setBackground("#0f172a").setFontColor("white");
-  }
-  
-  // ADD TEST USER IF EMPTY
-  if (drivers.getLastRow() === 1) {
-    drivers.appendRow(["DRV-TEST01", "driver1", "123456", "Test Driver", "LND-555-XY", "080-TEST-DRV", new Date()]);
-  }
-  
-  // 2. TRIPS SHEET
-  let trips = ss.getSheetByName("TRIPS");
-  if (!trips) {
-    trips = ss.insertSheet("TRIPS");
-    trips.appendRow(["TripID", "DriverID", "DriverName", "StartTime", "StartGPS", "StopTime", "StopGPS", "Duration_Mins", "Distance_KM", "Status"]);
-    trips.getRange("A1:J1").setFontWeight("bold").setBackground("#0f172a").setFontColor("white");
-  }
-
-  // 3. DASHBOARD SHEET (The Advanced Part)
-  let dash = ss.getSheetByName("DASHBOARD");
-  let shouldReset = true;
-
-  if (dash) {
-    if (isInteractive) {
-      const ui = SpreadsheetApp.getUi();
-      const result = ui.alert(
-        'Reset Dashboard Layout?',
-        'Do you want to reset the Dashboard columns and headers? (Select NO to keep your custom layout)',
-        ui.ButtonSet.YES_NO
-      );
-      if (result === ui.Button.NO) shouldReset = false;
-    } else {
-      shouldReset = false;
+    .btn-start { background: #06d6a0; color: #000; box-shadow: 0 0 20px rgba(6, 214, 160, 0.4); }
+    .btn-start:active { transform: scale(0.95); }
+    
+    .btn-stop { background: #ef476f; color: white; box-shadow: 0 0 20px rgba(239, 71, 111, 0.4); animation: pulse 2s infinite; }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 71, 111, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(239, 71, 111, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 71, 111, 0); }
     }
-  } else {
-    dash = ss.insertSheet("DASHBOARD");
-  }
-  
-  
-  if (shouldReset) {
-    // Reset Dashboard Layout
-    dash.clear();
+
+    .timer-display { font-size: 3rem; font-family: monospace; margin-top: 20px; font-weight: bold; }
+    .status-text { color: #888; margin-bottom: 20px; }
     
-    // 1. MAIN HEADER
-    dash.getRange("A1:I2").merge().setValue("FLEET COMMAND CENTER")
-        .setFontWeight("bold").setFontSize(24).setBackground("#0f172a").setFontColor("white")
-        .setHorizontalAlignment("center").setVerticalAlignment("middle");
-        
-    // 2. CONTROL PANEL (Left)
-    dash.getRange("B4").setValue("SELECT DRIVER:").setFontWeight("bold").setFontSize(10).setFontColor("#64748b").setHorizontalAlignment("right");
-    dash.getRange("C4").setBackground("#e0f7fa").setBorder(true, true, true, true, true, true)
-        .setFontWeight("bold").setHorizontalAlignment("center").clearContent(); // Clear any old content
-
-    dash.getRange("D4").setValue("FILTER DATE").setFontWeight("bold").setFontSize(10).setFontColor("#64748b").setHorizontalAlignment("right");
-    dash.getRange("E4").setBackground("#fff").setBorder(true, true, true, true, true, true)
-        .setNumberFormat("yyyy-mm-dd").setHorizontalAlignment("center"); // Date Picker here
-    // Add Date Validation
-    const dateRule = SpreadsheetApp.newDataValidation().requireDate().setAllowInvalid(false).build();
-    dash.getRange("E4").setDataValidation(dateRule);
-    dash.getRange("E5").setValue("(Delete to view all)").setFontSize(8).setFontColor("#94a3b8").setHorizontalAlignment("center");
-
-    // 3. DRIVER PROFILE CARD (Right)
-    dash.getRange("G3:I7").setBackground("#f8fafc").setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
-    dash.getRange("G3:I3").merge().setValue("DRIVER PROFILE").setFontWeight("bold").setBackground("#e2e8f0").setHorizontalAlignment("center");
+    .history-list { padding: 15px; }
+    .trip-card { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #06d6a0; }
+    .trip-card.ongoing { border-left: 5px solid #ef476f; }
     
-    dash.getRange("G4").setValue("NAME:").setFontWeight("bold").setFontColor("#64748b");
-    dash.getRange("G5").setValue("VEHICLE:").setFontWeight("bold").setFontColor("#64748b");
-    dash.getRange("G6").setValue("PHONE:").setFontWeight("bold").setFontColor("#64748b");
-    dash.getRange("G7").setValue("JOINED:").setFontWeight("bold").setFontColor("#64748b");
-    
-    // Merge placeholders for data
-    dash.getRange("H4:I4").merge(); dash.getRange("H5:I5").merge(); dash.getRange("H6:I6").merge(); dash.getRange("H7:I7").merge();
+    .nav-bottom { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: #000; display: flex; justify-content: space-around; padding: 15px; border-top: 1px solid #333; }
+    .nav-item { color: #666; text-align: center; font-size: 0.8rem; cursor: pointer; }
+    .nav-item.active { color: #06d6a0; }
+    .nav-item i { font-size: 1.2rem; display: block; margin-bottom: 5px; }
+  </style>
+</head>
+<body>
 
-    // 4. STATISTICS BAR
-    dash.getRange("B9:D9").merge().setValue("TOTAL TRIPS").setFontWeight("bold").setBackground("#3b82f6").setFontColor("white").setHorizontalAlignment("center");
-    dash.getRange("B10:D11").merge().setFormula('=COUNTA(A15:A)').setFontWeight("bold").setFontSize(20).setHorizontalAlignment("center").setVerticalAlignment("middle").setBackground("#eff6ff").setBorder(true, true, true, true, true, true);
+<div class="app-container">
 
-    dash.getRange("E9:F9").merge().setValue("TOTAL DISTANCE").setFontWeight("bold").setBackground("#10b981").setFontColor("white").setHorizontalAlignment("center");
-    dash.getRange("E10:F11").merge().setFormula('=SUM(F15:F) & " km"').setFontWeight("bold").setFontSize(20).setHorizontalAlignment("center").setVerticalAlignment("middle").setBackground("#ecfdf5").setBorder(true, true, true, true, true, true);
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen">
+    <div class="login-box">
+      <h2 class="mb-4"><i class="fas fa-car"></i> DRIVER APP</h2>
+      <input type="text" id="username" class="form-control" placeholder="Username">
+      <input type="password" id="password" class="form-control" placeholder="Password">
+      <button onclick="login()" class="btn btn-success w-100 py-3 fw-bold">LOGIN</button>
+      <p class="mt-3 text-muted" onclick="showRegister()">New Driver? Register here</p>
+      <div id="loginMsg" class="mt-3"></div>
+    </div>
+  </div>
 
-    dash.getRange("G9:H9").merge().setValue("TOTAL HOURS").setFontWeight("bold").setBackground("#f59e0b").setFontColor("white").setHorizontalAlignment("center");
-    dash.getRange("G10:H11").merge().setFormula('=ROUND(SUM(G15:G)/60, 1) & " hrs"').setFontWeight("bold").setFontSize(20).setHorizontalAlignment("center").setVerticalAlignment("middle").setBackground("#fffbeb").setBorder(true, true, true, true, true, true);
+  <!-- REGISTER SCREEN -->
+  <div id="registerScreen" class="d-none">
+    <div class="login-box" style="padding-top: 10vh;">
+      <h3 class="mb-4">New Driver</h3>
+      <input type="text" id="regUsername" class="form-control" placeholder="Username">
+      <input type="password" id="regPassword" class="form-control" placeholder="Password">
+      <input type="text" id="regFullname" class="form-control" placeholder="Full Name">
+      <input type="text" id="regPlate" class="form-control" placeholder="Car Plate Number">
+      <input type="text" id="regPhone" class="form-control" placeholder="Phone Number">
+      <button onclick="register()" class="btn btn-primary w-100 py-3 fw-bold">REGISTER</button>
+      <p class="mt-3 text-muted" onclick="showLogin()">Back to Login</p>
+    </div>
+  </div>
 
-    // 5. DATA TABLE
-    const headers = [["TRIP ID", "DRIVER NAME", "DATE", "START TIME", "STOP TIME", "DISTANCE", "DURATION (MIN)", "STATUS", "ROUTE MAP"]];
-    dash.getRange("A14:I14").setValues(headers)
-        .setFontWeight("bold").setBackground("#1e293b").setFontColor("white").setHorizontalAlignment("center");
-        
-    // Column Widths
-    dash.setColumnWidth(1, 100); // Trip ID
-    dash.setColumnWidth(2, 180); // Driver
-    dash.setColumnWidth(3, 100); // Date
-    dash.setColumnWidth(4, 90);  // Start
-    dash.setColumnWidth(5, 90);  // Stop
-    dash.setColumnWidth(6, 100); // Dist
-    dash.setColumnWidth(7, 120); // Mins
-    dash.setColumnWidth(8, 100); // Status
-    dash.setColumnWidth(9, 150); // Map
-    
-    // Freeze rows
-    dash.setFrozenRows(14);
-  }
-  
-  // Update Dropdown
-  updateDriverDropdown(ss);
-}
+  <!-- MAIN APP -->
+  <div id="appScreen" class="d-none">
+    <div class="top-bar">
+      <div>
+        <div class="driver-name" id="displayDriverName">Driver</div>
+        <div class="driver-info" id="displayPlate">ABC-123</div>
+      </div>
+      <button onclick="logout()" class="btn btn-sm btn-outline-secondary">Logout</button>
+    </div>
 
-function updateDriverDropdown(ss) {
-  const driversSheet = ss.getSheetByName("DRIVERS");
-  const dash = ss.getSheetByName("DASHBOARD");
-  
-  if (!driversSheet || !dash) return;
-  
-  const data = driversSheet.getDataRange().getValues();
-  // FullName is column 4 (index 3)
-  const names = data.slice(1).map(r => r[3]).filter(String);
-  
-  if (names.length > 0) {
-    const rule = SpreadsheetApp.newDataValidation().requireValueInList(names, true).build();
-    dash.getRange("C4").setDataValidation(rule);
-  }
-}
-
-function refreshDashboard() {
-  const ss = getDb();
-  const dash = ss.getSheetByName("DASHBOARD");
-  const tripsSheet = ss.getSheetByName("TRIPS");
-  
-  if (!dash || !tripsSheet) return;
-  
-  // Get Filters
-  const selectedDriver = dash.getRange("C4").getValue();
-  const selectedDate = dash.getRange("E4").getValue(); 
-  
-  // Clear old data
-  dash.getRange("A15:I1000").clearContent();
-  dash.getRange("H4:I7").clearContent(); // Clear old driver info
-  
-  if (!selectedDriver) return; 
-  
-  // 1. FETCH DRIVER INFO (Plate & Phone)
-  const driversSheet = ss.getSheetByName("DRIVERS");
-  if (driversSheet) {
-    const driverData = driversSheet.getDataRange().getValues();
-    // Find driver by Name (Column 4, index 3)
-    const driverRow = driverData.find(r => r[3] === selectedDriver);
-    if (driverRow) {
-      // Populate Card: Name(3), Plate(4), Phone(5), Joined(6)
-      dash.getRange("H4").setValue(driverRow[3]).setFontWeight("bold");
-      dash.getRange("H5").setValue(driverRow[4]);
-      dash.getRange("H6").setValue(driverRow[5]);
-      dash.getRange("H7").setValue(driverRow[6]).setNumberFormat("yyyy-mm-dd");
-    }
-  }
-
-  // 2. FETCH TRIP ACTIVITY
-  const trips = tripsSheet.getDataRange().getValues().slice(1).reverse(); // Skip header and show newest first
-  
-  const filtered = trips.filter(r => {
-    if (String(r[2]) !== String(selectedDriver)) return false; // Check Name
-    
-    if (selectedDate) {
-      // Robust Date Comparison (Handle both Date objects and Strings)
-      const tripDateStr = String(r[3]).split(' ')[0]; // DB Date is "dd/MM/yyyy"
+    <!-- HOME TAB -->
+    <div id="tabHome" class="main-action">
+      <div class="status-text" id="statusText">Ready to start?</div>
       
-      let selDateStr = "";
-      if (selectedDate instanceof Date) {
-         selDateStr = Utilities.formatDate(selectedDate, "GMT+1", "dd/MM/yyyy");
-      } else {
-         selDateStr = String(selectedDate).split(' ')[0];
-      }
-      
-      if (tripDateStr !== selDateStr) return false;
-    }
-    return true;
-  });
-  
-  if (filtered.length === 0) return;
-  
-  // Map to Dashboard Columns
-  const output = filtered.map(r => {
-    const datePart = r[3].split(' ')[0];
-    const timeStart = r[3].split(' ')[1];
-    const timeStop = r[5] ? r[5].split(' ')[1] : "ONGOING";
-    
-    // Generate Route Link (Origin -> Dest)
-    let mapLink = "";
-    if (r[4] && r[6]) {
-       mapLink = `=HYPERLINK("https://www.google.com/maps/dir/?api=1&origin=${r[4]}&destination=${r[6]}", "VIEW ROUTE")`;
-    } else if (r[4]) {
-       mapLink = `=HYPERLINK("https://maps.google.com/?q=${r[4]}", "VIEW START")`;
-    } else {
-       mapLink = "-";
-    }
-    
-    return [r[0], r[2], datePart, timeStart, timeStop, r[8], r[7], r[9], mapLink];
-  });
-  
-  // Write Data
-  dash.getRange(15, 1, output.length, 9).setValues(output);
-  
-  // Apply Professional Formatting to Data
-  dash.getRange(15, 1, output.length, 9)
-      .setHorizontalAlignment("center")
-      .setVerticalAlignment("middle")
-      .setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP) // Ensure text wraps instead of being cut off
-      .setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
-}
+      <!-- START BUTTON -->
+      <div id="btnStart" class="btn-circle btn-start" onclick="startTrip()">
+        <i class="fas fa-play mb-2"></i> START
+      </div>
 
-// ====================== API HANDLERS ======================
-function doGet(e) {
-  setup(false); // Ensure sheets exist
-  const action = e.parameter.action;
-  
-  // Allow simple ping or basic get, but prefer POST for data to avoid caching issues
-  try {
-    return jsonOut({error: "Invalid Action"});
-  } catch (err) {
-    return jsonOut({error: err.message});
-  }
-}
+      <!-- STOP BUTTON (Hidden) -->
+      <div id="btnStop" class="btn-circle btn-stop d-none" onclick="stopTrip()">
+        <i class="fas fa-stop mb-2"></i> STOP
+      </div>
 
-function doPost(e) {
-  setup(false); // Ensure sheets exist
-  try {
-    const data = JSON.parse(e.postData.contents);
-    
-    if (data.action === "login") {
-      return loginDriver(data.username, data.password);
-    }
-    if (data.action === "getHistory") {
-      return getTripHistory(data.driverId);
-    }
-    if (data.action === "register") {
-      return registerDriver(data);
-    }
-    if (data.action === "startTrip") {
-      return startTrip(data);
-    }
-    if (data.action === "stopTrip") {
-      return stopTrip(data);
-    }
-    return jsonOut({error: "Invalid Action"});
-  } catch (err) {
-    return jsonOut({error: err.message});
-  }
-}
+      <div class="timer-display" id="timer">00:00:00</div>
+      <div class="mt-3 text-muted" id="gpsStatus"><i class="fas fa-satellite"></i> GPS Ready</div>
+    </div>
 
-// ====================== CORE FUNCTIONS ======================
+    <!-- HISTORY TAB -->
+    <div id="tabHistory" class="d-none">
+      <h4 class="p-3 mb-0">My Trips</h4>
+      <div class="history-list" id="historyList">
+        <!-- Items go here -->
+      </div>
+    </div>
 
-function registerDriver(data) {
-  const ss = getDb();
-  const sheet = ss.getSheetByName("DRIVERS");
-  if (!sheet) throw new Error("DRIVERS sheet not found. Please run Setup.");
-  const rows = sheet.getDataRange().getValues();
-  
-  // Check if username exists
-  const exists = rows.some(r => String(r[1]).toLowerCase() === String(data.username).toLowerCase());
-  if (exists) throw new Error("Username already taken");
+    <!-- BOTTOM NAV -->
+    <div class="nav-bottom">
+      <div class="nav-item active" onclick="switchTab('home')">
+        <i class="fas fa-road"></i> Drive
+      </div>
+      <div class="nav-item" onclick="switchTab('history')">
+        <i class="fas fa-history"></i> History
+      </div>
+    </div>
 
-  const newId = "DRV-" + new Date().getTime().toString().slice(-6);
-  sheet.appendRow([newId, data.username, data.password, data.fullName, data.carPlate, data.phone, new Date()]);
-  updateDriverDropdown(ss); // Update dashboard dropdown
-  
-  return jsonOut({success: true, message: "Driver Registered!"});
-}
+  </div>
+</div>
 
-function loginDriver(username, password) {
-  const ss = getDb();
-  const sheet = ss.getSheetByName("DRIVERS");
-  const rows = sheet.getDataRange().getValues();
-  
-  const cleanUser = String(username).trim().toLowerCase();
-  const cleanPass = String(password).trim();
-  
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]).trim().toLowerCase() === cleanUser && String(rows[i][2]).trim() === cleanPass) {
-      return jsonOut({
-        success: true,
-        driverId: rows[i][0],
-        fullName: rows[i][3],
-        carPlate: rows[i][4]
-      });
-    }
-  }
-  throw new Error("Invalid Username or Password");
-}
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbx-i0Bye9VtcRBN59-IRPEPyEZeS3jehtZ0wovcgZHKtEksaQQ-jIPEx1T900oSni0j/exec";
 
-function startTrip(data) {
-  const ss = getDb();
-  const sheet = ss.getSheetByName("TRIPS");
-  
-  const tripId = "TRIP-" + new Date().getTime().toString().slice(-8);
-  const now = Utilities.formatDate(new Date(), "GMT+1", "dd/MM/yyyy HH:mm:ss");
-  
-  // Columns: TripID, DriverID, DriverName, StartTime, StartGPS, StopTime, StopGPS, Duration, Distance, Status
-  sheet.appendRow([tripId, data.driverId, data.driverName, now, data.gps, "", "", "", "", "ONGOING"]);
-  
-  return jsonOut({success: true, tripId: tripId, startTime: now});
-}
+let currentUser = null;
+let currentTrip = null;
+let timerInterval = null;
 
-function stopTrip(data) {
-  const ss = getDb();
-  const sheet = ss.getSheetByName("TRIPS");
-  const rows = sheet.getDataRange().getValues();
-  
-  for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === String(data.tripId)) {
-      const rowIdx = i + 1;
-      const now = Utilities.formatDate(new Date(), "GMT+1", "dd/MM/yyyy HH:mm:ss");
-      
-      // Calculate Distance (Haversine)
-      const startGPS = rows[i][4].split(",");
-      const stopGPS = data.gps.split(",");
-      const dist = calculateDistance(startGPS[0], startGPS[1], stopGPS[0], stopGPS[1]);
-      
-      // Calculate Duration
-      const t1 = parseDate(rows[i][3]);
-      const t2 = new Date();
-      const diffMins = Math.round((t2 - t1) / 60000);
-      
-      sheet.getRange(rowIdx, 6).setValue(now); // StopTime
-      sheet.getRange(rowIdx, 7).setValue(data.gps); // StopGPS
-      sheet.getRange(rowIdx, 8).setValue(diffMins); // Duration (Mins)
-      sheet.getRange(rowIdx, 9).setValue(dist.toFixed(2)); // Distance KM
-      sheet.getRange(rowIdx, 10).setValue("COMPLETED"); // Status
-      
-      return jsonOut({success: true, distance: dist.toFixed(2), duration: diffMins, stopTime: now});
-    }
-  }
-  throw new Error("Trip ID not found");
-}
+// ================= AUTH =================
+function showRegister() { document.getElementById('loginScreen').classList.add('d-none'); document.getElementById('registerScreen').classList.remove('d-none'); }
+function showLogin() { document.getElementById('registerScreen').classList.add('d-none'); document.getElementById('loginScreen').classList.remove('d-none'); }
 
-function getTripHistory(driverId) {
-  const ss = getDb();
-  const sheet = ss.getSheetByName("TRIPS");
-  const rows = sheet.getDataRange().getValues();
-  
-  // Filter by DriverID (Index 1)
-  const myTrips = rows.slice(1).filter(r => String(r[1]) === String(driverId)).reverse();
-  return jsonOut(myTrips);
-}
-
-// ====================== HELPERS ======================
-function jsonOut(data) {
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  return R * c; // Distance in km
-}
-
-function parseDate(str) {
-  const [date, time] = str.split(' ');
-  const [d, m, y] = date.split('/');
-  const [h, min, s] = time.split(':');
-  return new Date(y, m - 1, d, h, min, s);
-}
-
-function deg2rad(deg) {
-  return deg * (Math.PI/180);
-}
-
-function showAddDriverUi() {
-  const ui = SpreadsheetApp.getUi();
-  const u = ui.prompt("Username").getResponseText();
-  const p = ui.prompt("Password").getResponseText();
-  const f = ui.prompt("Full Name").getResponseText();
-  const c = ui.prompt("Car Plate").getResponseText();
-  const ph = ui.prompt("Phone").getResponseText();
-  
-  if(!u || !p) return ui.alert("Username and Password required");
+async function login() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value.trim();
+  document.getElementById('loginMsg').innerHTML = "Logging in...";
   
   try {
-    registerDriver({username: u, password: p, fullName: f, carPlate: c, phone: ph});
-    ui.alert("Driver Added Successfully");
+    // Use POST for login to avoid caching and ensure consistent headers
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "login", username: u, password: p }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    
+    currentUser = data;
+    localStorage.setItem("driverUser", JSON.stringify(currentUser));
+    initApp();
   } catch(e) {
-    ui.alert("Error: " + e.message);
+    document.getElementById('loginMsg').innerHTML = `<span class="text-danger">${e.message}</span>`;
   }
 }
+
+async function register() {
+  const body = {
+    action: "register",
+    username: document.getElementById('regUsername').value.trim(),
+    password: document.getElementById('regPassword').value.trim(),
+    fullName: document.getElementById('regFullname').value.trim(),
+    carPlate: document.getElementById('regPlate').value.trim(),
+    phone: document.getElementById('regPhone').value.trim()
+  };
+  
+  try {
+    const res = await fetch(API_URL, { 
+      method: "POST", 
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // Fixes CORS Preflight
+      body: JSON.stringify(body) 
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    alert("Registered! Please login.");
+    showLogin();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+function logout() {
+  localStorage.removeItem("driverUser");
+  location.reload();
+}
+
+// ================= APP LOGIC =================
+function initApp() {
+  document.getElementById('loginScreen').classList.add('d-none');
+  document.getElementById('appScreen').classList.remove('d-none');
+  document.getElementById('displayDriverName').innerText = currentUser.fullName;
+  document.getElementById('displayPlate').innerText = currentUser.carPlate;
+  
+  // Check if trip is active
+  const savedTrip = localStorage.getItem("activeTrip");
+  if (savedTrip) {
+    currentTrip = JSON.parse(savedTrip);
+    showStopButton();
+    startTimer();
+  }
+}
+
+function startTrip() {
+  if (!navigator.geolocation) return alert("GPS not supported");
+  document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting GPS...';
+  
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
+    
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "startTrip",
+          driverId: currentUser.driverId,
+          driverName: currentUser.fullName,
+          gps: gps
+        }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      });
+      const data = await res.json();
+      
+      currentTrip = { tripId: data.tripId, startTime: new Date().getTime() };
+      localStorage.setItem("activeTrip", JSON.stringify(currentTrip));
+      
+      showStopButton();
+      startTimer();
+      document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-check"></i> Trip Started';
+    } catch(e) {
+      alert("Error starting trip: " + e.message);
+    }
+  });
+}
+
+function stopTrip() {
+  if (!navigator.geolocation) return alert("GPS not supported");
+  document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ending Trip...';
+  
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
+    
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "stopTrip",
+          tripId: currentTrip.tripId,
+          gps: gps
+        }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      });
+      const data = await res.json();
+      
+      alert(`Trip Ended!\nDistance: ${data.distance} km`);
+      
+      localStorage.removeItem("activeTrip");
+      currentTrip = null;
+      clearInterval(timerInterval);
+      document.getElementById('timer').innerText = "00:00:00";
+      
+      showStartButton();
+      document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-satellite"></i> GPS Ready';
+    } catch(e) {
+      alert("Error stopping trip: " + e.message);
+    }
+  });
+}
+
+function showStopButton() {
+  document.getElementById('btnStart').classList.add('d-none');
+  document.getElementById('btnStop').classList.remove('d-none');
+  document.getElementById('statusText').innerText = "Trip in Progress...";
+}
+
+function showStartButton() {
+  document.getElementById('btnStart').classList.remove('d-none');
+  document.getElementById('btnStop').classList.add('d-none');
+  document.getElementById('statusText').innerText = "Ready to start?";
+}
+
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!currentTrip) return;
+    const diff = new Date().getTime() - currentTrip.startTime;
+    const date = new Date(diff);
+    const hh = ('0' + date.getUTCHours()).slice(-2);
+    const mm = ('0' + date.getUTCMinutes()).slice(-2);
+    const ss = ('0' + date.getUTCSeconds()).slice(-2);
+    document.getElementById('timer').innerText = `${hh}:${mm}:${ss}`;
+  }, 1000);
+}
+
+async function loadHistory() {
+  document.getElementById('historyList').innerHTML = "Loading...";
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "getHistory", driverId: currentUser.driverId }),
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  });
+  const trips = await res.json();
+  
+  let html = "";
+  trips.forEach(t => {
+    // t: TripID, DriverID, Name, Start, StartGPS, Stop, StopGPS, Duration, Dist, Status
+    const dist = t[8] || 0;
+    const status = t[9];
+    html += `
+      <div class="trip-card ${status === 'ONGOING' ? 'ongoing' : ''}">
+        <div class="d-flex justify-content-between">
+          <strong>${t[3].split(' ')[0]}</strong>
+          <span>${dist} km</span>
+        </div>
+        <div class="small text-muted">${t[3].split(' ')[1]} - ${t[5] ? t[5].split(' ')[1] : '...'}</div>
+        <div class="small mt-1 text-uppercase">${status}</div>
+      </div>
+    `;
+  });
+  document.getElementById('historyList').innerHTML = html || "No trips yet.";
+}
+
+function switchTab(tab) {
+  if (tab === 'home') {
+    document.getElementById('tabHome').classList.remove('d-none');
+    document.getElementById('tabHistory').classList.add('d-none');
+  } else {
+    document.getElementById('tabHome').classList.add('d-none');
+    document.getElementById('tabHistory').classList.remove('d-none');
+    loadHistory();
+  }
+}
+
+// ================= INIT =================
+window.onload = () => {
+  const saved = localStorage.getItem("driverUser");
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    initApp();
+  }
+};
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
