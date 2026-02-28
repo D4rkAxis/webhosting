@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Driver App</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <!-- Leaflet Maps CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900;1000&family=Roboto:wght@300;400;500;700&display=swap");
 
@@ -119,9 +121,9 @@
     .nav-icon { width: 40px; text-align: center; font-size: 1.2rem; }
     .nav-text { display: block; width: 100px; }
 
-    /* HEADER & HAMBURGER (Desktop Hidden) */
-    .mobile-header { display: contents; }
-    .hamburger { display: none; }
+    /* MOBILE ELEMENTS (Desktop Hidden) */
+    .mobile-top-bar { display: none; }
+    .menu-overlay { display: none; }
 
     /* CONTENT AREA */
     .content { position: relative; height: 100%; overflow: hidden; background: #f6f7fb; }
@@ -184,6 +186,29 @@
       justify-content: center;
       height: 100%;
       text-align: center;
+    }
+    
+    #journeyMap {
+      width: 100%;
+      height: 350px;
+      border-radius: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      z-index: 1;
+      border: 4px solid white;
+    }
+    
+    .speedometer-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      z-index: 10;
+      display: flex; align-items: baseline; gap: 4px;
     }
 
     /* CONTROL PANEL (Top Left) */
@@ -309,43 +334,69 @@
         font-size: 16px; /* Better readability on mobile */
       }
       
-      /* TOP NAVIGATION BAR (Hamburger Style) */
+      /* MOBILE TOP BAR (Fixed Header) */
+      .mobile-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: fixed;
+        top: 0; left: 0; width: 100%;
+        height: 60px;
+        background: #ffffff;
+        padding: 0 20px;
+        z-index: 1500;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      }
+      .mobile-top-bar h1 { font-size: 1.2rem; font-weight: 800; color: #484b57; margin: 0; letter-spacing: 0.5px; }
+      .hamburger { font-size: 1.4rem; color: #484b57; cursor: pointer; padding: 10px; margin-left: -10px; }
+
+      /* SIDE DRAWER NAVIGATION */
       .main-menu { 
         position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
-        height: auto;
-        padding: 0;
+        width: 280px; /* Standard Drawer Width */
+        height: 100vh;
+        padding-top: 30px;
         border-radius: 0;
         flex-direction: column;
         justify-content: flex-start;
-        align-items: stretch;
-        z-index: 1000;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        align-items: flex-start;
+        z-index: 2000;
+        box-shadow: 5px 0 30px rgba(0,0,0,0.15);
         background: rgb(73, 57, 113);
+        transform: translateX(-100%); /* Hidden by default */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
       
-      .mobile-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 20px;
-        width: 100%;
-        height: 70px;
-      }
+      .main-menu.open { transform: translateX(0); }
       
-      .main-menu h1 { display: block; font-size: 1.5rem; margin: 0; }
-      .hamburger { display: block; font-size: 1.5rem; color: white; cursor: pointer; }
+      /* OVERLAY BACKDROP */
+      .menu-overlay {
+        display: block;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.4);
+        z-index: 1900;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        backdrop-filter: blur(3px);
+      }
+      .menu-overlay.show { opacity: 1; visibility: visible; }
+
+      /* Hide internal header in drawer */
+      .main-menu h1 { display: none; }
       
       .main-menu ul {
-        display: none; /* Hidden by default */
+        display: flex;
         flex-direction: column;
+        list-style: none;
         width: 100%;
-        padding-bottom: 20px;
-        background: rgb(65, 50, 100);
+        background: transparent;
+        padding: 0;
+        margin-top: 20px;
       }
-      .main-menu ul.show { display: flex; }
       
       .nav-item { 
         margin: 0; 
@@ -353,15 +404,8 @@
         height: 60px;
         border-radius: 0;
         justify-content: flex-start;
-        padding: 0 20px;
+        padding: 0 30px;
         border-bottom: 1px solid rgba(255,255,255,0.05);
-      }
-      
-      .nav-item.active {
-        background: rgba(255,255,255,0.1);
-        box-shadow: none;
-        transform: none;
-        border-left: 5px solid #fff;
       }
       
       .nav-item a {
@@ -371,16 +415,16 @@
         font-size: 1rem;
         color: rgba(255,255,255,0.8);
         gap: 15px;
+        font-weight: 600;
       }
       
-      .nav-item.active a { color: #fff; }
-      .nav-item.active a i { 
-        transform: none; 
-        color: #fff; 
-        background: transparent;
+      .nav-item.active {
+        background: rgba(255,255,255,0.15);
         box-shadow: none;
-        width: 30px;
+        transform: none;
+        border-left: 5px solid #fff;
       }
+      .nav-item.active a { color: #fff; }
       
       /* Hide Desktop Curves */
       .nav-item b { display: none !important; }
@@ -391,7 +435,7 @@
       /* CONTENT AREA */
       .content { 
         height: 100vh;
-        padding-top: 70px; /* Header height */
+        padding-top: 70px; /* Header height + spacing */
         border-radius: 0;
         overflow: hidden;
       }
@@ -456,11 +500,18 @@
 
   <!-- MAIN DASHBOARD -->
   <main id="appScreen" class="d-none">
+    <!-- MOBILE TOP BAR -->
+    <div class="mobile-top-bar">
+      <div class="hamburger" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
+      <h1>DRIVER APP</h1>
+      <div style="width: 24px;"></div> <!-- Spacer for centering -->
+    </div>
+    
+    <!-- OVERLAY -->
+    <div class="menu-overlay" onclick="toggleMenu()"></div>
+
     <nav class="main-menu">
-      <div class="mobile-header">
-        <h1>Fleet App</h1>
-        <div class="hamburger" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
-      </div>
+      <h1>Fleet App</h1>
       <ul>
         <li class="nav-item active" id="nav-home">
           <b></b><b></b>
@@ -544,6 +595,14 @@
       <!-- VIEW: JOURNEY (START/STOP) -->
       <div id="view-journey" class="view-section">
         <div class="journey-container">
+          <!-- MAP CONTAINER (Hidden until start) -->
+          <div id="mapWrapper" class="d-none" style="position: relative; width: 100%; margin-bottom: 25px;">
+            <div id="journeyMap" style="margin-bottom: 0;"></div>
+            <div class="speedometer-box">
+              <span id="speedValue" style="font-size: 1.8rem; font-weight: 800; color: #484b57;">0</span> <small style="font-size: 0.8rem; font-weight: 700; color: #888;">KM/H</small>
+            </div>
+          </div>
+          
           <h2 class="mb-4">Current Journey</h2>
           
           <div id="btnStart" class="btn-action btn-start" onclick="startTrip()">
@@ -572,12 +631,25 @@
     </section>
   </main>
 
+<!-- Leaflet Maps JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Google Maps API - IMPORTANT: Replace YOUR_API_KEY with your actual key -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+<!-- Leaflet Google Mutant Layer -->
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@latest/dist/leaflet.gridlayer.googlemutant.js"></script>
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbx-i0Bye9VtcRBN59-IRPEPyEZeS3jehtZ0wovcgZHKtEksaQQ-jIPEx1T900oSni0j/exec";
 
 let currentUser = null;
 let currentTrip = null;
 let timerInterval = null;
+
+// MAP VARIABLES
+let map = null;
+let mapMarker = null;
+let mapRoute = null;
+let watchId = null;
+let routeCoords = [];
 
 // ================= AUTH =================
 function showRegister() { document.getElementById('loginScreen').classList.add('d-none'); document.getElementById('registerScreen').classList.remove('d-none'); }
@@ -637,7 +709,8 @@ function logout() {
 }
 
 function toggleMenu() {
-  document.querySelector('.main-menu ul').classList.toggle('show');
+  document.querySelector('.main-menu').classList.toggle('open');
+  document.querySelector('.menu-overlay').classList.toggle('show');
 }
 
 function switchTab(tabName) {
@@ -650,10 +723,16 @@ function switchTab(tabName) {
   document.getElementById('nav-' + tabName).classList.add('active');
   
   // Close mobile menu
-  document.querySelector('.main-menu ul').classList.remove('show');
+  document.querySelector('.main-menu').classList.remove('open');
+  document.querySelector('.menu-overlay').classList.remove('show');
 
   if(tabName === 'history' || tabName === 'home') {
     loadHistory();
+  }
+  
+  // Resize map if switching to journey view to prevent rendering issues
+  if(tabName === 'journey' && map) {
+    setTimeout(() => { map.invalidateSize(); }, 300);
   }
 }
 
@@ -817,6 +896,9 @@ function startTrip() {
       currentTrip = { tripId: data.tripId, startTime: new Date().getTime() };
       localStorage.setItem("activeTrip", JSON.stringify(currentTrip));
       
+      // Initialize Map
+      initMap(pos.coords.latitude, pos.coords.longitude);
+      
       showStopButton();
       startTimer();
       updateProfileUI(); // Update status to Active
@@ -831,6 +913,12 @@ function stopTrip() {
   if (!navigator.geolocation) return alert("GPS not supported");
   document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ending Trip...';
   
+  // Stop watching GPS
+  if (watchId) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
     
@@ -856,10 +944,107 @@ function stopTrip() {
       showStartButton();
       updateProfileUI(); // Update status to Idle
       document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-satellite"></i> GPS Ready';
+      
+      // Hide Map
+      document.getElementById('mapWrapper').classList.add('d-none');
     } catch(e) {
       alert("Error stopping trip: " + e.message);
     }
   });
+}
+
+// ================= MAP FUNCTIONS =================
+function initMap(lat, lng) {
+  const mapWrap = document.getElementById('mapWrapper');
+  mapWrap.classList.remove('d-none');
+  
+  // Reset route
+  routeCoords = [[lat, lng]];
+
+  if (!map) {
+    // Create Map Instance
+    map = L.map('journeyMap', {
+      zoomControl: true, // Enable zoom
+      attributionControl: false
+    }).setView([lat, lng], 18); // High zoom for "Street" feel
+
+    // --- DEFINE LAYERS ---
+    // Base Layers (using Google)
+    const googleStreets = L.gridLayer.googleMutant({
+        type: 'roadmap' // 'roadmap', 'satellite', 'hybrid', 'terrain'
+    }).addTo(map); // Add default layer
+
+    const googleHybrid = L.gridLayer.googleMutant({
+        type: 'hybrid'
+    });
+
+    // Overlay Layer
+    const trafficLayer = L.gridLayer.googleMutant({
+        type: 'roadmap',
+        layer: 'trafficLayer'
+    });
+
+    const baseLayers = {
+        "Streets": googleStreets,
+        "Satellite": googleHybrid
+    };
+
+    const overlayLayers = {
+        "Live Traffic": trafficLayer
+    };
+
+    // Add Layer Control to map
+    L.control.layers(baseLayers, overlayLayers, { position: 'topright' }).addTo(map);
+
+    // Add Custom Marker
+    const carIcon = L.divIcon({
+      className: 'custom-car-icon',
+      html: '<div style="background:#fff; border-radius:50%; padding:5px; box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-car-side" style="color:#7c88e0; font-size:20px;"></i></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    mapMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
+    
+    // Add Route Polyline
+    mapRoute = L.polyline(routeCoords, {color: '#4facfe', weight: 5, opacity: 0.8}).addTo(map);
+
+  } else {
+    // Reuse Map
+    map.setView([lat, lng], 18);
+    mapMarker.setLatLng([lat, lng]);
+    mapRoute.setLatLngs(routeCoords);
+    map.invalidateSize();
+  }
+
+  // Start Real-time Tracking
+  watchId = navigator.geolocation.watchPosition(updateMapPosition, 
+    (err) => console.log(err), 
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+  );
+}
+
+function updateMapPosition(pos) {
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  
+  if(map && mapMarker) {
+    const newLatLng = [lat, lng];
+    
+    // Update Marker
+    mapMarker.setLatLng(newLatLng);
+    
+    // Update Route
+    routeCoords.push(newLatLng);
+    mapRoute.setLatLngs(routeCoords);
+    
+    // Pan Map
+    map.panTo(newLatLng);
+    
+    // Update Speedometer
+    const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+    document.getElementById('speedValue').innerText = speedKmh;
+  }
 }
 
 function showStopButton() {
