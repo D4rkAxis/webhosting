@@ -211,6 +211,28 @@
       display: flex; align-items: baseline; gap: 4px;
     }
 
+    /* ADVANCED JOURNEY UI */
+    #preTripView { display: block; width: 100%; text-align: left; }
+    #onTripView { display: none; width: 100%; }
+    .vehicle-select-box {
+      background: white; padding: 25px; border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    #vehicleSelect {
+      width: 100%; padding: 15px; font-size: 1rem; border-radius: 10px;
+      border: 2px solid #e2e8f0; background-color: #f8fafc;
+      font-family: inherit; font-weight: 600;
+    }
+    .vehicle-info-card {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 20px; margin-top: 15px; border-radius: 10px;
+      display: none; /* Hidden until a vehicle is selected */
+    }
+    .vehicle-info-card h4 { margin: 0; color: #4a5568; }
+    .vehicle-info-card p { color: #718096; }
+    .btn-start:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+
     /* CONTROL PANEL (Top Left) */
     .control-panel {
       display: grid;
@@ -478,24 +500,12 @@
       <div class="text-center mb-4">
         <i class="fas fa-shipping-fast fa-3x" style="color: rgb(73, 57, 113);"></i>
         <h2 class="mt-3">Driver Portal</h2>
+        <p style="color: #666;">Login to continue</p>
       </div>
       <input type="text" id="username" class="form-control" placeholder="Username">
       <input type="password" id="password" class="form-control" placeholder="Password">
       <button onclick="login()" class="btn btn-primary w-100 py-3 fw-bold">LOGIN</button>
-      <p class="mt-3 text-center" style="cursor:pointer; color: #666;" onclick="showRegister()">New Driver? Register here</p>
       <div id="loginMsg" class="mt-3"></div>
-  </div>
-
-  <!-- REGISTER SCREEN -->
-  <div id="registerScreen" class="login-container d-none">
-      <h3 class="mb-4 text-center">New Driver</h3>
-      <input type="text" id="regUsername" class="form-control" placeholder="Username">
-      <input type="password" id="regPassword" class="form-control" placeholder="Password">
-      <input type="text" id="regFullname" class="form-control" placeholder="Full Name">
-      <input type="text" id="regPlate" class="form-control" placeholder="Car Plate Number">
-      <input type="text" id="regPhone" class="form-control" placeholder="Phone Number">
-      <button onclick="register()" class="btn btn-primary w-100 py-3 fw-bold">REGISTER</button>
-      <p class="mt-3 text-center" style="cursor:pointer; color: #666;" onclick="showLogin()">Back to Login</p>
   </div>
 
   <!-- MAIN DASHBOARD -->
@@ -595,29 +605,41 @@
       <!-- VIEW: JOURNEY (START/STOP) -->
       <div id="view-journey" class="view-section">
         <div class="journey-container">
-          <!-- MAP CONTAINER (Hidden until start) -->
-          <div id="mapWrapper" class="d-none" style="position: relative; width: 100%; margin-bottom: 25px;">
-            <div id="journeyMap" style="margin-bottom: 0;"></div>
-            <div class="speedometer-box">
-              <span id="speedValue" style="font-size: 1.8rem; font-weight: 800; color: #484b57;">0</span> <small style="font-size: 0.8rem; font-weight: 700; color: #888;">KM/H</small>
+
+          <!-- State 1: Pre-Trip (Vehicle Selection) -->
+          <div id="preTripView">
+            <div class="vehicle-select-box">
+              <h3 class="mb-4">Start a New Journey</h3>
+              <label for="vehicleSelect" style="font-weight: 600; font-size: 0.9rem; color: #888;">1. SELECT YOUR VEHICLE</label>
+              <select id="vehicleSelect" class="form-control mt-3" onchange="onVehicleSelect()">
+                <option value="">Loading available cars...</option>
+              </select>
+              <div id="vehicleInfo" class="vehicle-info-card">
+                <h4 id="vehicleInfoName"></h4>
+                <p id="vehicleInfoModel"></p>
+              </div>
+            </div>
+            <div id="btnStart" class="btn-action btn-start mt-3" onclick="startTrip()" disabled>
+              <i class="fas fa-play"></i>
+              <span style="font-size: 1rem; margin-top: 5px;">START</span>
             </div>
           </div>
-          
-          <h2 class="mb-4">Current Journey</h2>
-          
-          <div id="btnStart" class="btn-action btn-start" onclick="startTrip()">
-            <i class="fas fa-play"></i>
-            <span style="font-size: 1rem; margin-top: 5px;">START</span>
-          </div>
-          
-          <div id="btnStop" class="btn-action btn-stop d-none" onclick="stopTrip()">
-            <i class="fas fa-stop"></i>
-            <span style="font-size: 1rem; margin-top: 5px;">STOP</span>
-          </div>
 
-          <div class="timer-display mt-3" id="timer">00:00:00</div>
-          <p class="mt-3" style="color:#888; font-weight:600;" id="statusText">Ready to Drive?</p>
-          <div class="gps-status" id="gpsStatus"><i class="fas fa-satellite-dish"></i> GPS Ready</div>
+          <!-- State 2: On-Trip (Map and Timer) -->
+          <div id="onTripView">
+            <div id="mapWrapper" style="position: relative; width: 100%; margin-bottom: 25px;">
+              <div id="journeyMap" style="margin-bottom: 0;"></div>
+              <div class="speedometer-box">
+                <span id="speedValue" style="font-size: 1.8rem; font-weight: 800; color: #484b57;">0</span> <small style="font-size: 0.8rem; font-weight: 700; color: #888;">KM/H</small>
+              </div>
+            </div>
+            <div id="btnStop" class="btn-action btn-stop" onclick="stopTrip()">
+              <i class="fas fa-stop"></i>
+              <span style="font-size: 1rem; margin-top: 5px;">STOP</span>
+            </div>
+            <div class="timer-display mt-3" id="timer">00:00:00</div>
+            <div class="gps-status" id="gpsStatus"><i class="fas fa-satellite-dish"></i> Trip in Progress...</div>
+          </div>
         </div>
       </div>
 
@@ -648,9 +670,6 @@ let watchId = null;
 let routeCoords = [];
 
 // ================= AUTH =================
-function showRegister() { document.getElementById('loginScreen').classList.add('d-none'); document.getElementById('registerScreen').classList.remove('d-none'); }
-function showLogin() { document.getElementById('registerScreen').classList.add('d-none'); document.getElementById('loginScreen').classList.remove('d-none'); }
-
 async function login() {
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value.trim();
@@ -671,31 +690,6 @@ async function login() {
     initApp();
   } catch(e) {
     document.getElementById('loginMsg').innerHTML = `<span class="text-danger">${e.message}</span>`;
-  }
-}
-
-async function register() {
-  const body = {
-    action: "register",
-    username: document.getElementById('regUsername').value.trim(),
-    password: document.getElementById('regPassword').value.trim(),
-    fullName: document.getElementById('regFullname').value.trim(),
-    carPlate: document.getElementById('regPlate').value.trim(),
-    phone: document.getElementById('regPhone').value.trim()
-  };
-  
-  try {
-    const res = await fetch(API_URL, { 
-      method: "POST", 
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // Fixes CORS Preflight
-      body: JSON.stringify(body) 
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error);
-    alert("Registered! Please login.");
-    showLogin();
-  } catch(e) {
-    alert(e.message);
   }
 }
 
@@ -725,6 +719,11 @@ function switchTab(tabName) {
   if(tabName === 'history' || tabName === 'home') {
     loadHistory();
   }
+
+  if(tabName === 'journey') {
+    // Load available vehicles when switching to journey tab
+    loadVehicles();
+  }
   
   // Resize map if switching to journey view to prevent rendering issues
   if(tabName === 'journey' && map) {
@@ -746,8 +745,7 @@ function initApp() {
   const savedTrip = localStorage.getItem("activeTrip");
   if (savedTrip) {
     currentTrip = JSON.parse(savedTrip);
-    showStopButton();
-    startTimer();
+    showOnTripView();
     switchTab('journey'); // Auto go to journey if active
   }
 }
@@ -871,11 +869,13 @@ function handleProfileUpload(input) {
 
 function startTrip() {
   if (!navigator.geolocation) return alert("GPS not supported");
-  document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting GPS...';
+  const plateNumber = document.getElementById('vehicleSelect').value;
+  if(!plateNumber) return alert("Please select a vehicle first.");
+
+  document.getElementById('btnStart').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
-    
     try {
       const res = await fetch(API_URL, {
         method: "POST",
@@ -883,6 +883,7 @@ function startTrip() {
           action: "startTrip",
           driverId: currentUser.driverId,
           driverName: currentUser.fullName,
+          plateNumber: plateNumber,
           gps: gps
         }),
         headers: { "Content-Type": "text/plain;charset=utf-8" }
@@ -895,19 +896,18 @@ function startTrip() {
       // Initialize Map
       initMap(pos.coords.latitude, pos.coords.longitude);
       
-      showStopButton();
-      startTimer();
-      updateProfileUI(); // Update status to Active
-      document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-check"></i> Trip Started';
+      showOnTripView();
     } catch(e) {
       alert("Error starting trip: " + e.message);
+      document.getElementById('btnStart').innerHTML = '<i class="fas fa-play"></i><span style="font-size: 1rem; margin-top: 5px;">START</span>';
     }
   });
 }
 
 function stopTrip() {
   if (!navigator.geolocation) return alert("GPS not supported");
-  document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ending Trip...';
+  const stopBtn = document.getElementById('btnStop');
+  stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   
   // Stop watching GPS
   if (watchId) {
@@ -937,22 +937,17 @@ function stopTrip() {
       clearInterval(timerInterval);
       document.getElementById('timer').innerText = "00:00:00";
       
-      showStartButton();
-      updateProfileUI(); // Update status to Idle
-      document.getElementById('gpsStatus').innerHTML = '<i class="fas fa-satellite"></i> GPS Ready';
-      
-      // Hide Map
-      document.getElementById('mapWrapper').classList.add('d-none');
+      showPreTripView();
     } catch(e) {
       alert("Error stopping trip: " + e.message);
+      stopBtn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 1rem; margin-top: 5px;">STOP</span>';
     }
   });
 }
 
 // ================= MAP FUNCTIONS =================
 function initMap(lat, lng) {
-  const mapWrap = document.getElementById('mapWrapper');
-  mapWrap.classList.remove('d-none');
+  document.getElementById('mapWrapper').style.display = 'block';
   
   // Reset route
   routeCoords = [[lat, lng]];
@@ -1038,18 +1033,53 @@ function updateMapPosition(pos) {
   }
 }
 
-function showStopButton() {
-  document.getElementById('btnStart').classList.add('d-none');
-  document.getElementById('btnStop').classList.remove('d-none');
-  document.getElementById('statusText').innerText = "Trip in Progress...";
+async function loadVehicles() {
+  const select = document.getElementById('vehicleSelect');
+  select.innerHTML = '<option value="">Loading available cars...</option>';
+  document.getElementById('btnStart').disabled = true;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getVehicles" }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if (data.success && data.vehicles.length > 0) {
+      select.innerHTML = '<option value="">-- Please select a vehicle --</option>';
+      data.vehicles.forEach(v => {
+        const option = document.createElement('option');
+        option.value = v.plate;
+        option.textContent = `${v.name} - ${v.plate}`;
+        option.dataset.model = v.model;
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option value="">No vehicles available</option>';
+    }
+  } catch (e) {
+    select.innerHTML = '<option value="">Error loading vehicles</option>';
+  }
 }
 
-function showStartButton() {
-  document.getElementById('btnStart').classList.remove('d-none');
-  document.getElementById('btnStop').classList.add('d-none');
-  document.getElementById('statusText').innerText = "Ready to start?";
+function onVehicleSelect() {
+  const select = document.getElementById('vehicleSelect');
+  const infoCard = document.getElementById('vehicleInfo');
+  const startBtn = document.getElementById('btnStart');
+
+  if (select.value) {
+    const selectedOption = select.options[select.selectedIndex];
+    document.getElementById('vehicleInfoName').textContent = selectedOption.text;
+    document.getElementById('vehicleInfoModel').textContent = selectedOption.dataset.model;
+    infoCard.style.display = 'block';
+    startBtn.disabled = false;
+  } else {
+    infoCard.style.display = 'none';
+    startBtn.disabled = true;
+  }
 }
 
+// ================= UI STATE FUNCTIONS =================
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
@@ -1061,6 +1091,26 @@ function startTimer() {
     const ss = ('0' + date.getUTCSeconds()).slice(-2);
     document.getElementById('timer').innerText = `${hh}:${mm}:${ss}`;
   }, 1000);
+}
+
+function showOnTripView() {
+  document.getElementById('preTripView').style.display = 'none';
+  document.getElementById('onTripView').style.display = 'block';
+  if(map) map.invalidateSize();
+  startTimer();
+  updateProfileUI();
+}
+
+function showPreTripView() {
+  document.getElementById('preTripView').style.display = 'block';
+  document.getElementById('onTripView').style.display = 'none';
+  
+  // Reset vehicle selection
+  loadVehicles();
+  document.getElementById('vehicleInfo').style.display = 'none';
+  document.getElementById('vehicleSelect').value = '';
+  document.getElementById('btnStart').disabled = true;
+  updateProfileUI();
 }
 
 async function loadHistory() {
@@ -1075,13 +1125,13 @@ async function loadHistory() {
   let totalKm = 0;
 
   trips.forEach(t => {
-    // t: TripID, DriverID, Name, Start, StartGPS, Stop, StopGPS, Duration, Dist, Status
-    const dist = t[8] || 0;
-    const duration = t[7] || 0;
-    const status = t[9];
-    const date = t[3].split(' ')[0];
-    const time = t[3].split(' ')[1];
-    totalKm += parseFloat(dist);
+    // t: TripID, DriverID, Name, Plate, Start, StartGPS, Stop, StopGPS, Duration, Dist, Status
+    const dist = t[9] || 0;
+    const duration = t[8] || 0;
+    const status = t[10];
+    const date = String(t[4]).split(' ')[0];
+    const time = String(t[4]).split(' ')[1] || '';
+    totalKm += parseFloat(dist) || 0;
     
     html += `
       <div class="trip-item">
