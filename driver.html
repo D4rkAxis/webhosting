@@ -633,10 +633,6 @@
 
 <!-- Leaflet Maps JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<!-- Google Maps API - IMPORTANT: Replace YOUR_API_KEY with your actual key -->
-<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
-<!-- Leaflet Google Mutant Layer -->
-<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@latest/dist/leaflet.gridlayer.googlemutant.js"></script>
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbx-i0Bye9VtcRBN59-IRPEPyEZeS3jehtZ0wovcgZHKtEksaQQ-jIPEx1T900oSni0j/exec";
 
@@ -964,37 +960,32 @@ function initMap(lat, lng) {
   if (!map) {
     // Create Map Instance
     map = L.map('journeyMap', {
-      zoomControl: true, // Enable zoom
+      zoomControl: false, // We add it manually for better mobile positioning
       attributionControl: false
     }).setView([lat, lng], 18); // High zoom for "Street" feel
 
-    // --- DEFINE LAYERS ---
-    // Base Layers (using Google)
-    const googleStreets = L.gridLayer.googleMutant({
-        type: 'roadmap' // 'roadmap', 'satellite', 'hybrid', 'terrain'
-    }).addTo(map); // Add default layer
+    // Add Zoom Control to Bottom Right (Easier for thumb on mobile)
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    const googleHybrid = L.gridLayer.googleMutant({
-        type: 'hybrid'
-    });
+    // --- DEFINE LAYERS (NO API KEY REQUIRED) ---
+    
+    // 1. OpenStreetMap (Streets)
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
 
-    // Overlay Layer
-    const trafficLayer = L.gridLayer.googleMutant({
-        type: 'roadmap',
-        layer: 'trafficLayer'
+    // 2. Esri World Imagery (Satellite)
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
     });
 
     const baseLayers = {
-        "Streets": googleStreets,
-        "Satellite": googleHybrid
-    };
-
-    const overlayLayers = {
-        "Live Traffic": trafficLayer
+        "Streets": osm,
+        "Satellite": satellite
     };
 
     // Add Layer Control to map
-    L.control.layers(baseLayers, overlayLayers, { position: 'topright' }).addTo(map);
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
     // Add Custom Marker
     const carIcon = L.divIcon({
