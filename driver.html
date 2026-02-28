@@ -119,6 +119,10 @@
     .nav-icon { width: 40px; text-align: center; font-size: 1.2rem; }
     .nav-text { display: block; width: 100px; }
 
+    /* HEADER & HAMBURGER (Desktop Hidden) */
+    .mobile-header { display: contents; }
+    .hamburger { display: none; }
+
     /* CONTENT AREA */
     .content { position: relative; height: 100%; overflow: hidden; background: #f6f7fb; }
     
@@ -305,59 +309,89 @@
         font-size: 16px; /* Better readability on mobile */
       }
       
-      /* BOTTOM NAVIGATION BAR (App Style) */
+      /* TOP NAVIGATION BAR (Hamburger Style) */
       .main-menu { 
         position: fixed;
-        bottom: 0;
+        top: 0;
         left: 0;
         width: 100%;
-        height: 70px;
+        height: auto;
         padding: 0;
-        border-radius: 20px 20px 0 0;
-        flex-direction: row;
-        justify-content: space-around;
-        align-items: center;
+        border-radius: 0;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
         z-index: 1000;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        background: rgb(73, 57, 113);
       }
       
-      .main-menu h1 { display: none; }
+      .mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        width: 100%;
+        height: 70px;
+      }
+      
+      .main-menu h1 { display: block; font-size: 1.5rem; margin: 0; }
+      .hamburger { display: block; font-size: 1.5rem; color: white; cursor: pointer; }
+      
+      .main-menu ul {
+        display: none; /* Hidden by default */
+        flex-direction: column;
+        width: 100%;
+        padding-bottom: 20px;
+        background: rgb(65, 50, 100);
+      }
+      .main-menu ul.show { display: flex; }
       
       .nav-item { 
         margin: 0; 
-        width: 100%; 
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        width: 100%;
+        height: 60px;
+        border-radius: 0;
+        justify-content: flex-start;
+        padding: 0 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
       }
       
-      /* Reset Link Styles for Bottom Bar */
+      .nav-item.active {
+        background: rgba(255,255,255,0.1);
+        box-shadow: none;
+        transform: none;
+        border-left: 5px solid #fff;
+      }
+      
       .nav-item a {
-        flex-direction: column;
+        flex-direction: row;
+        justify-content: flex-start;
         margin: 0;
-        padding: 0;
-        border-radius: 0;
-        background: transparent !important;
-        color: rgba(255,255,255,0.5);
-        font-size: 0.75rem;
-        gap: 6px;
-        width: 100%;
-        height: 100%;
+        font-size: 1rem;
+        color: rgba(255,255,255,0.8);
+        gap: 15px;
       }
       
       .nav-item.active a { color: #fff; }
-      .nav-item.active a i { transform: translateY(-3px); color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.6); transition: 0.3s; }
+      .nav-item.active a i { 
+        transform: none; 
+        color: #fff; 
+        background: transparent;
+        box-shadow: none;
+        width: 30px;
+      }
       
       /* Hide Desktop Curves */
       .nav-item b { display: none !important; }
       
-      .nav-icon { font-size: 1.4rem; width: auto; margin: 0; }
-      .nav-text { display: block; width: auto; }
+      .nav-icon { font-size: 1.3rem; width: auto; margin: 0; transition: all 0.3s ease; }
+      .nav-text { display: block; width: auto; font-size: 0.7rem; letter-spacing: 0.5px; }
 
       /* CONTENT AREA */
       .content { 
-        height: calc(100vh - 70px); /* Subtract Nav Height */
+        height: 100vh;
+        padding-top: 70px; /* Header height */
         border-radius: 0;
         overflow: hidden;
       }
@@ -423,7 +457,10 @@
   <!-- MAIN DASHBOARD -->
   <main id="appScreen" class="d-none">
     <nav class="main-menu">
-      <h1>Fleet App</h1>
+      <div class="mobile-header">
+        <h1>Fleet App</h1>
+        <div class="hamburger" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
+      </div>
       <ul>
         <li class="nav-item active" id="nav-home">
           <b></b><b></b>
@@ -599,6 +636,10 @@ function logout() {
   location.reload();
 }
 
+function toggleMenu() {
+  document.querySelector('.main-menu ul').classList.toggle('show');
+}
+
 function switchTab(tabName) {
   // Hide all views
   document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
@@ -607,6 +648,9 @@ function switchTab(tabName) {
   // Show selected
   document.getElementById('view-' + tabName).classList.add('active');
   document.getElementById('nav-' + tabName).classList.add('active');
+  
+  // Close mobile menu
+  document.querySelector('.main-menu ul').classList.remove('show');
 
   if(tabName === 'history' || tabName === 'home') {
     loadHistory();
