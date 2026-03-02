@@ -683,6 +683,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbx-i0Bye9VtcRBN59-IRPEP
 let currentUser = null;
 let currentTrip = null;
 let timerInterval = null;
+let syncInterval = null;
 
 // MAP VARIABLES
 let map = null;
@@ -755,7 +756,7 @@ function switchTab(tabName) {
 }
 
 // ================= APP LOGIC =================
-function initApp() {
+async function initApp() {
   document.getElementById('loginScreen').classList.add('d-none');
   document.getElementById('appScreen').classList.remove('d-none');
   
@@ -764,12 +765,39 @@ function initApp() {
   // 2. Fetch fresh data from Sheet (CarPlate, Phone, etc.)
   refreshProfile();
   
-  // Check if trip is active
+  // Check if trip is active and VERIFY with backend
   const savedTrip = localStorage.getItem("activeTrip");
   if (savedTrip) {
     currentTrip = JSON.parse(savedTrip);
-    showOnTripView();
-    switchTab('journey'); // Auto go to journey if active
+    
+    // Call the new backend function to verify status
+    try {
+        const res = await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "checkTripStatus", tripId: currentTrip.tripId }),
+            headers: { "Content-Type": "text/plain;charset=utf-8" }
+        });
+        const data = await res.json();
+
+        if (data.success && data.status === "ONGOING") {
+            // Backend confirms trip is active. Proceed.
+            showOnTripView();
+            switchTab('journey');
+        } else {
+            // Backend says trip is completed or not found. It's a stale entry.
+            // This is the automatic self-healing part.
+            alert("Your previous trip has been completed. The app is now reset.");
+            localStorage.removeItem("activeTrip");
+            currentTrip = null;
+            showPreTripView(); // Reset to idle state
+            updateProfileUI(); // Update status badge
+        }
+    } catch (e) {
+        // Network error, etc. Cautiously assume trip is still active to avoid data loss.
+        console.error("Could not verify trip status, assuming active.", e);
+        showOnTripView();
+        switchTab('journey');
+    }
   }
 }
 
@@ -933,6 +961,7 @@ function stopTrip() {
   const stopBtn = document.getElementById('btnStop');
   stopBtn.disabled = true; // Prevent mashing the button
 
+  stopSync(); // Stop live syncing immediately
   // CORE UX FIX: Add confirmation before stopping.
   if (!confirm("Are you sure you want to end this trip?")) {
     stopBtn.disabled = false; // Re-enable if user cancels
@@ -1142,6 +1171,35 @@ function onVehicleSelect() {
   }
 }
 
+// ================= LIVE SYNC =================
+function startSync() {
+  stopSync();
+  // Sync every 30 seconds
+  syncInterval = setInterval(syncTripData, 30000);
+}
+
+function stopSync() {
+  if (syncInterval) clearInterval(syncInterval);
+  syncInterval = null;
+}
+
+async function syncTripData() {
+  if (!currentTrip || !routeCoords.length) return;
+  
+  // Use the last recorded point as current GPS
+  const lastPt = routeCoords[routeCoords.length - 1];
+  const gps = `${lastPt[0]},${lastPt[1]}`;
+
+  try {
+    // Fire and forget - we don't need to wait for response
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "updateTrip", tripId: currentTrip.tripId, gps: gps, routePath: routeCoords }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+  } catch(e) { console.log("Sync skipped"); }
+}
+
 // ================= UI STATE FUNCTIONS =================
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
@@ -1169,6 +1227,7 @@ function finishTripSummary() {
   localStorage.removeItem("activeTrip");
   currentTrip = null;
   routeCoords = [];
+  stopSync();
   lastRecordedPos = null;
   document.getElementById('timer').innerText = "00:00:00";
   
@@ -1182,6 +1241,7 @@ function showOnTripView() {
   document.getElementById('postTripView').style.display = 'none'; // Ensure summary is hidden
   document.getElementById('onTripView').style.display = 'block';
   if(map) map.invalidateSize();
+  startSync(); // Start live updates
   startTimer();
   updateProfileUI();
 }
@@ -1189,6 +1249,7 @@ function showOnTripView() {
 function showPreTripView() {
   document.getElementById('onTripView').style.display = 'none';
   document.getElementById('preTripView').style.display = 'block';
+  stopSync();
   
   // Reset vehicle selection
   loadVehicles();
