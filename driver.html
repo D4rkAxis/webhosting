@@ -640,6 +640,28 @@
             <div class="timer-display mt-3" id="timer">00:00:00</div>
             <div class="gps-status" id="gpsStatus"><i class="fas fa-satellite-dish"></i> Trip in Progress...</div>
           </div>
+
+          <!-- State 3: Post-Trip Summary -->
+          <div id="postTripView" style="display: none; width: 100%; text-align: left;">
+            <div class="vehicle-select-box">
+                <h2 class="mb-4">Trip Completed!</h2>
+                <div class="stats-row">
+                    <div class="control-card">
+                        <div class="stat-circle" style="border-color: #4facfe;">
+                          <span id="summaryDist">0</span><small>KM</small>
+                        </div>
+                        <h4 class="mt-3">Distance</h4>
+                    </div>
+                    <div class="control-card">
+                        <div class="stat-circle" style="border-color: #f59e0b;">
+                          <span id="summaryDur">0</span><small>MINS</small>
+                        </div>
+                        <h4 class="mt-3">Duration</h4>
+                    </div>
+                </div>
+                <button onclick="finishTripSummary()" class="btn btn-primary w-100 mt-3">Done</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1027,7 +1049,7 @@ function updateMapPosition(pos) {
     shouldRecord = true;
   } else {
     const dist = getDistanceFromLatLonInKm(lastRecordedPos.lat, lastRecordedPos.lng, lat, lng);
-    if (dist > 0.01) shouldRecord = true; // 0.01 km = 10 meters
+    if (dist > 0.005) shouldRecord = true; // 0.005 km = 5 meters
   }
 
   if(map && mapMarker) {
