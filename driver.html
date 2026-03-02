@@ -908,18 +908,19 @@ function startTrip() {
 
 function stopTrip() {
   if (!navigator.geolocation) return alert("GPS not supported");
+  
   const stopBtn = document.getElementById('btnStop');
   stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  stopBtn.disabled = true; // Prevent double-clicks
   
   // Stop watching GPS
   if (watchId) {
     navigator.geolocation.clearWatch(watchId);
     watchId = null;
   }
-
+  
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
-    
     try {
       const res = await fetch(API_URL, {
         method: "POST",
@@ -927,21 +928,23 @@ function stopTrip() {
           action: "stopTrip",
           tripId: currentTrip.tripId,
           gps: gps,
-          routePath: routeCoords // Send full path history
+          routePath: routeCoords
         }),
         headers: { "Content-Type": "text/plain;charset=utf-8" }
       });
       const data = await res.json();
       
-      alert(`Trip Ended!\nDistance: ${data.distance} km`);
+      // CORE FIX: Check for backend errors before proceeding.
+      if (!data.success) {
+        throw new Error(data.error || "An unknown error occurred on the server.");
+      }
       
-      localStorage.removeItem("activeTrip");
-      currentTrip = null;
-      clearInterval(timerInterval);
-      routeCoords = [];
-      document.getElementById('timer').innerText = "00:00:00";
+      // Stop timer immediately and show summary screen instead of alert
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
       
-      showPreTripView();
+      showPostTripView(data.distance, data.duration);
+
     } catch(e) {
       alert("Error stopping trip: " + e.message);
       stopBtn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 1rem; margin-top: 5px;">STOP</span>';
@@ -1124,8 +1127,30 @@ function startTimer() {
   }, 1000);
 }
 
+function showPostTripView(distance, duration) {
+  document.getElementById('onTripView').style.display = 'none';
+  document.getElementById('postTripView').style.display = 'block';
+
+  document.getElementById('summaryDist').innerText = distance || '0';
+  document.getElementById('summaryDur').innerText = duration || '0';
+}
+
+function finishTripSummary() {
+  // This is where we fully reset the state after user acknowledges summary
+  localStorage.removeItem("activeTrip");
+  currentTrip = null;
+  routeCoords = [];
+  lastRecordedPos = null;
+  document.getElementById('timer').innerText = "00:00:00";
+  
+  // Hide summary and show the pre-trip view for the next journey
+  document.getElementById('postTripView').style.display = 'none';
+  showPreTripView();
+}
+
 function showOnTripView() {
   document.getElementById('preTripView').style.display = 'none';
+  document.getElementById('postTripView').style.display = 'none'; // Ensure summary is hidden
   document.getElementById('onTripView').style.display = 'block';
   if(map) map.invalidateSize();
   startTimer();
@@ -1133,14 +1158,21 @@ function showOnTripView() {
 }
 
 function showPreTripView() {
-  document.getElementById('preTripView').style.display = 'block';
   document.getElementById('onTripView').style.display = 'none';
+  document.getElementById('preTripView').style.display = 'block';
   
   // Reset vehicle selection
   loadVehicles();
   document.getElementById('vehicleInfo').style.display = 'none';
   document.getElementById('vehicleSelect').value = '';
   document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStart').innerHTML = '<i class="fas fa-play"></i><span style="font-size: 1rem; margin-top: 5px;">START</span>';
+  
+  // Reset stop button for good measure
+  const stopBtn = document.getElementById('btnStop');
+  stopBtn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 1rem; margin-top: 5px;">STOP</span>';
+  stopBtn.disabled = false;
+
   updateProfileUI();
 }
 
