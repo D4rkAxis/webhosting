@@ -978,6 +978,11 @@ function stopTrip() {
   
   navigator.geolocation.getCurrentPosition(async (pos) => {
     const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
+
+    // CORE FIX: Add the final stop position to the route path array.
+    // This ensures the line goes all the way to the actual end point.
+    routeCoords.push([pos.coords.latitude, pos.coords.longitude]);
+
     try {
       const res = await fetch(API_URL, {
         method: "POST",
