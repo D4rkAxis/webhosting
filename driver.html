@@ -930,10 +930,16 @@ function startTrip() {
 
 function stopTrip() {
   if (!navigator.geolocation) return alert("GPS not supported");
-  
   const stopBtn = document.getElementById('btnStop');
+  stopBtn.disabled = true; // Prevent mashing the button
+
+  // CORE UX FIX: Add confirmation before stopping.
+  if (!confirm("Are you sure you want to end this trip?")) {
+    stopBtn.disabled = false; // Re-enable if user cancels
+    return; 
+  }
+
   stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-  stopBtn.disabled = true; // Prevent double-clicks
   
   // Stop watching GPS
   if (watchId) {
@@ -970,6 +976,7 @@ function stopTrip() {
     } catch(e) {
       alert("Error stopping trip: " + e.message);
       stopBtn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 1rem; margin-top: 5px;">STOP</span>';
+      stopBtn.disabled = false; // Re-enable on error
     }
   });
 }
