@@ -1097,6 +1097,1327 @@ function updateMapPosition(pos) {
     // Update Route if moved enough
     if (shouldRecord) {
       routeCoords.push(newLatLng);
+      console.log("Point added:", newLatLng);
+      mapRoute.setLatLngs(routeCoords);
+      lastRecordedPos = { lat: lat, lng: lng };
+    }
+    
+    // Pan Map
+    map.panTo(newLatLng);
+    
+    // Update Speedometer
+    const speedKmh = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+    document.getElementById('speedValue').innerText = speedKmh;
+  }
+}
+
+// Helper for frontend distance filter
+function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
+  var R = 6371; 
+  var dLat = deg2rad(lat2-lat1); 
+  var dLon = deg2rad(lon2-lon1); 
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+          Math.sin(dLon/2) * Math.sin(dLon/2); 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
+function deg2rad(deg) {
+  return deg * (Math.PI/180);
+}
+
+async function loadVehicles() {
+  const select = document.getElementById('vehicleSelect');
+  select.innerHTML = '<option value="">Loading available cars...</option>';
+  document.getElementById('btnStart').disabled = true;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getVehicles" }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if (data.success && data.vehicles.length > 0) {
+      select.innerHTML = '<option value="">-- Please select a vehicle --</option>';
+      data.vehicles.forEach(v => {
+        const option = document.createElement('option');
+        option.value = v.plate;
+        option.textContent = `${v.name} - ${v.plate}`;
+        option.dataset.model = v.model;
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option value="">No vehicles available</option>';
+    }
+  } catch (e) {
+    select.innerHTML = '<option value="">Error loading vehicles</option>';
+  }
+}
+
+function onVehicleSelect() {
+  const select = document.getElementById('vehicleSelect');
+  const infoCard = document.getElementById('vehicleInfo');
+  const startBtn = document.getElementById('btnStart');
+
+  if (select.value) {
+    const selectedOption = select.options[select.selectedIndex];
+    document.getElementById('vehicleInfoName').textContent = selectedOption.text;
+    document.getElementById('vehicleInfoModel').textContent = selectedOption.dataset.model;
+    infoCard.style.display = 'block';
+    startBtn.disabled = false;
+  } else {
+    infoCard.style.display = 'none';
+    startBtn.disabled = true;
+  }
+}
+
+// ================= LIVE SYNC =================
+function startSync() {
+  stopSync();
+  // Sync every 30 seconds
+  syncInterval = setInterval(syncTripData, 30000);
+}
+
+function stopSync() {
+  if (syncInterval) clearInterval(syncInterval);
+  syncInterval = null;
+}
+
+async function syncTripData() {
+  if (!currentTrip || !routeCoords.length) return;
+  
+  // Use the last recorded point as current GPS
+  const lastPt = routeCoords[routeCoords.length - 1];
+  const gps = `${lastPt[0]},${lastPt[1]}`;
+
+  try {
+    // Fire and forget - we don't need to wait for response
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "updateTrip", tripId: currentTrip.tripId, gps: gps, routePath: routeCoords }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+  } catch(e) { console.log("Sync skipped"); }
+}
+
+// ================= UI STATE FUNCTIONS =================
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!currentTrip) return;
+    const diff = new Date().getTime() - currentTrip.startTime;
+    const date = new Date(diff);
+    const hh = ('0' + date.getUTCHours()).slice(-2);
+    const mm = ('0' + date.getUTCMinutes()).slice(-2);
+    const ss = ('0' + date.getUTCSeconds()).slice(-2);
+    document.getElementById('timer').innerText = `${hh}:${mm}:${ss}`;
+  }, 1000);
+}
+
+function showPostTripView(distance, duration) {
+  document.getElementById('onTripView').style.display = 'none';
+  document.getElementById('postTripView').style.display = 'block';
+
+  document.getElementById('summaryDist').innerText = distance || '0';
+  document.getElementById('summaryDur').innerText = duration || '0';
+}
+
+function finishTripSummary() {
+  // This is where we fully reset the state after user acknowledges summary
+  localStorage.removeItem("activeTrip");
+  currentTrip = null;
+  routeCoords = [];
+  stopSync();
+  lastRecordedPos = null;
+  document.getElementById('timer').innerText = "00:00:00";
+  
+  // Hide summary and show the pre-trip view for the next journey
+  document.getElementById('postTripView').style.display = 'none';
+  showPreTripView();
+}
+
+function showOnTripView() {
+  document.getElementById('preTripView').style.display = 'none';
+  document.getElementById('postTripView').style.display = 'none'; // Ensure summary is hidden
+  document.getElementById('onTripView').style.display = 'block';
+  if(map) map.invalidateSize();
+  startSync(); // Start live updates
+  startTimer();
+  updateProfileUI();
+}
+
+function showPreTripView() {
+  document.getElementById('onTripView').style.display = 'none';
+  document.getElementById('preTripView').style.display = 'block';
+  stopSync();
+  
+  // Reset vehicle selection
+  loadVehicles();
+  document.getElementById('vehicleInfo').style.display = 'none';
+  document.getElementById('vehicleSelect').value = '';
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStart').innerHTML = '<i class="fas fa-play"></i><span style="font-size: 1rem; margin-top: 5px;">START</span>';
+  
+  // Reset stop button for good measure
+  const stopBtn = document.getElementById('btnStop');
+  stopBtn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 1rem; margin-top: 5px;">STOP</span>';
+  stopBtn.disabled = false;
+
+  updateProfileUI();
+}
+
+async function loadHistory() {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "getHistory", driverId: currentUser.driverId }),
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  });
+  const trips = await res.json();
+  
+  let html = "";
+  let totalKm = 0;
+
+  trips.forEach(t => {
+    // t: TripID, DriverID, Name, Plate, Start, StartGPS, Stop, StopGPS, Duration, Dist, Status
+    const dist = t[9] || 0;
+    const duration = t[8] || 0;
+    const status = t[10];
+    const date = String(t[4]).split(' ')[0];
+    const time = String(t[4]).split(' ')[1] || '';
+    totalKm += parseFloat(dist) || 0;
+    
+    html += `
+      <div class="trip-item">
+        <div class="trip-icon" style="background: ${status === 'ONGOING' ? '#ffebee; color: #f44336' : '#e0f7fa; color: #00bcd4'}">
+          <i class="fas ${status === 'ONGOING' ? 'fa-car-side' : 'fa-check'}"></i>
+        </div>
+        <div class="trip-details">
+          <h4>${date}</h4>
+          <p>${time} • ${duration} mins</p>
+        </div>
+        <div class="trip-stat">${dist} km</div>
+      </div>
+    `;
+  });
+  document.getElementById('historyList').innerHTML = html || "No trips yet.";
+  
+  // Update Home Stats
+  document.getElementById('totalTrips').innerText = trips.length;
+  document.getElementById('totalDist').innerText = totalKm.toFixed(1);
+}
+
+// ================= INIT =================
+window.onload = () => {
+  const saved = localStorage.getItem("driverUser");
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    initApp();
+    loadHistory(); // Auto load history on init
+  }
+};
+</script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Driver App</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <!-- Leaflet Maps CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900;1000&family=Roboto:wght@300;400;500;700&display=swap");
+
+    *, *::before, *::after { box-sizing: border-box; padding: 0; margin: 0; }
+    
+    body {
+      font-family: "Nunito", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-image: url(https://github.com/ecemgo/mini-samples-great-tricks/assets/13468728/5baf8325-ed69-40b0-b9d2-d8c5d2bde3b0);
+      background-repeat: no-repeat;
+      background-size: cover;
+      color: #484b57;
+    }
+
+    /* UTILITIES */
+    .d-none { display: none !important; }
+    .text-center { text-align: center; }
+    .w-100 { width: 100%; }
+    .mb-4 { margin-bottom: 1.5rem; }
+    .mt-3 { margin-top: 1rem; }
+    .text-danger { color: #dc3545; }
+    
+    /* LOGIN STYLES */
+    .login-container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+      backdrop-filter: blur(10px);
+    }
+    .form-control {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-family: inherit;
+      outline: none;
+    }
+    .form-control:focus { border-color: #7c88e0; }
+    .btn-primary {
+      background: rgb(73, 57, 113);
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+      transition: 0.3s;
+    }
+    .btn-primary:hover { background: rgb(58, 45, 90); }
+
+    /* DASHBOARD LAYOUT */
+    main {
+      display: grid;
+      grid-template-columns: 13% 87%;
+      width: 95%;
+      max-width: 1400px;
+      height: 90vh;
+      background: rgb(254, 254, 254);
+      box-shadow: 0 0.5px 0 1px rgba(255, 255, 255, 0.23) inset, 0 1px 0 0 rgba(255, 255, 255, 0.66) inset, 0 4px 16px rgba(0, 0, 0, 0.12);
+      border-radius: 15px;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    .main-menu {
+      background: rgb(73, 57, 113);
+      padding-top: 10px;
+      border-radius: 15px 0 0 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-menu h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      text-align: center;
+      margin: 20px 0 30px;
+      color: #fff;
+    }
+
+    .nav-item { position: relative; display: block; margin-bottom: 5px; }
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1rem;
+      padding: 15px 0;
+      margin-left: 10px;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+      text-decoration: none;
+    }
+    .nav-item.active a { background: rgb(254, 254, 254); color: #000; }
+    
+    /* Curves for active nav item */
+    .nav-item b:nth-child(1), .nav-item b:nth-child(2) { position: absolute; height: 15px; width: 100%; background: #fff; display: none; }
+    .nav-item b:nth-child(1) { top: -15px; }
+    .nav-item b:nth-child(2) { bottom: -15px; }
+    .nav-item b:nth-child(1)::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-bottom-right-radius: 20px; background: rgb(73, 57, 113); }
+    .nav-item b:nth-child(2)::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-top-right-radius: 20px; background: rgb(73, 57, 113); }
+    .nav-item.active b:nth-child(1), .nav-item.active b:nth-child(2) { display: block; }
+
+    .nav-icon { width: 40px; text-align: center; font-size: 1.2rem; }
+    .nav-text { display: block; width: 100px; }
+
+    /* MOBILE ELEMENTS (Desktop Hidden) */
+    .mobile-top-bar { display: none; }
+    .menu-overlay { display: none; }
+
+    /* CONTENT AREA */
+    .content { position: relative; height: 100%; overflow: hidden; background: #f6f7fb; }
+    
+    /* VIEWS */
+    .view-section { display: none; width: 100%; height: 100%; overflow-y: auto; padding: 20px; animation: fadeIn 0.3s ease-in-out; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* NEW PROFILE HEADER STYLES */
+    .profile-header {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    .profile-header:hover { transform: translateY(-2px); }
+    .profile-header::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: linear-gradient(180deg, #7c88e0 0%, #a18cd1 100%);
+    }
+    
+    .profile-left { display: flex; align-items: center; gap: 25px; }
+    
+    .profile-details h2 { margin: 0 0 8px 0; font-size: 1.6rem; color: #2d3748; font-weight: 700; }
+    .profile-meta { display: flex; gap: 15px; flex-wrap: wrap; }
+    .meta-tag { 
+      background: #f7fafc; padding: 6px 12px; border-radius: 8px; 
+      font-size: 0.9rem; color: #718096; 
+      display: flex; align-items: center; gap: 8px; border: 1px solid #edf2f7;
+    }
+    .meta-tag i { color: #7c88e0; }
+    .meta-tag b { color: #4a5568; }
+
+    .status-badge {
+      padding: 10px 20px; border-radius: 50px; font-weight: 700; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .status-idle { background: #edf2f7; color: #718096; }
+    .status-active { background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%); color: white; box-shadow: 0 4px 15px rgba(72, 198, 239, 0.4); }
+
+    /* DASHBOARD STATS ROW */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+
+    /* JOURNEY SCREEN */
+    .journey-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+    
+    #journeyMap {
+      width: 100%;
+      height: 350px;
+      border-radius: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      z-index: 1;
+      border: 4px solid white;
+    }
+    
+    .speedometer-box {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 8px 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      z-index: 10;
+      display: flex; align-items: baseline; gap: 4px;
+    }
+
+    /* ADVANCED JOURNEY UI */
+    #preTripView { display: block; width: 100%; text-align: left; }
+    #onTripView { display: none; width: 100%; }
+    .vehicle-select-box {
+      background: white; padding: 25px; border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    #vehicleSelect {
+      width: 100%; padding: 15px; font-size: 1rem; border-radius: 10px;
+      border: 2px solid #e2e8f0; background-color: #f8fafc;
+      font-family: inherit; font-weight: 600;
+    }
+    .vehicle-info-card {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      padding: 20px; margin-top: 15px; border-radius: 10px;
+      display: none; /* Hidden until a vehicle is selected */
+    }
+    .vehicle-info-card h4 { margin: 0; color: #4a5568; }
+    .vehicle-info-card p { color: #718096; }
+    .btn-start:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+
+    /* CONTROL PANEL (Top Left) */
+    .control-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .control-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .control-card:hover { transform: translateY(-2px); }
+
+    .btn-action {
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      border: none;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+    .btn-start { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .btn-stop { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); animation: pulse 2s infinite; }
+    
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 154, 158, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 154, 158, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 154, 158, 0); } }
+
+    .timer-display { font-size: 3rem; font-weight: 800; color: #484b57; font-family: 'Roboto', monospace; }
+    .gps-status { margin-top: 10px; color: #888; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; }
+
+    /* HISTORY LIST (Bottom Left) */
+    .history-section h2 { margin-bottom: 15px; font-size: 1.3rem; color: #484b57; }
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+    
+    .trip-item {
+      display: grid;
+      grid-template-columns: 10% 60% 30%;
+      align-items: center;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      transition: 0.2s;
+    }
+    .trip-item:hover { transform: scale(1.01); }
+    
+    .trip-icon {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: #e0f7fa;
+      color: #00bcd4;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    .trip-details h4 { font-size: 1rem; margin-bottom: 2px; }
+    .trip-details p { font-size: 0.8rem; color: #888; }
+    .trip-stat { text-align: right; font-weight: bold; color: #7c88e0; }
+
+    /* RIGHT SIDEBAR */
+    .right-content {
+      background: #f6f7fb;
+      margin: 15px 15px 15px 0;
+      padding: 20px;
+      border-radius: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .user-avatar {
+      width: 80px; height: 80px; border-radius: 50%; background: #e0e0e0; 
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: #fff; background: linear-gradient(to right, #a18cd1 0%, #fbc2eb 100%);
+      cursor: pointer; overflow: hidden; position: relative; flex-shrink: 0;
+    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .stats-box {
+      background: rgb(214, 227, 248);
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+    }
+    .stats-box h3 { font-size: 1rem; margin-bottom: 15px; color: #5b5f6f; }
+    .stat-circle {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: white;
+      margin: 0 auto;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 5px solid #7c88e0;
+    }
+    .stat-circle span { font-size: 1.5rem; font-weight: bold; color: #7c88e0; }
+    .stat-circle small { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      /* RESET DESKTOP LAYOUT */
+      main { 
+        display: block;
+        width: 100%; 
+        height: 100vh; 
+        margin: 0; 
+        border-radius: 0; 
+        font-size: 16px; /* Better readability on mobile */
+      }
+      
+      /* MOBILE TOP BAR (Fixed Header) */
+      .mobile-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: fixed;
+        top: 0; left: 0; width: 100%;
+        height: 60px;
+        background: #ffffff;
+        padding: 0 20px;
+        z-index: 1500;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      }
+      .mobile-top-bar h1 { font-size: 1.2rem; font-weight: 800; color: #484b57; margin: 0; letter-spacing: 0.5px; }
+      .hamburger { font-size: 1.4rem; color: #484b57; cursor: pointer; padding: 10px; margin-left: -10px; }
+
+      /* SIDE DRAWER NAVIGATION */
+      .main-menu { 
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px; /* Standard Drawer Width */
+        height: 100vh;
+        padding-top: 30px;
+        border-radius: 0;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        z-index: 2000;
+        box-shadow: 5px 0 30px rgba(0,0,0,0.15);
+        background: rgb(73, 57, 113);
+        transform: translateX(-100%); /* Hidden by default */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      .main-menu.open { transform: translateX(0); }
+      
+      /* OVERLAY BACKDROP */
+      .menu-overlay {
+        display: block;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.4);
+        z-index: 1900;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        backdrop-filter: blur(3px);
+      }
+      .menu-overlay.show { opacity: 1; visibility: visible; }
+
+      /* Hide internal header in drawer */
+      .main-menu h1 { display: none; }
+      
+      .main-menu ul {
+        display: flex;
+        flex-direction: column;
+        list-style: none;
+        width: 100%;
+        background: transparent;
+        padding: 0;
+        margin-top: 20px;
+      }
+      
+      .nav-item { 
+        margin: 0; 
+        width: 100%;
+        height: 60px;
+        border-radius: 0;
+        justify-content: flex-start;
+        padding: 0 30px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+      }
+      
+      .nav-item a {
+        flex-direction: row;
+        justify-content: flex-start;
+        margin: 0;
+        font-size: 1rem;
+        color: rgba(255,255,255,0.8);
+        gap: 15px;
+        font-weight: 600;
+      }
+      
+      .nav-item.active {
+        background: rgba(255,255,255,0.15);
+        box-shadow: none;
+        transform: none;
+        border-left: 5px solid #fff;
+      }
+      .nav-item.active a { color: #fff; }
+      
+      /* Hide Desktop Curves */
+      .nav-item b { display: none !important; }
+      
+      .nav-icon { font-size: 1.3rem; width: auto; margin: 0; transition: all 0.3s ease; }
+      .nav-text { display: block; width: auto; font-size: 0.7rem; letter-spacing: 0.5px; }
+
+      /* CONTENT AREA */
+      .content { 
+        height: 100vh;
+        padding-top: 70px; /* Header height + spacing */
+        border-radius: 0;
+        overflow: hidden;
+      }
+      
+      .view-section { 
+        padding: 20px; 
+        padding-bottom: 40px; /* Extra space at bottom */
+      }
+      
+      /* PROFILE HEADER MOBILE */
+      .profile-header { 
+        flex-direction: column; 
+        text-align: center; 
+        padding: 25px 20px; 
+        gap: 20px; 
+      }
+      .profile-header::before { width: 100%; height: 5px; bottom: auto; top: 0; left: 0; }
+      .profile-left { flex-direction: column; gap: 15px; }
+      .profile-meta { justify-content: center; }
+      .status-badge { width: 100%; justify-content: center; margin-top: 5px; }
+      
+      /* Control Panel Cards */
+      .control-panel { grid-template-columns: 1fr; gap: 15px; }
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 15px; }
+      
+      /* Journey Screen */
+      .journey-container { justify-content: center; padding-top: 0; }
+      .btn-action { width: 200px; height: 200px; margin-bottom: 30px; font-size: 2rem; }
+      .timer-display { font-size: 3.5rem; }
+      
+      /* LOGIN SCREEN */
+      .login-container { width: 90%; padding: 30px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="login-container">
+      <div class="text-center mb-4">
+        <i class="fas fa-shipping-fast fa-3x" style="color: rgb(73, 57, 113);"></i>
+        <h2 class="mt-3">Driver Portal</h2>
+        <p style="color: #666;">Login to continue</p>
+      </div>
+      <input type="text" id="username" class="form-control" placeholder="Username">
+      <input type="password" id="password" class="form-control" placeholder="Password">
+      <button onclick="login()" class="btn btn-primary w-100 py-3 fw-bold">LOGIN</button>
+      <div id="loginMsg" class="mt-3"></div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <main id="appScreen" class="d-none">
+    <!-- MOBILE TOP BAR -->
+    <div class="mobile-top-bar">
+      <div class="hamburger" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
+      <h1>DRIVER APP</h1>
+      <div style="width: 24px;"></div> <!-- Spacer for centering -->
+    </div>
+    
+    <!-- OVERLAY -->
+    <div class="menu-overlay" onclick="toggleMenu()"></div>
+
+    <nav class="main-menu">
+      <h1>Fleet App</h1>
+      <ul>
+        <li class="nav-item active" id="nav-home">
+          <b></b><b></b>
+          <a href="#" onclick="switchTab('home'); return false;">
+            <i class="fa fa-house nav-icon"></i>
+            <span class="nav-text">Home</span>
+          </a>
+        </li>
+        <li class="nav-item" id="nav-journey">
+          <b></b><b></b>
+          <a href="#" onclick="switchTab('journey'); return false;">
+            <i class="fa fa-road nav-icon"></i>
+            <span class="nav-text">Journey</span>
+          </a>
+        </li>
+        <li class="nav-item" id="nav-history">
+          <b></b><b></b>
+          <a href="#" onclick="switchTab('history'); return false;">
+            <i class="fa fa-clock-rotate-left nav-icon"></i>
+            <span class="nav-text">History</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <b></b><b></b>
+          <a href="#" onclick="logout(); return false;">
+            <i class="fa fa-right-from-bracket nav-icon"></i>
+            <span class="nav-text">Logout</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <section class="content">
+      
+      <!-- VIEW: HOME DASHBOARD -->
+      <div id="view-home" class="view-section active">
+        
+        <!-- 1. SLICK PROFILE HEADER -->
+        <div class="profile-header">
+          <div class="profile-left">
+            <div class="user-avatar" onclick="document.getElementById('avatarInput').click()">
+              <i class="fas fa-camera" id="avatarIcon"></i>
+              <img id="avatarImg" src="" class="d-none" alt="Profile">
+            </div>
+            <input type="file" id="avatarInput" hidden accept="image/*" onchange="handleProfileUpload(this)">
+            
+            <div class="profile-details">
+              <h2 id="displayDriverName">Driver Name</h2>
+              <div class="profile-meta">
+                <div class="meta-tag"><i class="fas fa-car"></i> <b id="displayPlate">---</b></div>
+                <div class="meta-tag"><i class="fas fa-phone"></i> <b id="displayPhone">---</b></div>
+                <div class="meta-tag"><i class="fas fa-calendar"></i> <span id="displayJoined">---</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <div id="driverStatus" class="status-badge status-idle">
+            <i class="fas fa-power-off"></i> IDLE
+          </div>
+        </div>
+
+        <!-- 2. WELCOME BANNER -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 20px;">
+          <h2 id="welcomeMsg">Welcome back!</h2>
+          <p style="opacity: 0.8;">Here is your fleet activity overview.</p>
+        </div>
+
+        <!-- 3. STATS ROW -->
+        <div class="stats-row">
+          <div class="control-card">
+            <div class="stat-circle" style="border-color: #4facfe;"><span id="totalTrips">0</span><small>TRIPS</small></div>
+            <h4 class="mt-3">Total Trips</h4>
+          </div>
+          <div class="control-card">
+            <div class="stat-circle" style="border-color: #00f2fe;"><span id="totalDist">0</span><small>KM</small></div>
+            <h4 class="mt-3">Total Distance</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: JOURNEY (START/STOP) -->
+      <div id="view-journey" class="view-section">
+        <div class="journey-container">
+
+          <!-- State 1: Pre-Trip (Vehicle Selection) -->
+          <div id="preTripView">
+            <div class="vehicle-select-box">
+              <h3 class="mb-4">Start a New Journey</h3>
+              <label for="vehicleSelect" style="font-weight: 600; font-size: 0.9rem; color: #888;">1. SELECT YOUR VEHICLE</label>
+              <select id="vehicleSelect" class="form-control mt-3" onchange="onVehicleSelect()">
+                <option value="">Loading available cars...</option>
+              </select>
+              <div id="vehicleInfo" class="vehicle-info-card">
+                <h4 id="vehicleInfoName"></h4>
+                <p id="vehicleInfoModel"></p>
+              </div>
+            </div>
+            <div id="btnStart" class="btn-action btn-start mt-3" onclick="startTrip()" disabled>
+              <i class="fas fa-play"></i>
+              <span style="font-size: 1rem; margin-top: 5px;">START</span>
+            </div>
+          </div>
+
+          <!-- State 2: On-Trip (Map and Timer) -->
+          <div id="onTripView">
+            <div id="mapWrapper" style="position: relative; width: 100%; margin-bottom: 25px;">
+              <div id="journeyMap" style="margin-bottom: 0;"></div>
+              <div class="speedometer-box">
+                <span id="speedValue" style="font-size: 1.8rem; font-weight: 800; color: #484b57;">0</span> <small style="font-size: 0.8rem; font-weight: 700; color: #888;">KM/H</small>
+              </div>
+            </div>
+            <div id="btnStop" class="btn-action btn-stop" onclick="stopTrip()">
+              <i class="fas fa-stop"></i>
+              <span style="font-size: 1rem; margin-top: 5px;">STOP</span>
+            </div>
+            <div class="timer-display mt-3" id="timer">00:00:00</div>
+            <div class="gps-status" id="gpsStatus"><i class="fas fa-satellite-dish"></i> Trip in Progress...</div>
+          </div>
+
+          <!-- State 3: Post-Trip Summary -->
+          <div id="postTripView" style="display: none; width: 100%; text-align: left;">
+            <div class="vehicle-select-box">
+                <h2 class="mb-4">Trip Completed!</h2>
+                <div class="stats-row">
+                    <div class="control-card">
+                        <div class="stat-circle" style="border-color: #4facfe;">
+                          <span id="summaryDist">0</span><small>KM</small>
+                        </div>
+                        <h4 class="mt-3">Distance</h4>
+                    </div>
+                    <div class="control-card">
+                        <div class="stat-circle" style="border-color: #f59e0b;">
+                          <span id="summaryDur">0</span><small>MINS</small>
+                        </div>
+                        <h4 class="mt-3">Duration</h4>
+                    </div>
+                </div>
+                <button onclick="finishTripSummary()" class="btn btn-primary w-100 mt-3">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: HISTORY -->
+      <div id="view-history" class="view-section">
+        <h2 class="mb-4">Trip History</h2>
+        <div class="history-list" id="historyList">
+          <div class="text-center p-5">Loading history...</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<!-- Leaflet Maps JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbylTLCvMmCXhOoQ_zf-Ttz7KHAEyRDWmjbZkqi_zw4cWOGnjKwvfiNsMQ44Lljf41_6/exec";
+
+let currentUser = null;
+let currentTrip = null;
+let timerInterval = null;
+let syncInterval = null;
+
+// MAP VARIABLES
+let map = null;
+let mapMarker = null;
+let mapRoute = null;
+let watchId = null;
+let routeCoords = [];
+let lastRecordedPos = null; // To filter small movements
+
+// ================= AUTH =================
+async function login() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value.trim();
+  document.getElementById('loginMsg').innerHTML = "Logging in...";
+  
+  try {
+    // Use POST for login to avoid caching and ensure consistent headers
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "login", username: u, password: p }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    
+    currentUser = data;
+    localStorage.setItem("driverUser", JSON.stringify(currentUser));
+    initApp();
+  } catch(e) {
+    document.getElementById('loginMsg').innerHTML = `<span class="text-danger">${e.message}</span>`;
+  }
+}
+
+function logout() {
+  localStorage.removeItem("driverUser");
+  location.reload();
+}
+
+function toggleMenu() {
+  document.querySelector('.main-menu').classList.toggle('open');
+  document.querySelector('.menu-overlay').classList.toggle('show');
+}
+
+function switchTab(tabName) {
+  // Hide all views
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+  // Show selected
+  document.getElementById('view-' + tabName).classList.add('active');
+  document.getElementById('nav-' + tabName).classList.add('active');
+  
+  // Close mobile menu
+  document.querySelector('.main-menu').classList.remove('open');
+  document.querySelector('.menu-overlay').classList.remove('show');
+
+  if(tabName === 'history' || tabName === 'home') {
+    loadHistory();
+  }
+
+  if(tabName === 'journey') {
+    // Load available vehicles when switching to journey tab
+    loadVehicles();
+  }
+  
+  // Resize map if switching to journey view to prevent rendering issues
+  if(tabName === 'journey' && map) {
+    setTimeout(() => { map.invalidateSize(); }, 300);
+  }
+}
+
+// ================= APP LOGIC =================
+async function initApp() {
+  document.getElementById('loginScreen').classList.add('d-none');
+  document.getElementById('appScreen').classList.remove('d-none');
+  
+  // 1. Show cached data immediately
+  updateProfileUI();
+  // 2. Fetch fresh data from Sheet (CarPlate, Phone, etc.)
+  refreshProfile();
+  
+  // Check if trip is active and VERIFY with backend
+  const savedTrip = localStorage.getItem("activeTrip");
+  if (savedTrip) {
+    currentTrip = JSON.parse(savedTrip);
+    
+    // Call the new backend function to verify status
+    try {
+        const res = await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "checkTripStatus", tripId: currentTrip.tripId }),
+            headers: { "Content-Type": "text/plain;charset=utf-8" }
+        });
+        const data = await res.json();
+
+        if (data.success && data.status === "ONGOING") {
+            // Backend confirms trip is active. Proceed.
+            showOnTripView();
+            switchTab('journey');
+        } else {
+            // Backend says trip is completed or not found. It's a stale entry.
+            // This is the automatic self-healing part.
+            alert("Your previous trip has been completed. The app is now reset.");
+            localStorage.removeItem("activeTrip");
+            currentTrip = null;
+            showPreTripView(); // Reset to idle state
+            updateProfileUI(); // Update status badge
+        }
+    } catch (e) {
+        // Network error, etc. Cautiously assume trip is still active to avoid data loss.
+        console.error("Could not verify trip status, assuming active.", e);
+        showOnTripView();
+        switchTab('journey');
+    }
+  }
+}
+
+function updateProfileUI() {
+  if(!currentUser) return;
+  document.getElementById('displayDriverName').innerText = currentUser.fullName;
+  document.getElementById('displayPlate').innerText = currentUser.carPlate || "NO PLATE";
+  document.getElementById('welcomeMsg').innerText = "Welcome, " + currentUser.fullName.split(' ')[0];
+  
+  document.getElementById('displayPhone').innerText = currentUser.phone || "---";
+  
+  // Update Status Badge
+  const statusEl = document.getElementById('driverStatus');
+  if (localStorage.getItem("activeTrip")) {
+    statusEl.className = "status-badge status-active";
+    statusEl.innerHTML = '<i class="fas fa-steering-wheel"></i> ON TRIP';
+  } else {
+    statusEl.className = "status-badge status-idle";
+    statusEl.innerHTML = '<i class="fas fa-power-off"></i> IDLE';
+  }
+  
+  if(currentUser.dateJoined) {
+    document.getElementById('displayJoined').innerText = String(currentUser.dateJoined).split('T')[0];
+  }
+  
+  if(currentUser.profilePic) {
+    document.getElementById('avatarIcon').classList.add('d-none');
+    document.getElementById('avatarImg').src = currentUser.profilePic;
+    document.getElementById('avatarImg').classList.remove('d-none');
+  }
+}
+
+async function refreshProfile() {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getDriver", driverId: currentUser.driverId }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if(data.success) {
+      currentUser = { ...currentUser, ...data };
+      localStorage.setItem("driverUser", JSON.stringify(currentUser));
+      updateProfileUI(); // Update UI with fresh data from sheet
+    }
+  } catch(e) { console.log("Background refresh failed", e); }
+}
+
+function handleProfileUpload(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    // Show loading state
+    document.getElementById('avatarIcon').className = "fas fa-spinner fa-spin";
+    document.getElementById('avatarIcon').classList.remove('d-none');
+    document.getElementById('avatarImg').classList.add('d-none');
+
+    // Resize Image using Canvas
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Resize to 150x150 max
+        const MAX_SIZE = 150;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+        } else {
+          if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Get Base64
+        const dataUrl = canvas.toDataURL(file.type);
+        const base64Data = dataUrl.split(',')[1];
+        
+        // Send to Backend
+        fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "uploadPic",
+            driverId: currentUser.driverId,
+            image: base64Data,
+            mimeType: file.type
+          }),
+          headers: { "Content-Type": "text/plain;charset=utf-8" }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if(data.success) {
+            currentUser.profilePic = data.url;
+            localStorage.setItem("driverUser", JSON.stringify(currentUser));
+            initApp(); 
+          } else {
+            alert("Upload failed: " + data.error);
+          }
+        })
+        .catch(err => alert("Error uploading: " + err.message))
+        .finally(() => {
+           // Reset icon if failed
+           if(!currentUser.profilePic) {
+             document.getElementById('avatarIcon').className = "fas fa-camera";
+             document.getElementById('avatarImg').classList.add('d-none');
+           }
+        });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function startTrip() {
+  if (!navigator.geolocation) return alert("GPS not supported");
+  const plateNumber = document.getElementById('vehicleSelect').value;
+  if(!plateNumber) return alert("Please select a vehicle first.");
+
+  document.getElementById('btnStart').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "startTrip",
+          driverId: currentUser.driverId,
+          driverName: currentUser.fullName,
+          plateNumber: plateNumber,
+          gps: gps
+        }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      });
+      const data = await res.json();
+      
+      currentTrip = { tripId: data.tripId, startTime: new Date().getTime() };
+      localStorage.setItem("activeTrip", JSON.stringify(currentTrip));
+      routeCoords = []; // Reset route
+      
+      // Initialize Map
+      initMap(pos.coords.latitude, pos.coords.longitude);
+      
+      showOnTripView();
+    } catch(e) {
+      alert("Error starting trip: " + e.message);
+      document.getElementById('btnStart').innerHTML = '<i class="fas fa-play"></i><span style="font-size: 1rem; margin-top: 5px;">START</span>';
+    }
+  });
+}
+
+function stopTrip() {
+  if (!navigator.geolocation) return alert("GPS not supported");
+  const stopBtn = document.getElementById('btnStop');
+  stopBtn.disabled = true; // Prevent mashing the button
+
+  stopSync(); // Stop live syncing immediately
+  // CORE UX FIX: Add confirmation before stopping.
+  if (!confirm("Are you sure you want to end this trip?")) {
+    stopBtn.disabled = false; // Re-enable if user cancels
+    return; 
+  }
+
+  stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  
+  // Stop watching GPS
+  if (watchId) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const gps = `${pos.coords.latitude},${pos.coords.longitude}`;
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "stopTrip",
+          tripId: currentTrip.tripId,
+          gps: gps,
+          routePath: routeCoords
+        }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      });
+      const data = await res.json();
+      
+      // CORE FIX: Check for backend errors before proceeding.
+      if (!data.success) {
+        throw new Error(data.error || "An unknown error occurred on the server.");
+      }
+      
+      // Stop timer immediately and show summary screen instead of alert
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      
+      showPostTripView(data.distance, data.duration);
+
+    } catch(e) {
+      alert("Error stopping trip: " + e.message);
+      stopBtn.innerHTML = '<i class="fas fa-stop"></i><span style="font-size: 1rem; margin-top: 5px;">STOP</span>';
+      stopBtn.disabled = false; // Re-enable on error
+    }
+  });
+}
+
+// ================= MAP FUNCTIONS =================
+function initMap(lat, lng) {
+  document.getElementById('mapWrapper').style.display = 'block';
+  
+  // Reset route
+  if(routeCoords.length === 0) routeCoords = [[lat, lng]];
+
+  if (!map) {
+    // Create Map Instance
+    map = L.map('journeyMap', {
+      zoomControl: false, // We add it manually for better mobile positioning
+      attributionControl: false
+    }).setView([lat, lng], 18); // High zoom for "Street" feel
+
+    // Add Zoom Control to Bottom Right (Easier for thumb on mobile)
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // --- DEFINE LAYERS (NO API KEY REQUIRED) ---
+    
+    // 1. OpenStreetMap (Streets)
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+    }).addTo(map);
+
+    // 2. Esri World Imagery (Satellite)
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+    });
+
+    const baseLayers = {
+        "Streets": osm,
+        "Satellite": satellite
+    };
+
+    // Add Layer Control to map
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+
+    // Add Custom Marker
+    const carIcon = L.divIcon({
+      className: 'custom-car-icon',
+      html: '<div style="background:#fff; border-radius:50%; padding:5px; box-shadow:0 2px 5px rgba(0,0,0,0.3);"><i class="fas fa-car-side" style="color:#7c88e0; font-size:20px;"></i></div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+
+    mapMarker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
+    
+    // Add Route Polyline
+    mapRoute = L.polyline(routeCoords, {color: '#4facfe', weight: 5, opacity: 0.8}).addTo(map);
+
+  } else {
+    // Reuse Map
+    map.setView([lat, lng], 18);
+    mapMarker.setLatLng([lat, lng]);
+    mapRoute.setLatLngs(routeCoords);
+    map.invalidateSize();
+  }
+
+  // Start Real-time Tracking
+  watchId = navigator.geolocation.watchPosition(updateMapPosition, 
+    (err) => console.log(err), 
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+  );
+}
+
+function updateMapPosition(pos) {
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
+  
+  // Filter: Only add point if moved > 10 meters to save data and reduce noise
+  let shouldRecord = false;
+  if (!lastRecordedPos) {
+    shouldRecord = true;
+  } else {
+    const dist = getDistanceFromLatLonInKm(lastRecordedPos.lat, lastRecordedPos.lng, lat, lng);
+    if (dist > 0.005) shouldRecord = true; // 0.005 km = 5 meters
+  }
+
+  if(map && mapMarker) {
+    const newLatLng = [lat, lng];
+    
+    // Update Marker
+    mapMarker.setLatLng(newLatLng);
+    
+    // Update Route if moved enough
+    if (shouldRecord) {
+      routeCoords.push(newLatLng);
       mapRoute.setLatLngs(routeCoords);
       lastRecordedPos = { lat: lat, lng: lng };
     }
