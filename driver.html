@@ -491,6 +491,46 @@
       /* LOGIN SCREEN */
       .login-container { width: 90%; padding: 30px 20px; }
     }
+
+    /* ALARM OVERLAY */
+    #alarmOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(220, 53, 69, 0.9);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      backdrop-filter: blur(5px);
+      animation: pulse-bg 1.5s infinite;
+    }
+    #alarmOverlay h1 {
+      font-size: 3rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+    #alarmOverlay p {
+      font-size: 1.2rem;
+      margin-bottom: 40px;
+    }
+    #alarmOverlay button {
+      padding: 20px 50px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #dc3545;
+      background: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    @keyframes pulse-bg { 0% { background-color: rgba(220, 53, 69, 0.9); } 50% { background-color: rgba(180, 30, 45, 0.95); } 100% { background-color: rgba(220, 53, 69, 0.9); } }
   </style>
 </head>
 <body>
@@ -675,6 +715,13 @@
     </section>
   </main>
 
+  <!-- ALARM OVERLAY -->
+  <div id="alarmOverlay" style="display: none;">
+    <h1><i class="fas fa-bell fa-shake"></i> URGENT ALERT</h1>
+    <p>Command Center requires your attention. Please acknowledge this message.</p>
+    <button onclick="acknowledgeAlarm()">Acknowledge</button>
+  </div>
+
 <!-- Leaflet Maps JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -684,6 +731,8 @@ let currentUser = null;
 let currentTrip = null;
 let timerInterval = null;
 let syncInterval = null;
+let statusPollInterval = null; // For the new alarm
+let vibrationInterval = null; // For continuous vibration
 
 // MAP VARIABLES
 let map = null;
@@ -718,6 +767,7 @@ async function login() {
 }
 
 function logout() {
+  if (statusPollInterval) clearInterval(statusPollInterval); // Stop polling
   localStorage.removeItem("driverUser");
   location.reload();
 }
@@ -762,6 +812,10 @@ async function initApp() {
   
   // 1. Show cached data immediately
   updateProfileUI();
+  // Start polling for status updates (like alarms)
+  if (statusPollInterval) clearInterval(statusPollInterval);
+  statusPollInterval = setInterval(pollServerForStatus, 8000); // Check every 8 seconds
+
   // 2. Fetch fresh data from Sheet (CarPlate, Phone, etc.)
   refreshProfile();
   
@@ -1309,6 +1363,61 @@ async function loadHistory() {
   // Update Home Stats
   document.getElementById('totalTrips').innerText = trips.length;
   document.getElementById('totalDist').innerText = totalKm.toFixed(1);
+}
+
+// ================= ALARM FUNCTIONS =================
+async function pollServerForStatus() {
+  if (!currentUser || !currentUser.driverId) return;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getDriverStatus", driverId: currentUser.driverId }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const data = await res.json();
+    if (data.success && data.alarmStatus === "TRIGGERED") {
+      // Check if alarm is already active to prevent re-triggering sound/vibration
+      if (document.getElementById('alarmOverlay').style.display === 'none') {
+        activateAlarm();
+      }
+    }
+  } catch (e) {
+    console.error("Status poll failed:", e);
+  }
+}
+
+function activateAlarm() {
+  document.getElementById('alarmOverlay').style.display = 'flex';
+  
+  // Vibrate (if supported)
+  if (navigator.vibrate) {
+    // A long, repeating pattern for urgency
+    vibrationInterval = setInterval(() => navigator.vibrate([1000, 200, 1000, 200, 1000]), 2400);
+  }
+}
+
+function deactivateAlarm() {
+  document.getElementById('alarmOverlay').style.display = 'none';
+  if (vibrationInterval) {
+    clearInterval(vibrationInterval);
+    vibrationInterval = null;
+  }
+  // Stop any current vibration immediately
+  if (navigator.vibrate) {
+    navigator.vibrate(0);
+  }
+}
+
+async function acknowledgeAlarm() {
+  deactivateAlarm(); // Stop the local alert immediately for good UX
+
+  // Tell the server we've seen it
+  await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "acknowledgeAlarm", driverId: currentUser.driverId }),
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  }).catch(e => console.error("Failed to acknowledge alarm on server:", e));
 }
 
 // ================= INIT =================
