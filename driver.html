@@ -718,7 +718,7 @@
   <!-- ALARM OVERLAY -->
   <div id="alarmOverlay" style="display: none;">
     <h1><i class="fas fa-bell fa-shake"></i> URGENT ALERT</h1>
-    <p>Command Center requires your attention. Please acknowledge this message.</p>
+    <p id="alarmMessage">Command Center requires your attention. Please acknowledge this message.</p>
     <button onclick="acknowledgeAlarm()">Acknowledge</button>
   </div>
 
@@ -1376,10 +1376,11 @@ async function pollServerForStatus() {
       headers: { "Content-Type": "text/plain;charset=utf-8" }
     });
     const data = await res.json();
-    if (data.success && data.alarmStatus === "TRIGGERED") {
+    // If alarmStatus contains any text, it's an active alarm.
+    if (data.success && data.alarmStatus) {
       // Check if alarm is already active to prevent re-triggering sound/vibration
       if (document.getElementById('alarmOverlay').style.display === 'none') {
-        activateAlarm();
+        activateAlarm(data.alarmStatus); // Pass the message to the activate function
       }
     }
   } catch (e) {
@@ -1387,12 +1388,15 @@ async function pollServerForStatus() {
   }
 }
 
-function activateAlarm() {
+function activateAlarm(message) {
+  // Set the custom message from the admin
+  const defaultMessage = "Command Center requires your attention. Please acknowledge this message.";
+  document.getElementById('alarmMessage').innerText = message || defaultMessage;
+
   document.getElementById('alarmOverlay').style.display = 'flex';
   
   // Vibrate (if supported)
   if (navigator.vibrate) {
-    // A long, repeating pattern for urgency
     vibrationInterval = setInterval(() => navigator.vibrate([1000, 200, 1000, 200, 1000]), 2400);
   }
 }
