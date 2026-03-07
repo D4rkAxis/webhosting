@@ -1,1 +1,2165 @@
+// =============================================================================
+//  FIBERONE BROADBAND — BITRIX24 SERVICE DELIVERY TRACKER  v10.4  (FINAL)
+// =============================================================================
+//
+//  CLASSIFICATION — based on STAGE NAME (simple, reliable, no color guessing):
+//
+//  ┌─────────────────┬──────────────────────────────────────────────────────┐
+//  │ 🟠 SD_Unassigned │ Ticket not yet picked up by any technician           │
+//  │                  │ Stages: "Area Coord..." · "FST Ticket Not Assigned"  │
+//  ├─────────────────┼──────────────────────────────────────────────────────┤
+//  │ 🔵 SD_Assigned   │ Ticket actively being worked on                      │
+//  │                  │ Stages: "FST-Assigned" · "FST-Schedule..."           │
+//  ├─────────────────┼──────────────────────────────────────────────────────┤
+//  │ 🟡 SD_Escalated  │ Problem ticket — needs supervisor attention          │
+//  │                  │ Stages: "Customer Not Available" · "FST-Missing R..."│
+//  ├─────────────────┼──────────────────────────────────────────────────────┤
+//  │ 🟢 SD_Closed     │ Ticket resolved and finished                         │
+//  │                  │ Stages: "FST-Resolved" · "Finish" · any with sem S/F │
+//  └─────────────────┴──────────────────────────────────────────────────────┘
+//
+//  HOW IT WORKS:
+//  The script checks each stage name against keyword lists below.
+//  Order of priority: closed → escalated → unassigned → assigned (default)
+//  Bitrix24 "S" / "F" semantics are always treated as closed.
+//
+//  SHEETS:
+//  ┌─────────────────┬────────────────────────────────────────────────────┐
+//  │ SD_Assigned     │ Active tickets being worked on                     │
+//  │ SD_Unassigned   │ New tickets — nobody has picked them up yet        │
+//  │ SD_Escalated    │ Problem tickets needing attention                  │
+//  │ SD_Closed       │ Resolved / finished tickets                        │
+//  │ SD_Log          │ Sync audit log                                     │
+//  │ SD_Health       │ One row per sync — timing & counts                 │
+//  │ IN_Assigned     │ Active Installation tickets                        │
+//  │ IN_Unassigned   │ New Installation tickets                           │
+//  │ IN_Escalated    │ Problem Installation tickets                       │
+//  │ IN_Closed       │ Completed Installations                            │
+//  │ RE_Assigned     │ Active Relocation tickets                          │
+//  │ RE_Unassigned   │ New Relocation tickets                             │
+//  │ RE_Escalated    │ Problem Relocation tickets                         │
+//  │ RE_Closed       │ Completed Relocations                              │
+//  └─────────────────┴────────────────────────────────────────────────────┘
+// =============================================================================
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SERVICE ACCOUNT CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
+const SERVICE_ACCOUNT = {
+  "type": "service_account",
+  "project_id": "ethical-456512",
+  "private_key_id": "bb41df7d435b03e28671517dd8821336cb3ddcf4",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC+3AdauNihasEZ\nHHLUt63Pgv9RP1tz84bkTS+gWiQnzC5iyIIQmhEXOhSW11DKKIFPXHqYfYZKZC3a\nUomRMjg24JtT9VA2tAaeyuDYHlrElmG9/+zwNtZMMMpEm3hSs2Cu5x7ENd3UP9t2\n6iOtU13iPujDwC/IQAB1bOr6N4pbgixXq7VTLalj34wpyZWRTM+G1fwU+wBbyGdP\nypzcY/9SUy9Uhg++vP3NnaQTzuhf0LYDsE9U4c7h9E4HSNQSZLozISbX2J435KTz\nlg6EQBtW7VWPBl5vImyGdDuCsibrlj/hkvCBghEiPnapL1s6SGnEZFh4z9yjKhNn\ncSHNA5UxAgMBAAECggEAB3V/ZxUCyFos9j+FoFkWVp4KvuDgQNmTW8BFfHmRYKnK\n5UrrRF1VDiiTrep3ypLHLPQTCXscYLNmFFp17GH/Tuu7vk3/xseF27ZXj7Kt/vFW\nnA+Qsbme6ebdPM2rp+XBQUygh/AH/ZfKSq0vXEJ+EI2/WIkeBPA1ZGFvlHxPsLBG\nJAyMTmZ0QQw0AHmnZHIL1PS//LNbT/X+yn9r7rLy4q7hdzbwhp+jVOf+TvFP3mvq\nPygSpkWsxRA4vHecKGboTFjy086+xyAtou72FxbpvSSNGg81jeD7IUbngKEn5L9Q\nhVJWQrr5YDJCdRC1HyNtv8sQ64MaKgesVLN5AwkuDQKBgQDlDCHPxveiFEuUMB/O\nyXQNrI4g51KnOHUXduXjG8/Dh09LRWovtQfLuWF1Uh90Jtoc0UnefRQxLByiBHgl\np41vA6/WupWEC5+evtrEEELPnkweF7SMrxE4JZdxpaVVcLi4u64cMR4ZIsFBbC+X\n+E1oHPaoGG6brqxjQo1NqnX99QKBgQDVUYRQWcjdzlIFWdNeklQ4HqOd9pM7chsw\nac0rSOY8Lf2BDD6ou83wIb746g26EKeR998tHdYoXmk4jGnRrIcDS4EWd4LDOnEt\nLQAno9c7Rg6DivqZvmocPUbCQ4jBZcE9a5/BPdngJIHqUT9pt4SgISM0OrIyUu+l\ndj6wIG9YzQKBgQC6SXG+gb6qLgOCVNmp36Lp9CvsivdoVby2BtfWLKqABq7xM1W3\n026xvOaM+uvmFitTQMzpjaU8kPoAs83cIjgf0EnVRQ+Rw7pg7C0VRXxxS/fwiaso\nuMIyfjB8GBMuOG2kodBr0W7/VosDYLAc07BxOw1JjgV3zUsbt+chAcDReQKBgQCt\nzot2RJGLWA4wWe4EwkloqF472KpB50kL+0i2GeGt6vMAcI+lP9Ad9gD6IwooLmW6\nYzIuOn9ByRsGfjHCK0aegqidO6cJltacLmxP4AkAPKaau2RQXHtsoujCY/BLU7NN\nbiFufAzHujc4ShbW9jZTmmxqo+CJbFXihSOysdrHiQKBgAYScMQNHq3SrucmUSHz\nXvci0RSF7s8o5fZMR3oseMyZhuOt0EkWmu9t3dwwoqdpu13KIl4JAHKiD0ijl/A2\nTF4ffUe8mHXH/38CNVg1tNqSue8tocP+tF6E1Q3sYxi4j9+gTbbOyZy1Ao3IKcEo\nRl0TjgI3HonPHyvlKBOLDvRx\n-----END PRIVATE KEY-----\n",
+  "client_email": "sheets-access@ethical-456512.iam.gserviceaccount.com",
+  "client_id": "108403817676871259513",
+  "token_uri": "https://oauth2.googleapis.com/token"
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
+var CFG = {
+  webhook        : "https://intranet.fob.ng/rest/4059/u41ader6cm8tit71/",
+  entityTypeId   : 163,
+  installEntityTypeId: 188,
+  relocationEntityTypeId: 190,
+  slaHours       : 48,
+  pageSize       : 50,
+  callDelayMs    : 450,
+  batchSize      : 50,
+  retryBaseMs    : 4000,
+  maxRetries     : 3, // Reduced to save execution time on hard failures
+  triggerMinutes : 5,
+  fullSyncHours  : 12,
+  maxPages       : 300,
+  maxSyncMs      : 270000,
+  enumCacheTtlMs : 7  * 24 * 3600000,
+  stageCacheTtlMs: 48 * 3600000,
+  deadZoneLimit  : 3,
+  failedSyncLimit: 3,
+  lockKey        : "syncLock_v10",
+  lockTtlMs      : 330000,
+  incrementalOverlapMs: 3 * 60000,
+  skipClosedTimeline: true, // Optimization: Don't fetch timeline for closed tickets to save API calls
+  targetSpreadsheetId: "", // Leave empty to use active spreadsheet, or paste ID here
+
+  // BIGQUERY CONFIGURATION
+  useBigQuery    : true, // ⚠️ Set to true AFTER running 'setupBigQuery'
+  bqProjectId    : "ethical-456512",
+  bqDatasetId    : "crm_data",
+  bqTableId      : "tickets",
+
+  // HARDCODED PIPELINE IDs (Saves API calls on startup)
+  pipelineIds : {
+    sd: 23,
+    cm: 17,
+    in: 94,
+    re: 0
+  },
+
+  sdPipelineName : "service delivery",
+  cmPipelineName : "case management",
+  inPipelineName : "installation",
+  rePipelineName : "relocation",
+
+  // ───────────────────────────────────────────────────────────────────────────
+  //  STAGE NAME → BUCKET CLASSIFICATION
+  //
+  //  Each array contains KEYWORDS (lowercase) that will be searched inside the
+  //  stage name. If ANY keyword is found in the stage name, that bucket wins.
+  //
+  //  Priority order (first match wins):
+  //    1. closed     — ticket is done
+  //    2. escalated  — problem ticket needs attention
+  //    3. unassigned — nobody has picked it up yet
+  //    4. assigned   — everything else (default / safe fallback)
+  //
+  //  Bitrix24 semantics "S" (success) or "F" (fail) always → closed,
+  //  regardless of stage name.
+  // ───────────────────────────────────────────────────────────────────────────
+  stageKeywords : {
+
+    // 🟢 CLOSED — ticket resolved or finished
+    closed : [
+      "resolved",
+      "finish",
+      "completed",
+      "done",
+      "closed",
+      "success",
+      "csc-resolved",
+      "on-boarding confirmation",
+      "confirmation",
+      "onboarding closure"
+    ],
+
+    // 🟡 ESCALATED — problem ticket, needs supervisor attention
+    escalated : [
+      "customer not available",
+      "customer unavailable",
+      "missing r",          // catches "FST-Missing Resources", "FST-Missing Route" etc.
+      "missing resource",
+      "escalat",            // catches "escalated", "escalation"
+      "on hold",
+      "hold"
+    ],
+
+    // 🟠 UNASSIGNED — ticket not yet picked up
+    unassigned : [
+      "area cord",          // catches "Area Cordinator" (Bitrix24 typo — no 'i' before 'n')
+      "area coord",         // catches "Area Coordinator" (correct spelling)
+      "not created",        // catches "FST Ticket Not Created"  << KEY FIX
+      "not assigned",       // catches "FST Ticket Not Assigned"
+      "fst ticket not",     // catches any "FST Ticket Not ..." variant
+      "unassigned",
+      "new ticket",
+      "pending assign",
+      "csc-new",
+      "csc - new",
+      "csc region",
+      "csc - region",
+      "eservice",
+      "ob new ticket",
+      "ob-new ticket",
+      "ob - new ticket",
+      "ob recived",
+      "ob received"
+    ],
+
+    // 🔵 ASSIGNED (Explicit keywords for safety, though default catches most)
+    assigned : [
+      "ob assigned to contractor",
+      "contractor",
+      "assiged to pdi",
+      "assigned to pdi"
+    ]
+  },
+
+  // Bitrix24 terminal semantics — always treated as closed
+  closedSemantics: ["S", "F"],
+
+  fields : {
+    serviceId      : ["ufCrm11_1674594881",    "ufCrm13_1686903257018"],
+    areas          : ["ufCrm13_1689696317",    "ufCrm13_1734959489",    "ufCrm11_1696580149069"],
+    olt            : ["ufCrm13_1689869497",    "ufCrm11_1696583704027", "ufCrm13_1738580181"],
+    gpon           : ["ufCrm13_1689869512",    "ufCrm11_1696583391792"],
+    iface          : ["ufCrm13_1689869524"],
+    serial         : ["ufCrm13_1689869543",    "ufCrm11_1696583347586"],
+    vlan           : ["ufCrm13_1689873900742"],
+    region         : ["ufCrm13_1734959851"],
+    resolvedAt     : ["ufCrm13_1737628125",    "ufCrm13_1737631055"],
+    complaintType  : ["ufCrm13_1675162535"],
+    complaint      : ["ufCrm13_1675162510"],
+    issueCategory  : ["ufCrm13_1676726628"],
+    complaintDesc  : ["ufCrm13_1689598116112"],
+    escalation     : ["ufCrm13_1689696214",    "ufCrm11_1702046003454"],
+    priority       : ["ufCrm13_1688468828963"],
+    rootCauseText  : ["ufCrm13_1719496094864"],
+    rootCauseDd    : ["ufCrm13_1686904049390"],
+    levelStatus    : ["ufCrm13_1686710238"],
+    slaIndicator   : ["ufCrm13_1686593082"],
+    slaBreachedCs  : ["ufCrm13_1699624018175"],
+    serviceImpact  : ["ufCrm13_1721229291925"],
+    outageTicket   : ["ufCrm13_1695906337"],
+    expectedClosure: ["ufCrm13_1686597046",    "ufCrm13_1715683405"],
+    ismAgent       : ["ufCrm13_1699027431983", "ufCrm13_1699027003504"],
+    lastUpdate     : ["ufCrm13_1699007889240"],
+    ticketSource   : ["ufCrm13_1738767994"],
+    servicePlan    : ["ufCrm11_1695216974469"],
+    customerAddress: ["ufCrm13_1700824750061"],
+    resolution     : ["ufCrm13_1719496136914"],
+    eServiceTckId  : ["ufCrm13_1733414320847"]
+  },
+
+  sheets : {
+    assigned   : "SD_Assigned",
+    unassigned : "SD_Unassigned",
+    escalated  : "SD_Escalated",
+    sdClosed   : "SD_Closed",
+    log        : "SD_Log",
+    health     : "SD_Health",
+    inAssigned   : "IN_Assigned",
+    inUnassigned : "IN_Unassigned",
+    inEscalated  : "IN_Escalated",
+    inClosed     : "IN_Closed",
+    reAssigned   : "RE_Assigned",
+    reUnassigned : "RE_Unassigned",
+    reEscalated  : "RE_Escalated",
+    reClosed     : "RE_Closed"
+  }
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  COLUMNS
+// ─────────────────────────────────────────────────────────────────────────────
+var BASE_COLS = [
+  "Date","Ticket ID","Service ID","Customer","Stage",
+  "Last Stage Change","Time in Stage (hrs)","Assigned To","Created By",
+  "Created Date","Resolved Date","Age (hrs)","SLA Met",
+  "Last Comment","Last Comment At","Last Comment By",
+  "Region","Areas","OLT","GPON","Interface","Serial Number",
+  "VLAN","Escalation","Issue Category","Priority","Complaint Type",
+  "Complaint","Complaint Desc","Root Cause","Level Status","Service Impact",
+  "Outage Ticket","SLA Indicator","SLA Breached","Expected Closure",
+  "Ticket Source","Service Plan","ISM Agent","Last Update",
+  "Customer Address","Open Ticket","Last Synced"
+];
+
+var CI_BASE = {};
+BASE_COLS.forEach(function(n, i) { CI_BASE[n] = i + 1; });
+var NUM_BASE = BASE_COLS.length;
+
+var _enumCache = {};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  STAGE NAME CLASSIFIER
+//  Returns "closed" | "escalated" | "unassigned" | "assigned"
+//
+//  Priority: closed > escalated > unassigned > assigned (default)
+//  Semantics S/F always win as closed.
+// ─────────────────────────────────────────────────────────────────────────────
+function classifyByName(stageName, semantics, defaultBucket) {
+  // 1. Bitrix24 terminal semantics — always closed
+  if (semantics && CFG.closedSemantics.indexOf(semantics) !== -1) return "closed";
+
+  var name = (stageName || "").toLowerCase().trim();
+  if (!name) return "assigned"; // safe default
+
+  var kw = CFG.stageKeywords;
+
+  // 2. Check closed keywords
+  for (var i = 0; i < kw.closed.length; i++) {
+    if (name.indexOf(kw.closed[i]) !== -1) return "closed";
+  }
+
+  // 3. Check escalated keywords
+  for (var j = 0; j < kw.escalated.length; j++) {
+    if (name.indexOf(kw.escalated[j]) !== -1) return "escalated";
+  }
+
+  // 4. Check unassigned keywords
+  for (var k = 0; k < kw.unassigned.length; k++) {
+    if (name.indexOf(kw.unassigned[k]) !== -1) return "unassigned";
+  }
+  
+  // 5. Check assigned keywords (explicit)
+  if (kw.assigned) {
+    for (var m = 0; m < kw.assigned.length; m++) { if (name.indexOf(kw.assigned[m]) !== -1) return "assigned"; }
+  }
+
+  // 6. Default — ticket is being worked on
+  return defaultBucket || "assigned";
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  MENU
+// ─────────────────────────────────────────────────────────────────────────────
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("Bitrix CRM")
+    .addItem("▶  RESUME Incomplete Sync",         "runResumeSync")
+    .addItem("▶  Run Total Reset & Sync",        "runFullSync")
+    .addItem("⚡  Run Incremental Sync Now",       "runIncrementalSync")
+    .addSeparator()
+    .addItem("⏰  Install Auto-Sync (5 min)",      "installTrigger")
+    .addItem("⏹  Remove Auto-Sync Trigger",       "removeTrigger")
+    .addSeparator()
+    .addItem("🔍  Show Stage Classification",     "showStageClassification")
+    .addItem("🔗  Test Connection",               "testConnection")
+    .addItem("📊  Show Sync Status",              "showSyncStatus")
+    .addItem("🗑  Reset Cache",                   "resetDiscovery")
+    .addSeparator()
+    .addItem("☁️  Setup BigQuery (Run Once)",      "setupBigQuery")
+    .addSeparator()
+    .addItem("⚠  Clear ALL Data (cannot undo)",  "clearAllSheets")
+    .addToUi();
+}
+function setupMenu() { onOpen(); }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TRIGGER MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+function installTrigger() {
+  removeTrigger();
+  ScriptApp.newTrigger("runIncrementalSync").timeBased().everyMinutes(CFG.triggerMinutes).create();
+  SpreadsheetApp.getUi().alert("✅  Auto-sync installed. Runs every " + CFG.triggerMinutes + " min.");
+}
+function removeTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    var fn = t.getHandlerFunction();
+    if (fn === "runIncrementalSync" || fn === "runFullSync") ScriptApp.deleteTrigger(t);
+  });
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  🔍 SHOW STAGE CLASSIFICATION
+//  Run this to verify each stage is going to the correct bucket BEFORE syncing.
+// ─────────────────────────────────────────────────────────────────────────────
+function showStageClassification() {
+  var ui    = SpreadsheetApp.getUi();
+  var props = PropertiesService.getScriptProperties();
+  var log   = ensureSheet(SpreadsheetApp.getActiveSpreadsheet(), CFG.sheets.log);
+
+  var sdId = getPipelineId(props, log, "sdCatId", CFG.sdPipelineName, CFG.entityTypeId) || 0;
+  var cmId = getPipelineId(props, log, "cmCatId", CFG.cmPipelineName, CFG.entityTypeId) || 0;
+  var inId = getPipelineId(props, log, "inCatId", CFG.inPipelineName, CFG.installEntityTypeId) || 0;
+  var reId = getPipelineId(props, log, "reCatId", CFG.rePipelineName, CFG.relocationEntityTypeId) || 0;
+  if (!sdId && !cmId && !inId && !reId) { ui.alert("❌  No pipelines found.\n\nRun 'Test Connection' first."); return; }
+
+  // Use cached stage map (built during sync). crm.stage.list not available on this account.
+  var stageMap = {};
+  if (sdId) { var m = getStageMap(sdId, props, log, "SD", CFG.entityTypeId); Object.keys(m).forEach(function(k){stageMap[k]=m[k];}); }
+  if (cmId) { var m = getStageMap(cmId, props, log, "CM", CFG.entityTypeId); Object.keys(m).forEach(function(k){stageMap[k]=m[k];}); }
+  if (inId) { var m = getStageMap(inId, props, log, "IN", CFG.installEntityTypeId); Object.keys(m).forEach(function(k){stageMap[k]=m[k];}); }
+  if (reId) { var m = getStageMap(reId, props, log, "RE", CFG.relocationEntityTypeId, "escalated"); Object.keys(m).forEach(function(k){stageMap[k]=m[k];}); }
+
+  if (Object.keys(stageMap).length === 0) {
+    ui.alert("Stage map not built yet.\n\nRun  Total Reset & Sync  first, then come back here.");
+
+
+    return;
+  }
+  var seenLabels = {}, uniqueStages = [];
+  Object.keys(stageMap).forEach(function(sid) {
+    var s = stageMap[sid];
+    if (s.label && !seenLabels[s.label]) { seenLabels[s.label] = true; uniqueStages.push(s); }
+  });
+
+  var bucketEmoji = { closed:"🟢", escalated:"🟡", unassigned:"🟠", assigned:"🔵" };
+  var lines = [
+    "STAGE NAME                    → BUCKET\n",
+    "──────────────────────────────────────────────────\n"
+  ];
+
+  var counts = { closed:0, escalated:0, unassigned:0, assigned:0 };
+  uniqueStages.forEach(function(s) {
+    var bucket = s.nameBucket;
+    counts[bucket] = (counts[bucket]||0) + 1;
+    var emoji  = bucketEmoji[bucket] || "?";
+    lines.push(padR(s.label, 30) + "  ->  " + emoji + " " + bucket.toUpperCase() + "\n");
+  });
+
+  lines.push("\n──────────────────────────────────────────────────\n");
+  lines.push(" SD_Assigned   : " + (counts.assigned   || 0) + " stage(s)\n");
+  lines.push("🟠 SD_Unassigned : " + (counts.unassigned || 0) + " stage(s)\n");
+  lines.push("🟡 SD_Escalated  : " + (counts.escalated  || 0) + " stage(s)\n");
+  lines.push("🟢 SD_Closed     : " + (counts.closed     || 0) + " stage(s)\n");
+  lines.push("\nIf anything looks wrong, update CFG.stageKeywords\nthen run ▶ Total Reset & Sync.\n");
+
+  ui.alert("🔍  Stage Classification  (v10.4)\n\n" + lines.join(""));
+}
+
+function padR(str, len) {
+  str = String(str || "");
+  while (str.length < len) str += " ";
+  return str.substring(0, len);
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ENTRY POINTS
+// ─────────────────────────────────────────────────────────────────────────────
+function runFullSync(e) {
+  var deleteAndRebuild = false;
+  if (!e) {
+    var ui   = SpreadsheetApp.getUi();
+    var resp = ui.alert(
+      "⚠️  Total Reset & Sync",
+      "This will ERASE ALL DATA sheets, clear caches, and rebuild from scratch.\n\nProceed?",
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (resp !== ui.Button.OK) return;
+    deleteAndRebuild = true;
+  }
+  _doSync(true, PropertiesService.getScriptProperties(), deleteAndRebuild);
+}
+
+function runResumeSync() {
+  var props = PropertiesService.getScriptProperties();
+  var ui = SpreadsheetApp.getUi();
+
+  var lock = props.getProperty(CFG.lockKey);
+  if (!lock) {
+    ui.alert("No incomplete sync detected. The last run finished successfully. If you still want to run a sync, use one of the other menu options.");
+    return;
+  }
+
+  ui.alert("Attempting to resume the previous incomplete sync from where it stopped. This will not delete existing data.");
+
+  // Clear the lock to allow the resume to run
+  props.deleteProperty(CFG.lockKey);
+
+  // Call _doSync in "full" mode (to process all pipelines) but NOT "deleteSheets" mode.
+  _doSync(true, props, false);
+}
+
+function runIncrementalSync() {
+  var props     = PropertiesService.getScriptProperties();
+  var lastFull  = parseInt(props.getProperty("lastFullTs") || "0");
+  var needFull  = (Date.now() - lastFull) > CFG.fullSyncHours * 3600000;
+  var failCount = parseInt(props.getProperty("incrementalFails") || "0");
+  if (failCount >= CFG.failedSyncLimit) { needFull = true; props.setProperty("incrementalFails","0"); }
+  _doSync(needFull, props, false);
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ██████████  CORE SYNC ENGINE  ██████████
+// ─────────────────────────────────────────────────────────────────────────────
+function _doSync(full, props, deleteSheets) {
+  var t0  = Date.now();
+  var ss  = CFG.targetSpreadsheetId ? SpreadsheetApp.openById(CFG.targetSpreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
+  var log = ensureSheet(ss, CFG.sheets.log);
+  var props = PropertiesService.getScriptProperties(); // Ensure props is available
+
+  // Concurrency lock
+  var existingLock = props.getProperty(CFG.lockKey);
+  if (existingLock) {
+    var age = Date.now() - parseInt(existingLock);
+    if (age < CFG.lockTtlMs) { Logger.log("Sync running (" + Math.round(age/1000) + "s). Skip."); return; }
+    Logger.log("Stale lock cleared.");
+  }
+  props.setProperty(CFG.lockKey, String(Date.now()));
+
+  try {
+    // Dead-zone skip for incremental
+    if (!full) {
+      var dz = parseInt(props.getProperty("deadZoneCount") || "0");
+      if (dz >= CFG.deadZoneLimit) {
+        if (safeQuickCount(props) === 0) {
+          props.setProperty("deadZoneCount", String(dz + 1));
+          props.deleteProperty(CFG.lockKey);
+          return;
+        }
+        props.setProperty("deadZoneCount", "0");
+      }
+    }
+
+    logLine(log, "══════════════════════════════════════════════════════════");
+    logLine(log, "SYNC START [" + (full?"FULL":"INCR") + "]  v10.4  " + new Date().toLocaleString());
+
+    var hook = webhookStatus();
+    if (!hook.ok) {
+      logLine(log, "⚠️  ABORT: Webhook — " + hook.reason);
+      _writeHealth(ss, full, 0, {}, 0, "ABORTED", hook.reason);
+      props.deleteProperty(CFG.lockKey);
+      return;
+    }
+    logLine(log, "Webhook OK (" + hook.user + ")");
+
+    if (deleteSheets) {
+      logLine(log, "🗑  Clearing data sheets...");
+      var sheetValues = Object.values ? Object.values(CFG.sheets) : Object.keys(CFG.sheets).map(function(k){return CFG.sheets[k];});
+      ss.getSheets().forEach(function(s) {
+        var n = s.getName();
+        if (sheetValues.indexOf(n) > -1 && n !== CFG.sheets.log) {
+          try { s.clear(); } catch(e) { try { ss.deleteSheet(s); } catch(e2) {} }
+        }
+      });
+      
+      // PRESERVE CACHE: Don't delete enum cache to save API calls
+      var savedEnum = props.getProperty("enumCache_v10");
+      var savedEnumTs = props.getProperty("enumCacheTs_v10");
+      
+      props.deleteAllProperties();
+      
+      if (savedEnum) props.setProperty("enumCache_v10", savedEnum);
+      if (savedEnumTs) props.setProperty("enumCacheTs_v10", savedEnumTs);
+      
+      props.setProperty(CFG.lockKey, String(Date.now()));
+      props.setProperty("resumeIndex", "0");
+      logLine(log, "  ✅ Sheets cleared.");
+    }
+
+    var sdCatId = getPipelineId(props, log, "sdCatId", CFG.sdPipelineName, CFG.entityTypeId);
+    var cmCatId = getPipelineId(props, log, "cmCatId", CFG.cmPipelineName, CFG.entityTypeId);
+    var inCatId = getPipelineId(props, log, "inCatId", CFG.inPipelineName, CFG.installEntityTypeId);
+    var reCatId = getPipelineId(props, log, "reCatId", CFG.rePipelineName, CFG.relocationEntityTypeId);
+
+    if (!sdCatId && !cmCatId && !inCatId && !reCatId) {
+      logLine(log, "⚠️  ABORT: No pipelines found.");
+      _writeHealth(ss, full, 0, {}, 0, "ABORTED", "Pipelines missing");
+      props.deleteProperty(CFG.lockKey);
+      return;
+    }
+    if (sdCatId) logLine(log, "SD Pipeline ID: " + sdCatId);
+    if (cmCatId) logLine(log, "CM Pipeline ID: " + cmCatId);
+    if (inCatId) logLine(log, "IN Pipeline ID: " + inCatId);
+    if (reCatId) logLine(log, "RE Pipeline ID: " + reCatId);
+
+    loadEnumCache(props, log, [CFG.entityTypeId, CFG.installEntityTypeId, CFG.relocationEntityTypeId]);
+    
+    var combinedStageMap = {};
+    if (sdCatId) { var m = getStageMap(sdCatId, props, log, "SD", CFG.entityTypeId); Object.keys(m).forEach(function(k){combinedStageMap[k]=m[k];}); }
+    if (cmCatId) { var m = getStageMap(cmCatId, props, log, "CM", CFG.entityTypeId); Object.keys(m).forEach(function(k){combinedStageMap[k]=m[k];}); }
+    if (inCatId) { var m = getStageMap(inCatId, props, log, "IN", CFG.installEntityTypeId); Object.keys(m).forEach(function(k){combinedStageMap[k]=m[k];}); }
+    if (reCatId) { var m = getStageMap(reCatId, props, log, "RE", CFG.relocationEntityTypeId, "escalated"); Object.keys(m).forEach(function(k){combinedStageMap[k]=m[k];}); }
+
+    // Log stage classification to console only (not sheet — too verbose)
+    console.log("── Stage name classification ─────────────────────────────");
+    Object.keys(combinedStageMap).forEach(function(sid) {
+      var s = combinedStageMap[sid];
+      console.log("  '" + s.label + "'  sem=" + (s.semantics||"-") + "  → " + s.nameBucket.toUpperCase());
+    });
+    console.log("─────────────────────────────────────────────────────────");
+
+    var cutoff = "";
+    if (!full) {
+      var lastTs = props.getProperty("lastSyncTs");
+      cutoff = lastTs
+        ? new Date(new Date(lastTs).getTime() - CFG.incrementalOverlapMs).toISOString()
+        : new Date(Date.now() - (CFG.triggerMinutes + 8) * 60000).toISOString();
+      logLine(log, "Incremental cutoff: " + cutoff);
+    }
+
+    logLine(log, "Fetching tickets...");
+    var allItems = [];
+    
+    // REORDERED: Fetch smaller/critical pipelines (IN, RE, SD) FIRST, before the massive CM pipeline.
+    // This ensures Installation tickets get processed even if CM times out later.
+    
+    if (inCatId) {
+      var f = { categoryId: inCatId }; if (cutoff) f[">updatedTime"] = cutoff;
+      var items = fetchAllItems(f, log, t0, "IN", CFG.installEntityTypeId);
+      allItems = allItems.concat(items);
+    }
+    if (reCatId) {
+      var f = { categoryId: reCatId }; if (cutoff) f[">updatedTime"] = cutoff;
+      var items = fetchAllItems(f, log, t0, "RE", CFG.relocationEntityTypeId);
+      allItems = allItems.concat(items);
+    }
+    if (sdCatId) {
+      var f = { categoryId: sdCatId }; if (cutoff) f[">updatedTime"] = cutoff;
+      var items = fetchAllItems(f, log, t0, "SD", CFG.entityTypeId);
+      allItems = allItems.concat(items);
+    }
+    if (cmCatId) {
+      var f = { categoryId: cmCatId }; if (cutoff) f[">updatedTime"] = cutoff;
+      var items = fetchAllItems(f, log, t0, "CM", CFG.entityTypeId);
+      allItems = allItems.concat(items);
+    }
+    
+    logLine(log, "Total: " + allItems.length + " ticket(s) found");
+
+    // If stage API returned nothing, build the map from live ticket stageId values
+    if (allItems.length > 0 && Object.keys(combinedStageMap).length === 0) {
+      logLine(log, "Building stage map from live ticket data (API fallback)...");
+      combinedStageMap = buildStageMapFromTickets(allItems, combinedStageMap, log);
+    }
+
+    if (allItems.length === 0) {
+      if (!full) {
+        var dzc = parseInt(props.getProperty("deadZoneCount")||"0") + 1;
+        props.setProperty("deadZoneCount", String(dzc));
+        logLine(log, "Nothing new. (quiet run: " + dzc + "/" + CFG.deadZoneLimit + ")");
+      } else {
+        logLine(log, "⚠️  Full sync returned 0 tickets — check pipeline filter.");
+      }
+      _writeHealth(ss, full, 0, {}, (Date.now()-t0)/1000, "EMPTY", "0 tickets");
+      logLine(log, "══════════════════════════════════════════════════════════");
+      props.setProperty("lastSyncTs", new Date().toISOString());
+      props.deleteProperty(CFG.lockKey);
+      return;
+    }
+    props.setProperty("deadZoneCount",    "0");
+    props.setProperty("incrementalFails", "0");
+
+    // ── CHUNKED PROCESSING LOOP ──────────────────────────────────────────
+    // Process tickets in small batches to save progress and avoid memory issues
+    
+    var resumeIndex = parseInt(props.getProperty("resumeIndex") || "0");
+    if (resumeIndex > 0 && resumeIndex < allItems.length) {
+      logLine(log, "🔄  Resuming processing from ticket #" + (resumeIndex + 1) + " of " + allItems.length);
+    } else if (resumeIndex >= allItems.length) {
+      resumeIndex = 0; // Start over if index is weird
+    }
+
+    var stats   = { assigned:0, unassigned:0, escalated:0, sdClosed:0, slaBreached:0 };
+    var chunkSize = 50; // Process 50 tickets at a time
+    var processedCount = 0;
+
+    for (var i = resumeIndex; i < allItems.length; i += chunkSize) {
+      // 1. Check Time Limit
+      if ((Date.now() - t0) > CFG.maxSyncMs * 0.85) {
+        logLine(log, "⚠️  Time limit reached. Saving progress at ticket " + i + "...");
+        props.setProperty("resumeIndex", String(i));
+        // Do NOT delete lock key so Resume works
+        return; 
+      }
+
+      // 2. Prepare Chunk
+      var chunk = allItems.slice(i, i + chunkSize);
+      var timelineMap = {};
+
+      // 3. Fetch Timeline (Core Dive) for Chunk
+      try {
+        timelineMap = batchFetchAdvancedTimeline(chunk, log, t0, combinedStageMap);
+      } catch (e) {
+        if (e.message.indexOf("too many times") !== -1) {
+          logLine(log, "⛔  DAILY QUOTA EXCEEDED. Stopping safely.");
+          props.setProperty("resumeIndex", String(i));
+          return;
+        }
+        logLine(log, "⚠️  Timeline fetch error: " + e.message);
+      }
+
+      // 4. Resolve Users
+      var userMap = batchResolveUsers(chunk, props, log, timelineMap);
+
+      // 5. Build Buckets for Chunk
+      var buckets = {
+        assigned:[], unassigned:[], escalated:[], sdClosed:[],
+        inAssigned:[], inUnassigned:[], inEscalated:[], inClosed:[],
+        reAssigned:[], reUnassigned:[], reEscalated:[], reClosed:[]
+      };
+
+      chunk.forEach(function(item) {
+        if (!item || !item.id) return;
+        var row = buildRow(item, userMap, combinedStageMap, BASE_COLS, CI_BASE, NUM_BASE, timelineMap[item.id] || {});
+        
+        var isIN = (item._sheetPrefix === "IN");
+        var isRE = (item._sheetPrefix === "RE");
+        var target = "";
+
+        switch (row.bucket) {
+          case "closed":
+            if (isIN) target = "inClosed";
+            else if (isRE) target = "reClosed";
+            else target = "sdClosed";
+            stats.sdClosed++;
+            break;
+          case "escalated":
+            if (isIN) target = "inEscalated";
+            else if (isRE) target = "reEscalated";
+            else target = "escalated";
+            stats.escalated++;
+            if (row.slaMet === "NO") stats.slaBreached++;
+            break;
+          case "unassigned":
+            if (isIN) target = "inUnassigned";
+            else if (isRE) target = "reUnassigned";
+            else target = "unassigned";
+            stats.unassigned++;
+            if (row.slaMet === "NO") stats.slaBreached++;
+            break;
+          default: // "assigned"
+            if (isIN) target = "inAssigned";
+            else if (isRE) target = "reAssigned";
+            else target = "assigned";
+            stats.assigned++;
+            if (row.slaMet === "NO") stats.slaBreached++;
+            break;
+        }
+        if (target && buckets[target]) buckets[target].push(row);
+      });
+
+      // 6. Save Chunk to Sheets
+      if (CFG.useBigQuery) {
+        var allRows = [];
+        Object.keys(buckets).forEach(function(k) {
+          buckets[k].forEach(function(r) { allRows.push(r); });
+        });
+        if (allRows.length > 0) streamToBigQuery(allRows, log);
+      } else {
+        smartUpsert(ss, buckets, log);
+      }
+      processedCount += chunk.length;
+      
+      // Update progress
+      props.setProperty("resumeIndex", String(i + chunkSize));
+      if (i % 500 === 0) logLine(log, "  Processed " + (i + chunkSize) + " / " + allItems.length + " tickets...");
+    }
+
+    // ── FINISH ─────────────────────────────────────────────────────────────
+    
+    // Clear resume index only if we actually finished the loop
+    if (processedCount > 0) {
+       props.deleteProperty("resumeIndex");
+    }
+
+    logLine(log, "📋  Assigned: "   + stats.assigned   +
+                 "  Unassigned: "  + stats.unassigned  +
+                 "  Escalated: "   + stats.escalated   +
+                 "  Closed: "      + stats.sdClosed     +
+                 "  SLA breach: "  + stats.slaBreached);
+
+    // Sample log — first 10 tickets
+    logLine(log, "── Sample classification (first 10) ─────────────────────");
+    allItems.slice(0, 10).forEach(function(item) {
+      if (!item) return;
+      var si  = combinedStageMap[item.stageId || ""];
+      var lbl = si ? si.label    : String(item.stageId||"?");
+      var bkt = si ? si.nameBucket.toUpperCase() : "UNKNOWN→ASSIGNED";
+      logLine(log, "  #" + item.id + "  stage='" + lbl + "'  → " + bkt);
+    });
+    logLine(log, "─────────────────────────────────────────────────────────");
+
+    /*
+    // Legacy full build logic removed - we now use smartUpsert for everything
+    if (full) {
+      // ...
+      props.setProperty("lastFullTs", String(Date.now()));
+    } 
+    */
+    if (full) props.setProperty("lastFullTs", String(Date.now()));
+
+    props.setProperty("lastSyncTs",    new Date().toISOString());
+    props.setProperty("lastSyncCount", String(allItems.length));
+
+    var elapsed = (Date.now() - t0) / 1000;
+    logLine(log, "✅  DONE in " + elapsed.toFixed(1) + "s  |  " + allItems.length + " ticket(s) synced");
+    logLine(log, "══════════════════════════════════════════════════════════");
+    _writeHealth(ss, full, allItems.length, stats, elapsed, "OK", "");
+    
+    // On success, explicitly remove the lock.
+    props.deleteProperty(CFG.lockKey);
+
+  } catch(e) {
+    var em = String(e.message || e);
+    try {
+      logLine(log, "🔴  ERROR: " + em);
+      logLine(log, "══════════════════════════════════════════════════════════");
+      _writeHealth(ss, full, 0, {}, (Date.now()-t0)/1000, "ERROR", em.substring(0, 200));
+    } catch(le) {}
+    var f = parseInt(props.getProperty("incrementalFails")||"0") + 1;
+    props.setProperty("incrementalFails", String(f));
+    // On error, the lock is intentionally NOT deleted. This signals that the sync
+    // was incomplete and allows the "RESUME" function to work.
+  }
+}
+
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BIGQUERY INTEGRATION
+// ─────────────────────────────────────────────────────────────────────────────
+function setupBigQuery() {
+  var ui = SpreadsheetApp.getUi();
+  try {
+    // 1. Create Dataset
+    try {
+      var dataset = BigQuery.newDataset();
+      dataset.datasetReference = BigQuery.newDatasetReference();
+      dataset.datasetReference.projectId = CFG.bqProjectId;
+      dataset.datasetReference.datasetId = CFG.bqDatasetId;
+      BigQuery.Datasets.insert(dataset, CFG.bqProjectId);
+      Logger.log("Dataset created.");
+    } catch(e) { Logger.log("Dataset exists or error: " + e.message); }
+
+    // 2. Create Table
+    var table = BigQuery.newTable();
+    table.tableReference = BigQuery.newTableReference();
+    table.tableReference.projectId = CFG.bqProjectId;
+    table.tableReference.datasetId = CFG.bqDatasetId;
+    table.tableReference.tableId   = CFG.bqTableId;
+
+    var schema = BigQuery.newTableSchema();
+    schema.fields = BASE_COLS.map(function(col) {
+      var f = BigQuery.newTableFieldSchema();
+      f.name = col.replace(/\W+/g, "_").replace(/^_+|_+$/g, ""); // Sanitize "Ticket ID" -> "Ticket_ID"
+      f.type = "STRING"; // Use STRING for everything to be safe and easy
+      return f;
+    });
+    // Add extra useful columns
+    var fBucket = BigQuery.newTableFieldSchema(); fBucket.name = "Bucket"; fBucket.type = "STRING";
+    schema.fields.push(fBucket);
+    
+    table.schema = schema;
+    try {
+      BigQuery.Tables.insert(table, CFG.bqProjectId, CFG.bqDatasetId);
+      ui.alert("✅  BigQuery Setup Complete!\n\nDataset: " + CFG.bqDatasetId + "\nTable: " + CFG.bqTableId + "\n\nYou can now set 'useBigQuery: true' in the code.");
+    } catch(e) {
+      ui.alert("⚠️  Table creation failed (might already exist):\n" + e.message);
+    }
+  } catch(e) {
+    ui.alert("❌  BigQuery Error:\n" + e.message + "\n\nDid you enable the 'BigQuery API' service in Apps Script?");
+  }
+}
+
+function streamToBigQuery(rows, log) {
+  if (!rows || !rows.length) return;
+  var insertAllRequest = BigQuery.newTableDataInsertAllRequest();
+  insertAllRequest.rows = rows.map(function(r) {
+    var rowData = BigQuery.newTableDataInsertAllRequestRows();
+    rowData.insertId = r.ticketId; // Deduplication key
+    var json = {};
+    BASE_COLS.forEach(function(col, i) {
+      var key = col.replace(/\W+/g, "_").replace(/^_+|_+$/g, "");
+      json[key] = String(r.d[i] || "");
+    });
+    json.Bucket = r.bucket;
+    rowData.json = json;
+    return rowData;
+  });
+
+  try {
+    var response = BigQuery.Tabledata.insertAll(insertAllRequest, CFG.bqProjectId, CFG.bqDatasetId, CFG.bqTableId);
+    if (response.insertErrors && response.insertErrors.length > 0) {
+      logLine(log, "⚠️  BQ Insert Errors: " + JSON.stringify(response.insertErrors[0]));
+    } else {
+      logLine(log, "  ☁️  Streamed " + rows.length + " rows to BigQuery");
+    }
+  } catch (e) {
+    logLine(log, "🔴  BQ Stream Error: " + e.message);
+  }
+}
+//  WEBHOOK / QUICK COUNT
+// ─────────────────────────────────────────────────────────────────────────────
+function webhookStatus() {
+  try {
+    var r = UrlFetchApp.fetch(CFG.webhook + "profile", {
+      method:"post", contentType:"application/json", payload:"{}", muteHttpExceptions:true
+    });
+    if (r.getResponseCode() !== 200) return { ok:false, reason:"HTTP " + r.getResponseCode() };
+    var d = safeJsonParse(r.getContentText(), null);
+    if (!d || !d.result) return { ok:false, reason:"No profile returned" };
+    var u = d.result;
+    return { ok:true, user:((u.NAME||"") + " " + (u.LAST_NAME||"")).trim() || "ID " + u.ID };
+  } catch(e) { 
+    var msg = e.message;
+    if (msg.indexOf("Service invoked too many times") !== -1) {
+      msg = "GOOGLE QUOTA EXCEEDED (Wait 24h)";
+    }
+    return { ok:false, reason:msg }; 
+  }
+}
+
+function safeQuickCount(props) {
+  try {
+    var sdId = parseInt(props.getProperty("sdCatId") || "0");
+    var cmId = parseInt(props.getProperty("cmCatId") || "0");
+    var inId = parseInt(props.getProperty("inCatId") || "0");
+    var reId = parseInt(props.getProperty("reCatId") || "0");
+    if (!sdId && !cmId && !inId && !reId) return 1;
+    var lastTs = props.getProperty("lastSyncTs");
+    var cutoff = lastTs
+      ? new Date(new Date(lastTs).getTime() - CFG.incrementalOverlapMs).toISOString()
+      : new Date(Date.now() - (CFG.triggerMinutes + 8) * 60000).toISOString();
+    throttle();
+    var catFilter = (sdId && cmId) ? [sdId, cmId] : (sdId || cmId);
+    // Note: This quick count only checks the main entity type (163). 
+    // It's an approximation. If IN is on 188, it won't be counted here, which is fine for a "quick" check.
+    var r = api("crm.item.list", {entityTypeId:CFG.entityTypeId, select:["id"], filter:{categoryId:catFilter, ">updatedTime":cutoff}, limit:1});
+    return (r && r.total !== undefined) ? r.total : 1;
+  } catch(e) { return 1; }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PIPELINE DISCOVERY
+// ─────────────────────────────────────────────────────────────────────────────
+function getPipelineId(props, log, cacheKey, pipelineName, entityTypeId) {
+  // 0. Check Hardcoded Config (Saves API calls)
+  if (cacheKey === "sdCatId" && CFG.pipelineIds.sd) { logLine(log, "  ✅ Pipeline '" + pipelineName + "' → ID " + CFG.pipelineIds.sd + " (Hardcoded)"); return CFG.pipelineIds.sd; }
+  if (cacheKey === "cmCatId" && CFG.pipelineIds.cm) { logLine(log, "  ✅ Pipeline '" + pipelineName + "' → ID " + CFG.pipelineIds.cm + " (Hardcoded)"); return CFG.pipelineIds.cm; }
+  if (cacheKey === "inCatId" && CFG.pipelineIds.in) { logLine(log, "  ✅ Pipeline '" + pipelineName + "' → ID " + CFG.pipelineIds.in + " (Hardcoded)"); return CFG.pipelineIds.in; }
+  if (cacheKey === "reCatId" && CFG.pipelineIds.re) { logLine(log, "  ✅ Pipeline '" + pipelineName + "' → ID " + CFG.pipelineIds.re + " (Hardcoded)"); return CFG.pipelineIds.re; }
+
+  var cached = props.getProperty(cacheKey);
+  if (cached) return parseInt(cached);
+  try {
+    throttle();
+    var raw  = api("crm.category.list", { entityTypeId:entityTypeId });
+    var cats = (raw && raw.result && raw.result.categories) ? raw.result.categories : [];
+    logLine(log, "Pipelines found: " + cats.map(function(c){ return '"' + c.name + '" (' + c.id + ')'; }).join(", "));
+    for (var i = 0; i < cats.length; i++) {
+      if ((cats[i].name || "").toLowerCase().indexOf(pipelineName) !== -1) {
+        props.setProperty(cacheKey, String(cats[i].id));
+        logLine(log, "  ✅ Pipeline '" + pipelineName + "' → ID " + cats[i].id + " ('" + cats[i].name + "')");
+        return cats[i].id;
+      }
+    }
+    logLine(log, "  ⚠️  No pipeline found matching '" + pipelineName + "'");
+  } catch(e) { logLine(log, "getPipelineId error: " + e.message); }
+  return null;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  STAGE MAP
+//
+//  Bitrix24 on this account does NOT support crm.stage.list.
+//  Instead we use crm.status.list (the older universal API) to get stage names.
+//  The stageId on each ticket looks like  "DT163_23:UC_ABC123"  — the part after
+//  the colon is the STATUS_ID we match against crm.status.list results.
+//
+//  If crm.status.list also fails, the map stays empty and classifyByName() is
+//  called with the raw stageId string as a fallback — it still classifies
+//  correctly because the stage IDs themselves often contain the stage name
+//  (e.g. "DT163_23:FST_RESOLVED").
+//
+//  Stores per entry: { label, semantics, nameBucket }
+// ─────────────────────────────────────────────────────────────────────────────
+function getStageMap(catId, props, log, label, entityTypeId, defaultBucket) {
+  var ck = "stageMap_" + catId;
+  var tk = "stageMapTs_" + catId;
+  var raw = props.getProperty(ck);
+  var ts  = parseInt(props.getProperty(tk) || "0");
+
+  if (raw && (Date.now() - ts) < CFG.stageCacheTtlMs) {
+    var parsed = safeJsonParse(raw, null);
+    if (parsed) { logLine(log, "[" + label + "] Stage map loaded from cache (" + Object.keys(parsed).length + " entries)"); return parsed; }
+    props.deleteProperty(ck);
+  }
+
+  var map = {};
+
+  // ── Attempt 1: crm.status.list  (works on all Bitrix24 versions) ──────────
+  // ENTITY_ID for SPA pipeline stages is  "DYNAMIC_" + entityTypeId + "_" + catId
+  // e.g. entityTypeId=163, catId=23  →  "DYNAMIC_163_23"
+  var entityId = "DYNAMIC_" + entityTypeId + "_" + catId;
+  try {
+    throttle();
+    var r  = api("crm.status.list", { filter:{ ENTITY_ID: entityId } });
+    var st = (r && r.result) ? r.result : [];
+    if (!Array.isArray(st)) st = [];
+
+    if (st.length) {
+      logLine(log, "[" + label + "] crm.status.list returned " + st.length + " stage(s) — see console for details");
+      st.forEach(function(s) {
+        // STATUS_ID is the short key, e.g. "UC_ABC123" or "NEW"
+        var sid    = s.STATUS_ID || s.id || "";
+        var name   = s.NAME      || s.name || sid;
+        var sem    = s.SEMANTICS || s.semantics || "";
+        var bucket = classifyByName(name, sem, defaultBucket);
+        // Store under both the short ID and the full prefixed ID so lookups work
+        // regardless of what format stageId comes back as on each ticket.
+        map[sid] = { label:name, semantics:sem, nameBucket:bucket };
+        var fullKey = "DT" + CFG.entityTypeId + "_" + catId + ":" + sid;
+        map[fullKey] = { label:name, semantics:sem, nameBucket:bucket }; // Legacy fallback
+        console.log("  [" + bucket.toUpperCase() + "] '" + name + "'  id=" + sid + "  sem=" + (sem||"-"));
+      });
+      try { props.setProperty(ck, JSON.stringify(map)); props.setProperty(tk, String(Date.now())); } catch(e) {}
+      return map;
+    }
+    logLine(log, "[" + label + "] crm.status.list returned 0 results for ENTITY_ID=" + entityId);
+  } catch(e) {
+    logLine(log, "[" + label + "] crm.status.list error: " + e.message);
+  }
+
+  // ── Attempt 2: crm.status.list without filter (get all, then filter client-side) ─
+  try {
+    throttle();
+    var r2  = api("crm.status.list", {});
+    var st2 = (r2 && r2.result) ? r2.result : [];
+    if (!Array.isArray(st2)) st2 = [];
+    var filtered = st2.filter(function(s) {
+      var eid = (s.ENTITY_ID || "").toUpperCase();
+      return eid === entityId.toUpperCase() || eid.indexOf("DYNAMIC_" + entityTypeId) === 0;
+    });
+    if (filtered.length) {
+      logLine(log, "[" + label + "] crm.status.list (unfiltered) found " + filtered.length + " matching stage(s) — see console for details");
+      filtered.forEach(function(s) {
+        var sid    = s.STATUS_ID || s.id || "";
+        var name   = s.NAME      || s.name || sid;
+        var sem    = s.SEMANTICS || s.semantics || "";
+        var bucket = classifyByName(name, sem, defaultBucket);
+        map[sid] = { label:name, semantics:sem, nameBucket:bucket };
+        var fullKey = "DT" + entityTypeId + "_" + catId + ":" + sid;
+        map[fullKey] = { label:name, semantics:sem, nameBucket:bucket };
+        console.log("  [" + bucket.toUpperCase() + "] '" + name + "'  id=" + sid);
+      });
+      try { props.setProperty(ck, JSON.stringify(map)); props.setProperty(tk, String(Date.now())); } catch(e) {}
+      return map;
+    }
+    logLine(log, "[" + label + "] No matching stages in full crm.status.list either.");
+  } catch(e2) {
+    logLine(log, "[" + label + "] crm.status.list (unfiltered) error: " + e2.message);
+  }
+
+  // ── Attempt 3: Build map on-the-fly from ticket stageId values ────────────
+  // This runs AFTER fetchAllItems populates _liveStageIds.
+  // We register a deferred build — see buildStageMapFromTickets().
+  logLine(log, "[" + label + "] ⚠️  No stage API available — map will be built from ticket data.");
+  return map; // empty for now; buildStageMapFromTickets() fills it in later
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BUILD STAGE MAP FROM LIVE TICKET DATA
+//  Called after fetchAllItems() when the stage API returned nothing.
+//  Reads the stageId field on each ticket and classifies by the name portion.
+//  e.g.  "DT163_23:FST-Resolved"  →  label="FST-Resolved"  bucket="closed"
+// ─────────────────────────────────────────────────────────────────────────────
+function buildStageMapFromTickets(items, map, log) {
+  var added = 0;
+  items.forEach(function(item) {
+    if (!item) return;
+    var fullId = String(item.stageId || "").trim();
+    if (!fullId || map[fullId]) return; // already known
+
+    // Extract the human-readable part after the last colon
+    var parts  = fullId.split(":");
+    var name   = parts[parts.length - 1] || fullId;
+
+    // Also decode underscores to spaces for matching, e.g. "FST_RESOLVED" → "FST RESOLVED"
+    var nameForMatch = name.replace(/_/g, " ");
+    var defaultBucket = (item._sheetPrefix === "RE") ? "escalated" : "assigned";
+    var bucket = classifyByName(nameForMatch, "", defaultBucket);
+
+    map[fullId] = { label:name, semantics:"", nameBucket:bucket };
+    added++;
+    Logger.log("  [LIVE] [" + bucket.toUpperCase() + "] '" + name + "'  stageId=" + fullId);
+  });
+  if (added) logLine(log, "  Built " + added + " stage entry(s) from live ticket data.");
+  return map;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PAGINATED LIST FETCH
+// ─────────────────────────────────────────────────────────────────────────────
+function fetchAllItems(filter, log, t0, label, entityTypeId) {
+  var all = [], start = 0;
+  var select = ["id","title","stageId","categoryId","createdBy","assignedById",
+                "opened","createdTime","updatedTime","closedTime","movedTime"];
+  Object.keys(CFG.fields).forEach(function(key) {
+    CFG.fields[key].forEach(function(fid) { if (select.indexOf(fid) === -1) select.push(fid); });
+  });
+
+  for (var page = 0; page < CFG.maxPages; page++) {
+    if (t0 && (Date.now() - t0) > CFG.maxSyncMs * 0.60) {
+      logLine(log, "⚠️  [" + label + "] 60% time limit — stopping at " + all.length + " tickets.");
+      break;
+    }
+    throttle();
+    try {
+      var raw   = api("crm.item.list", {
+        entityTypeId : entityTypeId,
+        select       : select,
+        filter       : filter,
+        order        : { id:"DESC" },
+        start        : start,
+        limit        : CFG.pageSize
+      });
+      var chunk = (raw && raw.result && raw.result.items) ? raw.result.items : [];
+      if (page === 0) logLine(log, "[" + label + "] API reports total: " + (raw ? (raw.total || 0) : "?"));
+      
+      // Tag items with their source type for later processing
+      chunk.forEach(function(item) { item._entityTypeId = entityTypeId; item._sheetPrefix = label; });
+      
+      all = all.concat(chunk);
+      if (chunk.length < CFG.pageSize) break;
+      start += CFG.pageSize;
+    } catch(e) {
+      logLine(log, "⚠️  [" + label + "] Page " + page + " error: " + e.message);
+      if (page === 0) return [];
+      break;
+    }
+  }
+  return all;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BATCH DEEP FETCH
+// ─────────────────────────────────────────────────────────────────────────────
+function batchDeepFetch(items, log, t0) {
+  var rich  = [];
+  var total = items.length;
+  logLine(log, "Deep-fetch: " + total + " tickets in " + Math.ceil(total / CFG.batchSize) + " batch(es)");
+
+  for (var i = 0; i < total; i += CFG.batchSize) {
+    if (t0 && (Date.now() - t0) > CFG.maxSyncMs * 0.80) {
+      logLine(log, "⚠️  80% time limit — using list data for remaining " + (total - i) + " tickets.");
+      for (var j = i; j < total; j++) rich.push(items[j]);
+      break;
+    }
+    var chunk = items.slice(i, i + CFG.batchSize);
+    var cmds  = {};
+    chunk.forEach(function(item, idx) {
+      var etId = item._entityTypeId || CFG.entityTypeId;
+      cmds["i" + idx] = "crm.item.get?entityTypeId=" + etId + "&id=" + item.id;
+    });
+    throttle();
+    try {
+      var br  = api("batch", { halt:0, cmd:cmds });
+      var res = (br && br.result && br.result.result)       ? br.result.result       : {};
+      var err = (br && br.result && br.result.result_error) ? br.result.result_error : {};
+      chunk.forEach(function(listItem, idx) {
+        var k    = "i" + idx;
+        var full = (res[k] && res[k].item) ? res[k].item : null;
+        if (full) {
+          var merged = {};
+          Object.keys(listItem).forEach(function(fk) { merged[fk] = listItem[fk]; });
+          Object.keys(full).forEach(function(fk)     { merged[fk] = full[fk]; });
+          rich.push(merged);
+        } else {
+          var retry = _retryItemGet(listItem.id, log, listItem._entityTypeId);
+          rich.push(retry || listItem);
+          if (err[k]) logLine(log, "  ⚠️  Batch miss #" + listItem.id + ": " + JSON.stringify(err[k]).substring(0,80));
+        }
+      });
+    } catch(e) {
+      logLine(log, "⚠️  Batch error: " + e.message);
+      chunk.forEach(function(listItem) { rich.push(_retryItemGet(listItem.id, log, listItem._entityTypeId) || listItem); });
+    }
+    var done = Math.min(i + CFG.batchSize, total);
+    if (done % 150 === 0 || done === total) {
+      logLine(log, "Progress: " + done + "/" + total + " (" + Math.round(done / total * 100) + "%)");
+    }
+  }
+  return rich;
+}
+
+function _retryItemGet(ticketId, log, entityTypeId) {
+  try {
+    throttle();
+    var r = api("crm.item.get", { entityTypeId:(entityTypeId||CFG.entityTypeId), id:ticketId });
+    return (r && r.result && r.result.item) ? r.result.item : null;
+  } catch(e) { logLine(log, "  ⚠️  Retry #" + ticketId + ": " + e.message); return null; }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ADVANCED TIMELINE FETCH (CORE DIVE)
+//  Fetches latest comment AND latest stage change for each ticket.
+// ─────────────────────────────────────────────────────────────────────────────
+function batchFetchAdvancedTimeline(items, log, t0, stageMap) {
+  if (!items || !items.length) return {};
+
+  var timelineData = {};
+  var total = items.length;
+  var ticketBatchSize = Math.floor(CFG.batchSize / 2); // 2 commands per ticket
+  logLine(log, "Core Dive: " + total + " tickets in " + Math.ceil(total / ticketBatchSize) + " batch(es)");
+
+  for (var i = 0; i < total; i += ticketBatchSize) {
+    // Safety: Stop if we are running out of execution time
+    if (t0 && (Date.now() - t0) > CFG.maxSyncMs * 0.90) {
+      logLine(log, "⚠️  Core Dive: Time limit reached. Skipping history for remaining tickets.");
+      break;
+    }
+    var chunk = items.slice(i, i + ticketBatchSize);
+    var cmds = {};
+    chunk.forEach(function(item) {
+      // Optimization: Skip timeline fetch for closed tickets to save quota
+      if (CFG.skipClosedTimeline && stageMap) {
+        var s = stageMap[item.stageId];
+        if (s && s.nameBucket === "closed") return;
+      }
+      
+      var etId = item._entityTypeId || CFG.entityTypeId;
+      // Command for latest comment
+      cmds["c_" + item.id] = "crm.timeline.item.list" +
+        "?entityTypeId=" + etId + "&entityId=" + item.id +
+        "&filter[TYPE_ID]=3" + // 3 = Comment
+        "&order[CREATED]=DESC" + "&limit=1";
+      // Command for latest stage change
+      cmds["s_" + item.id] = "crm.timeline.item.list" +
+        "?entityTypeId=" + etId + "&entityId=" + item.id +
+        "&filter[TYPE_ID]=2" + // 2 = Stage Change
+        "&order[CREATED]=DESC" + "&limit=1";
+    });
+
+    throttle();
+    try {
+      var br = api("batch", { halt: 0, cmd: cmds });
+      var res = (br && br.result && br.result.result) ? br.result.result : {};
+      chunk.forEach(function(item) {
+        if (!timelineData[item.id]) timelineData[item.id] = {};
+
+        // Process comment result
+        var ck = "c_" + item.id;
+        var commentItems = (res[ck] && res[ck].items) ? res[ck].items : res[ck];
+        if (Array.isArray(commentItems) && commentItems.length > 0) {
+          timelineData[item.id].comment = commentItems[0];
+        }
+
+        // Process stage change result
+        var sk = "s_" + item.id;
+        var stageItems = (res[sk] && res[sk].items) ? res[sk].items : res[sk];
+        if (Array.isArray(stageItems) && stageItems.length > 0) {
+          timelineData[item.id].stageChange = stageItems[0];
+        }
+      });
+    } catch (e) {
+      logLine(log, "⚠️  Core Dive batch error: " + e.message);
+    }
+  }
+  logLine(log, "Core Dive: Found events for " + Object.keys(timelineData).length + " tickets.");
+  return timelineData;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BATCH USER RESOLUTION
+// ─────────────────────────────────────────────────────────────────────────────
+function batchResolveUsers(items, props, log, timelineMap) {
+  var cache = safeJsonParse(props.getProperty("userCache"), {});
+  var need  = {};
+  items.forEach(function(item) {
+    if (!item) return;
+    var uids = [item.createdBy, item.assignedById];
+    var ism  = gf(item, "ismAgent");
+    if (ism && /^\d+$/.test(String(ism).trim())) uids.push(ism);
+    uids.forEach(function(uid) {
+      var k = String(uid || "");
+      if (k && k !== "0" && !cache[k]) need[k] = 1;
+    });
+  });
+
+  // NEW: Add authors from timeline comments
+  if (timelineMap) {
+    Object.keys(timelineMap).forEach(function(ticketId) {
+      var events = timelineMap[ticketId];
+      if (!events) return;
+      var authors = [];
+      if (events.comment && events.comment.AUTHOR_ID) authors.push(events.comment.AUTHOR_ID);
+      if (events.stageChange && events.stageChange.AUTHOR_ID) authors.push(events.stageChange.AUTHOR_ID);
+
+      authors.forEach(function(authorId) {
+        var k = String(authorId);
+        if (k && k !== "0" && !cache[k]) need[k] = 1;
+      });
+    });
+  }
+
+  var ids = Object.keys(need);
+  if (!ids.length) {
+    logLine(log, "User cache: " + Object.keys(cache).length + " user(s) (all cached)");
+    return cache;
+  }
+  logLine(log, "Resolving " + ids.length + " new user(s)...");
+
+  var cmds = {};
+  ids.forEach(function(uid, i) { cmds["u" + i] = "user.get?ID=" + uid; });
+  try {
+    throttle();
+    var br  = api("batch", { halt:0, cmd:cmds });
+    var res = (br && br.result && br.result.result) ? br.result.result : {};
+    ids.forEach(function(uid, i) {
+      var r   = res["u" + i];
+      var arr = Array.isArray(r) ? r : (r ? [r] : []);
+      cache[uid] = arr[0]
+        ? (((arr[0].NAME||"") + " " + (arr[0].LAST_NAME||"")).trim() || "User " + uid)
+        : "User " + uid;
+    });
+  } catch(e) {
+    logLine(log, "⚠️  User batch error: " + e.message);
+    ids.forEach(function(uid) { if (!cache[uid]) cache[uid] = "User " + uid; });
+  }
+  try { props.setProperty("userCache", JSON.stringify(cache)); } catch(e) {}
+  return cache;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ENUM CACHE
+// ─────────────────────────────────────────────────────────────────────────────
+function loadEnumCache(props, log, entityTypeIds) {
+  var ck = "enumCache_v10", tk = "enumCacheTs_v10";
+  var raw = props.getProperty(ck);
+  var ts  = parseInt(props.getProperty(tk) || "0");
+  if (raw && (Date.now() - ts) < CFG.enumCacheTtlMs) {
+    var p = safeJsonParse(raw, null);
+    if (p) { _enumCache = p; logLine(log, "Enum cache: " + Object.keys(p).length + " option(s) (cached)"); return; }
+    props.deleteProperty(ck); props.deleteProperty(tk);
+  }
+  logLine(log, "Building enum cache...");
+  _enumCache = {};
+  var count = 0;
+  try {
+    var types = Array.isArray(entityTypeIds) ? entityTypeIds : [CFG.entityTypeId];
+    types.forEach(function(etId) {
+      throttle();
+      var fr  = api("crm.item.fields", { entityTypeId:etId });
+      var dfs = (fr && fr.result && fr.result.fields) ? fr.result.fields : {};
+      Object.keys(dfs).forEach(function(fid) {
+        var vals = dfs[fid].enumValues || dfs[fid].items || dfs[fid].options || dfs[fid].values || [];
+        if (!Array.isArray(vals)) return;
+        vals.forEach(function(opt) {
+          var oid = String(opt.ID || opt.id || opt.VALUE_ID || opt.STATUS_ID || "");
+          var ov  = String(opt.VALUE || opt.value || opt.LABEL || opt.label || "");
+          if (oid && ov) { _enumCache[fid + "_" + oid] = ov; count++; }
+        });
+      });
+    });
+    logLine(log, "Enum cache: " + count + " option(s) loaded");
+    try { props.setProperty(ck, JSON.stringify(_enumCache)); props.setProperty(tk, String(Date.now())); } catch(e) {}
+  } catch(e) { logLine(log, "⚠️  Enum cache error: " + e.message); }
+}
+
+function resolveEnum(fieldIds, value) {
+  if (value === null || value === undefined || value === "") return "";
+  var str = String(value).trim();
+  if (!str) return "";
+  if (/^\d+$/.test(str)) {
+    var ids = Array.isArray(fieldIds) ? fieldIds : [fieldIds];
+    for (var i = 0; i < ids.length; i++) {
+      var l = _enumCache[ids[i] + "_" + str];
+      if (l) return l;
+    }
+  }
+  return str;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ██████████  BUILD ROW  ██████████
+//  Reads one Bitrix24 item and returns a flat row object for the sheet.
+// ─────────────────────────────────────────────────────────────────────────────
+function buildRow(item, userMap, stageMap, colDefs, CI, numCols, timelineEvents) {
+  if (!item) return {
+    bucket:"assigned", ticketId:"", stageLabel:"", slaMet:"",
+    escalation:"", svcImpact:"", slaIndicator:"", slaBreached:"", priority:"", timeInStageHrs:"",
+    ageHrs:"", dateOnly:"", isClosed:false, numCols:numCols, CI:CI,
+    d: new Array(numCols).fill("")
+  };
+
+  var stageId    = item.stageId || "";
+  var stageInfo  = stageMap ? stageMap[stageId] : null;
+  var stageLabel = stageInfo ? stageInfo.label : humanizeStage(stageId);
+
+  // ── CORE CLASSIFICATION ─────────────────────────────────────────────────
+  var bucket   = stageInfo ? stageInfo.nameBucket : "assigned";
+  var isClosed = (bucket === "closed");
+
+  // ── USERS ───────────────────────────────────────────────────────────────
+  var ownerId  = item.assignedById;
+  var assignee = (parseInt(ownerId) > 0) ? (userMap[String(ownerId)] || "User " + ownerId) : "";
+  var creator  = item.createdBy ? (userMap[String(item.createdBy)] || "User " + item.createdBy) : "";
+
+  // ── DATES & SLA ──────────────────────────────────────────────────────────
+  var createdDate  = fmtDate(item.createdTime);
+  var resolvedRaw  = gf(item, "resolvedAt") || (isClosed ? (item.closedTime || item.movedTime || null) : null);
+  var resolvedDate = resolvedRaw ? fmtDate(resolvedRaw) : "";
+  var ageHrs = "", slaMet = "";
+  if (item.createdTime) {
+    var end  = resolvedRaw ? new Date(resolvedRaw) : new Date();
+    var diff = (end - new Date(item.createdTime)) / 3600000;
+    if (diff >= 0 && isFinite(diff)) {
+      ageHrs = diff.toFixed(1);
+      if (resolvedRaw) slaMet = (diff <= CFG.slaHours) ? "YES" : "NO";
+    }
+  }
+
+  // ── TIMELINE (DEEP DIVE) ─────────────────────────────────────────────────
+  var lastComment = "", lastCommentAt = "", lastCommentBy = "";
+  if (timelineEvents.comment) {
+    var timelineComment = timelineEvents.comment;
+    // Clean comment text from HTML tags and limit length
+    lastComment = (timelineComment.COMMENT || "").replace(/<br\/?>/gi, ' ').replace(/<[^>]*>/g, '').trim();
+    lastCommentAt = fmtDate(timelineComment.CREATED);
+    lastCommentBy = userMap[String(timelineComment.AUTHOR_ID)] || "User " + timelineComment.AUTHOR_ID;
+  }
+
+  var lastStageChange = "", timeInStageHrs = "";
+  if (timelineEvents.stageChange) {
+    var sc = timelineEvents.stageChange;
+    var prev = sc.SETTINGS && sc.SETTINGS.PREVIOUS_STAGE_NAME ? sc.SETTINGS.PREVIOUS_STAGE_NAME : "?";
+    var curr = sc.SETTINGS && sc.SETTINGS.CURRENT_STAGE_NAME ? sc.SETTINGS.CURRENT_STAGE_NAME : stageLabel;
+    lastStageChange = prev + " → " + curr;
+
+    // Calculate time in current stage, but only for non-closed tickets
+    if (!isClosed && sc.CREATED) {
+        var stageChangeDate = new Date(sc.CREATED);
+        var timeDiff = (new Date() - stageChangeDate) / 3600000; // in hours
+        if (timeDiff >= 0 && isFinite(timeDiff)) {
+            timeInStageHrs = timeDiff.toFixed(1);
+        }
+    }
+  }
+
+  // ── FIELD HELPERS ────────────────────────────────────────────────────────
+  function field(key) {
+    var val = gf(item, key);
+    if (val === null || val === undefined) return "";
+    var str = String(val).trim();
+    if (!str || str === "0") return "";
+    if (/^\d+$/.test(str) && CFG.fields[key]) return resolveEnum(CFG.fields[key], val);
+    return clean(val);
+  }
+
+  // Areas — try each field ID until one resolves
+  var areasVal = "";
+  for (var ai = 0; ai < CFG.fields.areas.length; ai++) {
+    var av = item[CFG.fields.areas[ai]];
+    if (!av && av !== 0) continue;
+    var avs = String(av).trim();
+    if (!avs) continue;
+    if (/^\d+$/.test(avs)) {
+      var avr = resolveEnum([CFG.fields.areas[ai]], avs);
+      if (avr && avr !== avs) { areasVal = avr; break; }
+      if (!areasVal) areasVal = avs;
+    } else { areasVal = avs; break; }
+  }
+
+  var expClosure = clean(gf(item, "expectedClosure"));
+  if (expClosure && expClosure.indexOf("T") !== -1) expClosure = fmtDate(expClosure);
+
+  var rootCause = clean(gf(item, "rootCauseText")) || field("rootCauseDd");
+
+  var ismAgentRaw = gf(item, "ismAgent"), ismAgent = "";
+  if (ismAgentRaw) {
+    var ims = String(ismAgentRaw).trim();
+    if (/^\d+$/.test(ims)) {
+      var iml = resolveEnum(CFG.fields.ismAgent, ims);
+      ismAgent = (iml && iml !== ims) ? iml : (userMap[ims] || clean(ismAgentRaw));
+    } else { ismAgent = clean(ismAgentRaw); }
+  }
+
+  // ── BUILD ROW ARRAY ───────────────────────────────────────────────────────
+  var d = new Array(numCols).fill("");
+  d[CI["Date"]             - 1] = (item.createdTime || "").substring(0, 10);
+  d[CI["Ticket ID"]        - 1] = item.id;
+  d[CI["Service ID"]       - 1] = field("serviceId");
+  d[CI["Customer"]         - 1] = item.title || "";
+  d[CI["Stage"]            - 1] = stageLabel;
+  d[CI["Last Stage Change"]- 1] = lastStageChange.substring(0, 150);
+  d[CI["Time in Stage (hrs)"] - 1] = timeInStageHrs;
+  d[CI["Assigned To"]      - 1] = assignee;
+  d[CI["Created By"]       - 1] = creator;
+  d[CI["Created Date"]     - 1] = createdDate;
+  d[CI["Resolved Date"]    - 1] = resolvedDate;
+  d[CI["Age (hrs)"]        - 1] = ageHrs;
+  d[CI["SLA Met"]          - 1] = slaMet;
+  d[CI["Last Comment"]     - 1] = lastComment.substring(0, 250);
+  d[CI["Last Comment At"]  - 1] = lastCommentAt;
+  d[CI["Last Comment By"]  - 1] = lastCommentBy;
+  d[CI["Region"]           - 1] = field("region");
+  d[CI["Areas"]            - 1] = areasVal;
+  d[CI["OLT"]              - 1] = clean(gf(item, "olt"));
+  d[CI["GPON"]             - 1] = clean(gf(item, "gpon"));
+  d[CI["Interface"]        - 1] = clean(gf(item, "iface"));
+  d[CI["Serial Number"]    - 1] = clean(gf(item, "serial"));
+  d[CI["VLAN"]             - 1] = clean(gf(item, "vlan")).replace(/\.0$/, "");
+  d[CI["Escalation"]       - 1] = field("escalation");
+  d[CI["Issue Category"]   - 1] = field("issueCategory");
+  d[CI["Priority"]         - 1] = field("priority");
+  d[CI["Complaint Type"]   - 1] = field("complaintType");
+  d[CI["Complaint"]        - 1] = clean(gf(item, "complaint"));
+  d[CI["Complaint Desc"]   - 1] = String(gf(item, "complaintDesc") || "").substring(0, 350);
+  d[CI["Root Cause"]       - 1] = rootCause;
+  d[CI["Level Status"]     - 1] = field("levelStatus");
+  d[CI["Service Impact"]   - 1] = field("serviceImpact");
+  d[CI["Outage Ticket"]    - 1] = field("outageTicket");
+  d[CI["SLA Indicator"]    - 1] = field("slaIndicator");
+  d[CI["SLA Breached"]     - 1] = field("slaBreachedCs");
+  d[CI["Expected Closure"] - 1] = expClosure;
+  d[CI["Ticket Source"]    - 1] = clean(gf(item, "ticketSource"));
+  d[CI["Service Plan"]     - 1] = clean(gf(item, "servicePlan"));
+  d[CI["ISM Agent"]        - 1] = ismAgent;
+  d[CI["Last Update"]      - 1] = clean(gf(item, "lastUpdate"));
+  d[CI["Customer Address"] - 1] = String(gf(item, "customerAddress") || "").replace(/\\n/g, " ").trim().substring(0, 200);
+  var etId = item._entityTypeId || CFG.entityTypeId;
+  d[CI["Open Ticket"]      - 1] = "https://intranet.fob.ng/crm/type/" + etId + "/details/" + item.id + "/";
+  d[CI["Last Synced"]      - 1] = fmtDate(new Date());
+
+  return {
+    bucket      : bucket,
+    isClosed    : isClosed,
+    dateOnly    : (item.createdTime || "").substring(0, 10),
+    ticketId    : String(item.id),
+    stageLabel  : stageLabel,
+    ageHrs      : ageHrs,
+    timeInStageHrs: timeInStageHrs,
+    slaMet      : slaMet,
+    escalation  : d[CI["Escalation"]     - 1],
+    svcImpact   : d[CI["Service Impact"] - 1],
+    slaIndicator: d[CI["SLA Indicator"]  - 1],
+    slaBreached : d[CI["SLA Breached"]   - 1],
+    priority    : d[CI["Priority"]       - 1],
+    numCols     : numCols,
+    CI          : CI,
+    d           : d
+  };
+}
+
+function gf(item, key) {
+  if (!item || !CFG.fields[key]) return null;
+  for (var i = 0; i < CFG.fields[key].length; i++) {
+    var v = item[CFG.fields[key][i]];
+    if (v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && !v.length)) return v;
+  }
+  return null;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SMART UPSERT  (incremental sync — update/move tickets without full rebuild)
+// ─────────────────────────────────────────────────────────────────────────────
+function smartUpsert(ss, buckets, log) {
+  var sheetNames = {
+    assigned  : CFG.sheets.assigned,
+    unassigned: CFG.sheets.unassigned,
+    escalated : CFG.sheets.escalated,
+    sdClosed  : CFG.sheets.sdClosed,
+    inAssigned: CFG.sheets.inAssigned,
+    inUnassigned: CFG.sheets.inUnassigned,
+    inEscalated: CFG.sheets.inEscalated,
+    inClosed: CFG.sheets.inClosed,
+    reAssigned: CFG.sheets.reAssigned,
+    reUnassigned: CFG.sheets.reUnassigned,
+    reEscalated: CFG.sheets.reEscalated,
+    reClosed: CFG.sheets.reClosed
+  };
+  var allBucketNames = Object.keys(sheetNames);
+  var sheetInfo = {}, existingLocs = {};
+
+  // Build index of existing ticket locations
+  allBucketNames.forEach(function(bname) {
+    var sheet    = ensureSheet(ss, sheetNames[bname]);
+    var lr       = sheet.getLastRow();
+    var idToRow  = {};
+    if (lr >= 3) {
+      sheet.getRange(3, CI_BASE["Ticket ID"], lr - 2, 1).getValues().forEach(function(v, i) {
+        if (v[0]) { var tid = String(v[0]); idToRow[tid] = i + 3; existingLocs[tid] = { bname:bname, rowIndex:i+3 }; }
+      });
+    }
+    sheetInfo[bname] = { sheet:sheet, idToRow:idToRow };
+  });
+
+  var opsBySheet = {};
+  allBucketNames.forEach(function(bname) { opsBySheet[bname] = { deletes:[], updates:[], appends:[] }; });
+  var totalUpserts = 0, totalMoves = 0;
+
+  allBucketNames.forEach(function(bname) {
+    var rows = buckets[bname];
+    if (!rows || !rows.length) return;
+    rows.forEach(function(r) {
+      var tid      = r.ticketId;
+      var existing = existingLocs[tid];
+      if (existing) {
+        if (existing.bname !== bname) {
+          // Ticket changed bucket (e.g. escalated → closed) — move it
+          opsBySheet[existing.bname].deletes.push(existing.rowIndex);
+          opsBySheet[bname].appends.push(r);
+          totalMoves++;
+          logLine(log, "  ↩️  #" + tid + ": " + existing.bname + " → " + bname);
+        } else {
+          opsBySheet[bname].updates.push(r);
+        }
+      } else {
+        opsBySheet[bname].appends.push(r);
+      }
+      totalUpserts++;
+    });
+  });
+
+  allBucketNames.forEach(function(bname) {
+    var sheet = sheetInfo[bname].sheet;
+    var ops   = opsBySheet[bname];
+
+    // Delete rows (descending so row numbers stay valid)
+    if (ops.deletes.length > 0) {
+      ops.deletes.sort(function(a, b) { return b - a; }).forEach(function(ri) { sheet.deleteRow(ri); });
+    }
+
+    // Re-index after deletes
+    var idToRow = sheetInfo[bname].idToRow;
+    if (ops.deletes.length > 0) {
+      idToRow = {};
+      var lr = sheet.getLastRow();
+      if (lr >= 3) {
+        sheet.getRange(3, CI_BASE["Ticket ID"], lr - 2, 1).getValues().forEach(function(v, i) {
+          if (v[0]) idToRow[String(v[0])] = i + 3;
+        });
+      }
+    }
+
+    // Update existing rows in place
+    if (ops.updates.length > 0) {
+      ops.updates.forEach(function(r) {
+        var rn = idToRow[r.ticketId];
+        if (rn) {
+          sheet.getRange(rn, 1, 1, r.numCols || NUM_BASE).setValues([r.d]);
+          applyRowStyles(sheet, rn, [r]);
+        } else {
+          ops.appends.push(r); // row not found → append instead
+        }
+      });
+    }
+
+    // Append new rows
+    if (ops.appends.length > 0) {
+      var ins  = Math.max(sheet.getLastRow() + 1, 3);
+      var da   = ops.appends.map(function(r) { return r.d; });
+      var nc   = ops.appends[0].numCols || NUM_BASE;
+      sheet.getRange(ins, 1, da.length, nc).setValues(da);
+      applyRowStyles(sheet, ins, ops.appends);
+    }
+  });
+
+  if (totalMoves)   logLine(log, "  Reclassified: " + totalMoves + " ticket(s) moved between sheets");
+  logLine(log, "  Upserted: " + totalUpserts + " ticket(s)");
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BUILD FULL SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+function buildSheet(ss, sheetName, rows, subtitle, colDefs, CI, numCols) {
+  var sheet = ensureSheet(ss, sheetName);
+  sheet.clearContents();
+  sheet.clearFormats();
+
+  // Title row
+  sheet.getRange(1, 1, 1, numCols).merge()
+    .setValue("FiberOne Broadband  |  " + subtitle + "  |  Total: " + rows.length + "  |  " + fmtDate(new Date()))
+    .setBackground("#0d1b2a").setFontColor("#8ab4d4").setFontStyle("italic").setFontSize(9).setWrap(false);
+
+  // Header row
+  sheet.getRange(2, 1, 1, numCols).setValues([colDefs])
+    .setBackground("#1a3a5c").setFontColor("#ffffff").setFontWeight("bold").setFontSize(10).setWrap(false);
+
+  sheet.setFrozenRows(2);
+
+  if (!rows.length) {
+    sheet.getRange(3, 1).setValue("No tickets.");
+    applyWidths(sheet, CI);
+    return;
+  }
+
+  // Sort newest first
+  rows.sort(function(a, b) {
+    if (b.dateOnly !== a.dateOnly) return b.dateOnly.localeCompare(a.dateOnly);
+    return parseInt(b.ticketId || "0") - parseInt(a.ticketId || "0");
+  });
+
+  // Group by date for separator rows
+  var groups = [], dateIdx = {};
+  rows.forEach(function(r) {
+    var d = r.dateOnly || "Unknown";
+    if (!dateIdx.hasOwnProperty(d)) { dateIdx[d] = groups.length; groups.push({ date:d, rows:[] }); }
+    groups[dateIdx[d]].rows.push(r);
+  });
+
+  var allData = [], allMeta = [];
+  groups.forEach(function(g) {
+    allData.push(new Array(numCols).fill(""));
+    allMeta.push({ type:"sep", date:g.date, count:g.rows.length });
+    g.rows.forEach(function(r) { allData.push(r.d); allMeta.push({ type:"data", row:r }); });
+  });
+
+  var sr = 3;
+  
+  // Resize sheet if needed to prevent "coordinates outside dimensions" error
+  var requiredRows = sr + allData.length + 10;
+  var currentRows  = sheet.getMaxRows();
+  if (currentRows < requiredRows) {
+    sheet.insertRowsAfter(currentRows, requiredRows - currentRows);
+  }
+
+  sheet.getRange(sr, 1, allData.length, numCols).setValues(allData);
+
+  var batchStart = -1, batchRows = [];
+  for (var i = 0; i < allMeta.length; i++) {
+    var rn   = sr + i;
+    var meta = allMeta[i];
+    if (meta.type === "sep") {
+      if (batchStart !== -1) { applyRowStyles(sheet, batchStart, batchRows); batchStart = -1; batchRows = []; }
+      sheet.getRange(rn, 1, 1, numCols).merge()
+        .setValue(fmtDateDisplay(meta.date) + "   —   " + meta.count + " ticket" + (meta.count !== 1 ? "s" : ""))
+        .setBackground("#1a3a5c").setFontColor("#c8ddf0").setFontWeight("bold").setFontSize(10).setWrap(false);
+    } else {
+      if (batchStart === -1) batchStart = rn;
+      batchRows.push(meta.row);
+    }
+  }
+  if (batchStart !== -1) applyRowStyles(sheet, batchStart, batchRows);
+
+  applyWidths(sheet, CI);
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ROW STYLING
+// ─────────────────────────────────────────────────────────────────────────────
+function applyRowStyles(sheet, startRow, rows) {
+  if (!rows || rows.length === 0) return;
+  var numRows = rows.length;
+  var numCols = rows[0].numCols;
+  var CI      = rows[0].CI;
+
+  var backgrounds = [], fontColors = [], fontWeights = [];
+  var formulas    = sheet.getRange(startRow, CI["Open Ticket"], numRows, 1).getFormulas();
+
+  for (var i = 0; i < numRows; i++) {
+    var r      = rows[i];
+    var rowNum = startRow + i;
+    var even   = rowNum % 2 === 0;
+
+    // Base row colour per bucket
+    var baseBg, baseFC;
+    switch (r.bucket) {
+      case "closed":
+        baseBg = even ? "#e8f8e8" : "#f4fcf4";   // soft green
+        baseFC = "#1a3d1a";
+        break;
+      case "escalated":
+        baseBg = even ? "#fff8e1" : "#fffdf0";   // soft amber/yellow
+        baseFC = "#4a3000";
+        break;
+      case "unassigned":
+        baseBg = even ? "#fff3e0" : "#fffaf3";   // soft orange
+        baseFC = "#4a2800";
+        break;
+      default: // assigned
+        baseBg = even ? "#eef3f8" : "#ffffff";   // soft blue-white
+        baseFC = "#1a2c3d";
+        break;
+    }
+
+    var rowBgs = new Array(numCols).fill(baseBg);
+    var rowFCs = new Array(numCols).fill(baseFC);
+    var rowFWs = new Array(numCols).fill("normal");
+
+    // Stage cell — accent colour per bucket
+    var stageCol = CI["Stage"] - 1;
+    switch (r.bucket) {
+      case "closed":
+        rowBgs[stageCol] = "#c3f5c3"; rowFCs[stageCol] = "#0f5210"; rowFWs[stageCol] = "bold"; break;
+      case "escalated":
+        rowBgs[stageCol] = "#fff176"; rowFCs[stageCol] = "#5a3a00"; rowFWs[stageCol] = "bold"; break;
+      case "unassigned":
+        rowBgs[stageCol] = "#ffe0b2"; rowFCs[stageCol] = "#7a3800"; rowFWs[stageCol] = "bold"; break;
+      default:
+        rowBgs[stageCol] = "#cce5ff"; rowFCs[stageCol] = "#004085"; rowFWs[stageCol] = "bold"; break;
+    }
+
+    // SLA Met
+    if (r.slaMet === "YES") {
+      rowBgs[CI["SLA Met"]-1] = "#c3f5c3"; rowFCs[CI["SLA Met"]-1] = "#0f5210"; rowFWs[CI["SLA Met"]-1] = "bold";
+    } else if (r.slaMet === "NO") {
+      rowBgs[CI["SLA Met"]-1] = "#fcd9d9"; rowFCs[CI["SLA Met"]-1] = "#7a1010"; rowFWs[CI["SLA Met"]-1] = "bold";
+    }
+
+    // Age breach
+    if (!r.isClosed && r.ageHrs && parseFloat(r.ageHrs) > CFG.slaHours) {
+      rowBgs[CI["Age (hrs)"]-1] = "#fcd9d9"; rowFCs[CI["Age (hrs)"]-1] = "#7a1010"; rowFWs[CI["Age (hrs)"]-1] = "bold";
+    }
+
+    // Time in Stage breach
+    if (!r.isClosed && r.timeInStageHrs && parseFloat(r.timeInStageHrs) > 72) {
+      rowBgs[CI["Time in Stage (hrs)"]-1] = "#fde8d8"; // soft orange
+      rowFCs[CI["Time in Stage (hrs)"]-1] = "#7a3800";
+      rowFWs[CI["Time in Stage (hrs)"]-1] = "bold";
+    }
+
+    // Escalation field
+    var eu = (r.escalation || "").toUpperCase();
+    if      (eu.indexOf("HIGH")     !== -1) { rowBgs[CI["Escalation"]-1]="#fcd9d9"; rowFCs[CI["Escalation"]-1]="#7a1010"; rowFWs[CI["Escalation"]-1]="bold"; }
+    else if (eu.indexOf("MODERATE") !== -1) { rowBgs[CI["Escalation"]-1]="#fde8d8"; rowFCs[CI["Escalation"]-1]="#7a3800"; rowFWs[CI["Escalation"]-1]="bold"; }
+    else if (eu.indexOf("LOW")      !== -1) { rowBgs[CI["Escalation"]-1]="#e8f4e8"; rowFCs[CI["Escalation"]-1]="#2a6b2a"; }
+
+    // Service Impact
+    var iu = (r.svcImpact || "").toUpperCase();
+    if      (iu.indexOf("HIGH")   !== -1) { rowBgs[CI["Service Impact"]-1]="#fde8d8"; rowFCs[CI["Service Impact"]-1]="#7a3800"; rowFWs[CI["Service Impact"]-1]="bold"; }
+    else if (iu.indexOf("MEDIUM") !== -1) { rowBgs[CI["Service Impact"]-1]="#fff3cd"; rowFCs[CI["Service Impact"]-1]="#856404"; }
+    else if (iu.indexOf("LOW")    !== -1) { rowBgs[CI["Service Impact"]-1]="#e8f4e8"; rowFCs[CI["Service Impact"]-1]="#2a6b2a"; }
+
+    // SLA Indicator
+    var siu = (r.slaIndicator || "").toUpperCase();
+    if      (siu.indexOf("BREACH") !== -1) { rowBgs[CI["SLA Indicator"]-1]="#fcd9d9"; rowFCs[CI["SLA Indicator"]-1]="#7a1010"; rowFWs[CI["SLA Indicator"]-1]="bold"; }
+    else if (siu.indexOf("WITHIN") !== -1) { rowBgs[CI["SLA Indicator"]-1]="#c3f5c3"; rowFCs[CI["SLA Indicator"]-1]="#0f5210"; }
+
+    // SLA Breached
+    var sbu = (r.slaBreached || "").toUpperCase();
+    if      (sbu === "YES") { rowBgs[CI["SLA Breached"]-1]="#fcd9d9"; rowFCs[CI["SLA Breached"]-1]="#7a1010"; rowFWs[CI["SLA Breached"]-1]="bold"; }
+    else if (sbu === "NO")  { rowBgs[CI["SLA Breached"]-1]="#c3f5c3"; rowFCs[CI["SLA Breached"]-1]="#0f5210"; }
+
+    // Priority
+    var pu = (r.priority || "").toUpperCase();
+    if      (pu.indexOf("2 HOUR")  !== -1 || pu.indexOf("4 HOUR")  !== -1) { rowBgs[CI["Priority"]-1]="#fcd9d9"; rowFCs[CI["Priority"]-1]="#7a1010"; rowFWs[CI["Priority"]-1]="bold"; }
+    else if (pu.indexOf("24 HOUR") !== -1)                                  { rowBgs[CI["Priority"]-1]="#fde8d8"; rowFCs[CI["Priority"]-1]="#7a3800"; rowFWs[CI["Priority"]-1]="bold"; }
+    else if (pu.indexOf("48 HOUR") !== -1 || pu.indexOf("72 HOUR") !== -1)  { rowBgs[CI["Priority"]-1]="#fff3cd"; rowFCs[CI["Priority"]-1]="#856404"; }
+
+    // Open Ticket hyperlink
+    var url = r.d[CI["Open Ticket"] - 1];
+    if (url && url.indexOf("http") === 0) {
+      formulas[i][0] = '=HYPERLINK("' + url.replace(/"/g, '""') + '","Open")';
+      rowFCs[CI["Open Ticket"]-1] = "#1a73e8"; rowFWs[CI["Open Ticket"]-1] = "bold";
+    }
+
+    backgrounds.push(rowBgs);
+    fontColors.push(rowFCs);
+    fontWeights.push(rowFWs);
+  }
+
+  var range = sheet.getRange(startRow, 1, numRows, numCols);
+  range.setBackgrounds(backgrounds).setFontColors(fontColors).setFontWeights(fontWeights);
+  range.setFontSize(9).setWrap(false);
+  sheet.getRange(startRow, CI["Open Ticket"], numRows, 1).setFormulas(formulas);
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  COLUMN WIDTHS
+// ─────────────────────────────────────────────────────────────────────────────
+function applyWidths(sheet, CI) {
+  var w = {
+    "Date":88, "Ticket ID":78, "Service ID":108, "Customer":225, "Stage":175,
+    "Last Stage Change": 200, "Time in Stage (hrs)": 80, "Assigned To":155,
+    "Created By":135, "Created Date":130, "Resolved Date":130, "Age (hrs)":68,
+    "SLA Met":62, "Last Comment": 250, "Last Comment At": 130, "Last Comment By": 135,
+    "Region":145, "Areas":180, "OLT":175, "GPON":115, "Interface":165,
+    "Serial Number":155, "VLAN":52, "Escalation":100, "Issue Category":130,
+    "Priority":108, "Complaint Type":155, "Complaint":160, "Complaint Desc":280,
+    "Root Cause":215, "Level Status":122, "Service Impact":108, "Outage Ticket":88,
+    "SLA Indicator":108, "SLA Breached":105, "Expected Closure":142,
+    "Ticket Source":105, "Service Plan":115, "ISM Agent":140, "Last Update":148,
+    "Customer Address":225, "Open Ticket":68, "Last Synced":122
+  };
+  Object.keys(w).forEach(function(n) { if (CI[n]) sheet.setColumnWidth(CI[n], w[n]); });
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  HEALTH SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+function _writeHealth(ss, full, ticketCount, stats, elapsedS, status, notes) {
+  try {
+    var HCOLS = ["Timestamp","Type","Total","Assigned","Unassigned","Escalated","SD Closed","SLA Breach","Sec","Status","Notes"];
+    var sheet = ensureSheet(ss, CFG.sheets.health);
+    if (sheet.getLastRow() < 1) {
+      sheet.getRange(1,1,1,HCOLS.length).setValues([HCOLS])
+        .setBackground("#1a3a5c").setFontColor("#ffffff").setFontWeight("bold").setFontSize(10);
+      sheet.setFrozenRows(1);
+      [145,60,70,75,85,80,75,75,55,70,280].forEach(function(w, i) { sheet.setColumnWidth(i+1, w); });
+    }
+    var r = sheet.getLastRow() + 1;
+    sheet.getRange(r, 1, 1, HCOLS.length).setValues([[
+      fmtDate(new Date()),
+      full ? "FULL" : "INCR",
+      ticketCount,
+      stats.assigned   || 0,
+      stats.unassigned || 0,
+      stats.escalated  || 0,
+      stats.sdClosed   || 0,
+      stats.slaBreached|| 0,
+      Math.round(elapsedS),
+      status,
+      notes || ""
+    ]]);
+    var sc = sheet.getRange(r, 10);
+    if      (status === "OK")      sc.setBackground("#c3f5c3").setFontColor("#0f5210").setFontWeight("bold");
+    else if (status === "ERROR")   sc.setBackground("#fcd9d9").setFontColor("#7a1010").setFontWeight("bold");
+    else if (status === "ABORTED") sc.setBackground("#fde8d8").setFontColor("#7a3800").setFontWeight("bold");
+    else if (status === "EMPTY")   sc.setBackground("#fff3cd").setFontColor("#856404");
+    if (r > 502) sheet.deleteRows(2, r - 502);
+  } catch(e) { Logger.log("_writeHealth: " + e.message); }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TEST CONNECTION
+// ─────────────────────────────────────────────────────────────────────────────
+function testConnection() {
+  var ui    = SpreadsheetApp.getUi();
+  var props = PropertiesService.getScriptProperties();
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var log   = ensureSheet(ss, CFG.sheets.log);
+
+  // Clear all cached data for a clean test
+  ["sdCatId","cmCatId","enumCache_v10","enumCacheTs_v10","deadZoneCount","incrementalFails",CFG.lockKey].forEach(function(k) {
+    props.deleteProperty(k);
+  });
+  props.deleteProperty("inCatId");
+  var all = props.getProperties();
+  Object.keys(all).forEach(function(k) {
+    if (k.indexOf("stageMap_") === 0 || k.indexOf("stageMapTs_") === 0) props.deleteProperty(k);
+  });
+
+  logLine(log, "══ TEST CONNECTION  " + new Date().toLocaleString() + " ══");
+  try {
+    var hook = webhookStatus();
+    if (!hook.ok) { ui.alert("❌  Webhook FAILED:\n\n" + hook.reason); return; }
+    throttle();
+
+    var ping  = api("crm.item.list", { entityTypeId:CFG.entityTypeId, select:["id"], limit:1 });
+    var total = (ping && ping.total) ? ping.total : 0;
+    var sdId  = getPipelineId(props, log, "sdCatId", CFG.sdPipelineName, CFG.entityTypeId);
+    var cmId  = getPipelineId(props, log, "cmCatId", CFG.cmPipelineName, CFG.entityTypeId);
+    var inId  = getPipelineId(props, log, "inCatId", CFG.inPipelineName, CFG.installEntityTypeId);
+
+    loadEnumCache(props, log, [CFG.entityTypeId, CFG.installEntityTypeId]);
+
+    var combinedSt = {};
+    if (sdId) { var m = getStageMap(sdId, props, log, "SD", CFG.entityTypeId); Object.keys(m).forEach(function(k){combinedSt[k]=m[k];}); }
+    if (cmId) { var m = getStageMap(cmId, props, log, "CM", CFG.entityTypeId); Object.keys(m).forEach(function(k){combinedSt[k]=m[k];}); }
+    if (inId) { var m = getStageMap(inId, props, log, "IN", CFG.installEntityTypeId); Object.keys(m).forEach(function(k){combinedSt[k]=m[k];}); }
+
+    var emoji = { closed:"🟢", escalated:"🟡", unassigned:"🟠", assigned:"🔵" };
+    var stageLines = Object.keys(combinedSt).map(function(k) {
+      var s = combinedSt[k];
+      return "  " + (emoji[s.nameBucket]||"❓") + " '" + s.label + "'  → " + s.nameBucket.toUpperCase();
+    }).join("\n") || "  (none found)";
+
+    ui.alert(
+      "✅  CONNECTION OK  (v10.4)\n\n" +
+      "User          : " + hook.user + "\n" +
+      "Total items   : " + total + "\n" +
+      "SD pipeline   : " + (sdId || "NOT FOUND ⚠️") + "\n" +
+      "CM pipeline   : " + (cmId || "NOT FOUND ⚠️") + "\n" +
+      "IN pipeline   : " + (inId || "NOT FOUND ⚠️") + "\n" +
+      "RE pipeline   : " + (reId || "NOT FOUND ⚠️") + "\n" +
+      "Enum options  : " + Object.keys(_enumCache).length + "\n\n" +
+      "STAGES FOUND:\n" + stageLines + "\n\n" +
+      "NEXT STEPS:\n" +
+      "1. Run '🔍 Show Stage Classification' to verify buckets\n" +
+      "2. Update CFG.stageKeywords if anything is wrong\n" +
+      "3. Run '▶ Total Reset & Sync'"
+    );
+  } catch(e) {
+    logLine(log, "Test error: " + e.toString());
+    ui.alert("❌  FAILED:\n\n" + e.toString());
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SYNC STATUS / RESET / CLEAR
+// ─────────────────────────────────────────────────────────────────────────────
+function showSyncStatus() {
+  var props    = PropertiesService.getScriptProperties();
+  var lastFull = props.getProperty("lastFullTs");
+  var nextFull = lastFull
+    ? Math.max(0, CFG.fullSyncHours - (Date.now() - parseInt(lastFull)) / 3600000).toFixed(1) + " hrs"
+    : "on next run";
+  SpreadsheetApp.getUi().alert(
+    "📊  Sync Status  (v10.4)\n\n" +
+    "Last sync    : " + (props.getProperty("lastSyncTs")    || "Never") + "\n" +
+    "Tickets last : " + (props.getProperty("lastSyncCount") || "0")     + "\n" +
+    "Last FULL    : " + (lastFull ? fmtDate(new Date(parseInt(lastFull))) : "Never") + "\n" +
+    "Next full in : " + nextFull + "\n" +
+    "SD pipeline  : " + (props.getProperty("sdCatId")       || "Not cached") + "\n" +
+    "CM pipeline  : " + (props.getProperty("cmCatId")       || "Not cached") + "\n" +
+    "IN pipeline  : " + (props.getProperty("inCatId")       || "Not cached") + "\n" +
+    "Enum cache   : " + (props.getProperty("enumCache_v10") ? "✅ Loaded" : "Not cached") + "\n" +
+    "Dead zone    : " + (props.getProperty("deadZoneCount") || "0") + "\n" +
+    "Fail streak  : " + (props.getProperty("incrementalFails") || "0") + "\n" +
+    "Lock active  : " + (props.getProperty(CFG.lockKey)     ? "YES ⚠️" : "no") + "\n" +
+    "Triggers     : " + ScriptApp.getProjectTriggers().length
+  );
+}
+
+function resetDiscovery() {
+  var props = PropertiesService.getScriptProperties();
+  ["sdCatId","cmCatId","inCatId","reCatId","enumCache_v10","enumCacheTs_v10","deadZoneCount","incrementalFails",CFG.lockKey].forEach(function(k) {
+    props.deleteProperty(k);
+  });
+  var all = props.getProperties();
+  Object.keys(all).forEach(function(k) {
+    if (k.indexOf("stageMap_") === 0 || k.indexOf("stageMapTs_") === 0) props.deleteProperty(k);
+  });
+  SpreadsheetApp.getUi().alert("🗑  All caches cleared.\n\nRun Test Connection to verify, then Total Reset & Sync.");
+}
+
+function clearAllSheets() {
+  var ui = SpreadsheetApp.getUi();
+  if (ui.alert("⚠️  Erase ALL data sheets?", ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  var ss          = CFG.targetSpreadsheetId ? SpreadsheetApp.openById(CFG.targetSpreadsheetId) : SpreadsheetApp.getActiveSpreadsheet();
+  var sheetValues = Object.keys(CFG.sheets).map(function(k){ return CFG.sheets[k]; });
+  ss.getSheets().forEach(function(s) {
+    var n = s.getName();
+    if (sheetValues.indexOf(n) > -1 && n !== CFG.sheets.log) ss.deleteSheet(s);
+  });
+  PropertiesService.getScriptProperties().deleteAllProperties();
+  ui.alert("✅  Done.\n\n1. Test Connection\n2. Show Stage Classification\n3. Run Total Reset & Sync");
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  LOGGING
+// ─────────────────────────────────────────────────────────────────────────────
+function logLine(sheet, msg) {
+  Logger.log(msg);
+  if (!sheet) return;
+  try {
+    var r = Math.max(sheet.getLastRow() + 1, 2);
+    sheet.getRange(r, 1).setValue(fmtDate(new Date()));
+    sheet.getRange(r, 2).setValue(String(msg));
+    if (r > 3200) sheet.deleteRows(2, 400);
+  } catch(e) {}
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BITRIX24 API
+// ─────────────────────────────────────────────────────────────────────────────
+var _lastCallTs = 0;
+function throttle() {
+  var now = Date.now(), since = now - _lastCallTs;
+  if (since < CFG.callDelayMs) Utilities.sleep(CFG.callDelayMs - since);
+  _lastCallTs = Date.now();
+}
+
+function api(method, params, attempt) {
+  attempt = attempt || 1;
+  var opts = {
+    method          : "post",
+    contentType     : "application/json",
+    payload         : JSON.stringify(params || {}),
+    muteHttpExceptions: true
+  };
+  var resp, code, text;
+  try {
+    resp = UrlFetchApp.fetch(CFG.webhook + method, opts);
+    code = resp.getResponseCode();
+    text = resp.getContentText();
+  } catch(e) {
+    if (attempt > CFG.maxRetries) throw new Error("Network: " + e.message);
+    Utilities.sleep(CFG.retryBaseMs * attempt);
+    return api(method, params, attempt + 1);
+  }
+  if (code === 429) {
+    if (attempt > CFG.maxRetries) throw new Error("Rate limit on " + method);
+    Utilities.sleep(CFG.retryBaseMs * Math.pow(2, attempt - 1));
+    throttle();
+    return api(method, params, attempt + 1);
+  }
+  if (code >= 500) {
+    if (attempt > 3) throw new Error("Server error " + code);
+    Utilities.sleep(CFG.retryBaseMs * attempt);
+    return api(method, params, attempt + 1);
+  }
+  if (code !== 200) throw new Error("HTTP " + code + " [" + method + "]: " + (text || "").substring(0, 200));
+  var data = safeJsonParse(text, null);
+  if (!data) throw new Error("Invalid JSON from " + method);
+  if (data.error) throw new Error("[" + data.error + "] " + method + ": " + (data.error_description || ""));
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SERVICE ACCOUNT AUTHENTICATION (JWT)
+// ─────────────────────────────────────────────────────────────────────────────
+function getServiceAccountToken() {
+  var header = { alg: "RS256", typ: "JWT" };
+  var now = Math.floor(Date.now() / 1000);
+  var claim = {
+    iss: SERVICE_ACCOUNT.client_email,
+    scope: "https://www.googleapis.com/auth/spreadsheets",
+    aud: SERVICE_ACCOUNT.token_uri,
+    exp: now + 3600,
+    iat: now
+  };
+
+  var signature = Utilities.computeRsaSha256Signature(
+    Utilities.base64Encode(JSON.stringify(header)) + "." + Utilities.base64Encode(JSON.stringify(claim)),
+    SERVICE_ACCOUNT.private_key
+  );
+
+  var jwt = Utilities.base64Encode(JSON.stringify(header)) + "." +
+            Utilities.base64Encode(JSON.stringify(claim)) + "." +
+            Utilities.base64Encode(signature);
+
+  var params = {
+    method: "post",
+    payload: {
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt
+    }
+  };
+
+  var response = UrlFetchApp.fetch(SERVICE_ACCOUNT.token_uri, params);
+  var json = JSON.parse(response.getContentText());
+  return json.access_token;
+}
+
+// Helper to use Service Account for Sheet operations (Optional usage)
+function callSheetsApi(method, endpoint, payload) {
+  var token = getServiceAccountToken();
+  var url = "https://sheets.googleapis.com/v4/spreadsheets/" + (CFG.targetSpreadsheetId || SpreadsheetApp.getActiveSpreadsheet().getId()) + endpoint;
+  var options = {
+    method: method,
+    headers: { Authorization: "Bearer " + token },
+    contentType: "application/json",
+    muteHttpExceptions: true
+  };
+  if (payload) options.payload = JSON.stringify(payload);
+  
+  var response = UrlFetchApp.fetch(url, options);
+  if (response.getResponseCode() >= 400) {
+    throw new Error("Sheets API Error: " + response.getContentText());
+  }
+  return JSON.parse(response.getContentText());
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  UTILITIES
+// ─────────────────────────────────────────────────────────────────────────────
+function safeJsonParse(str, fallback) {
+  try { return str ? JSON.parse(str) : fallback; } catch(e) { return fallback; }
+}
+
+function clean(v) {
+  if (v === null || v === undefined) return "";
+  if (Array.isArray(v)) return v.filter(Boolean).join(", ");
+  return String(v).replace(/\.0$/, "").trim();
+}
+
+function humanizeStage(stageId) {
+  if (!stageId) return "";
+  return String(stageId).split(":").pop().replace(/_/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+}
+
+function ensureSheet(ss, name) {
+  return ss.getSheetByName(name) || ss.insertSheet(name);
+}
+
+function fmtDate(d) {
+  if (!d) return "";
+  var dt = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dt.getTime())) return "";
+  var p = function(n) { return n < 10 ? "0" + n : "" + n; };
+  return p(dt.getMonth()+1) + "/" + p(dt.getDate()) + "/" + dt.getFullYear() +
+         " " + p(dt.getHours()) + ":" + p(dt.getMinutes()) + ":" + p(dt.getSeconds());
+}
+
+function fmtDateDisplay(iso) {
+  if (!iso || iso === "Unknown") return "Unknown Date";
+  try {
+    var d  = new Date(iso + "T12:00:00Z");
+    var DN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var MN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    return DN[d.getUTCDay()] + ",  " + d.getUTCDate() + " " + MN[d.getUTCMonth()] + " " + d.getUTCFullYear();
+  } catch(e) { return iso; }
+}
