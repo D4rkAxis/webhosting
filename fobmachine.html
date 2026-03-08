@@ -8,6 +8,11 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
     body { font-family: 'EB Garamond', serif; background: #f8fafc; }
+    /* Critical CSS Fallbacks - Prevents layout explosion if Bootstrap fails */
+    .d-none { display: none !important; }
+    .modal { display: none; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
     .navy { background: #0f172a; color: white; }
     .teal { background: #e0f7fa; }
     .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); background: rgba(255, 255, 255, 0.95); }
@@ -94,6 +99,7 @@
             <div class="card-body">
               <input id="machineName" class="form-control mb-3" placeholder="Machine Name">
               <input id="serialNumber" class="form-control mb-3" placeholder="Serial Number">
+              <div class="mb-3"><label class="form-label small text-muted">Machine Photo</label><input type="file" id="machinePhoto" class="form-control" accept="image/*"></div>
               <button id="btnAddMachine" onclick="addMachine()" class="btn btn-success w-100">Add Machine</button>
             </div>
           </div>
@@ -127,6 +133,11 @@
                 </div>
               </div>
               <textarea id="issues" class="form-control mt-3" rows="3" placeholder="Describe the issue with the machine..."></textarea>
+              <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="getLocation('createTicketLoc', this)"><i class="fas fa-map-marker-alt"></i> Share My Location</button>
+                <small id="createTicketLocMsg" class="text-muted ms-2"></small>
+                <input type="hidden" id="createTicketLoc">
+              </div>
               <button id="btnCreateTicket" onclick="createTicket()" class="btn btn-primary mt-3 w-100">Submit Ticket to Technician</button>
             </div>
           </div>
@@ -139,7 +150,7 @@
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-hover mb-0" id="clientTicketsTable">
-                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Machine</th><th>Technician</th><th>Status</th><th>Opened</th><th>Action</th></tr></thead>
+                  <thead class="navy text-white"><tr><th>Ticket ID</th><th>Machine</th><th>Technician</th><th>Status</th><th>Details</th><th>Action</th></tr></thead>
                   <tbody></tbody>
                 </table>
               </div>
@@ -154,21 +165,23 @@
       <h3>Welcome, <span id="techName"></span> (Technician)</h3>
 
       <!-- Nav tabs -->
-      <ul class="nav nav-tabs mt-3 nav-justified" id="techTab" role="tablist">
+      <ul class="nav nav-tabs mt-3" id="techTab" role="tablist">
         <li class="nav-item" role="presentation">
           <button class="nav-link active" id="tickets-tab" data-bs-toggle="tab" data-bs-target="#tickets-tab-pane" type="button" role="tab" onclick="loadTechnicianTickets()">My Tickets</button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-tab-pane" type="button" role="tab" onclick="loadClosedTickets()">Ticket History</button>
         </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="clients-tab" data-bs-toggle="tab" data-bs-target="#clients-tab-pane" type="button" role="tab">Manage Clients</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-tab-pane" type="button" role="tab">Register User</button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="areas-tab" data-bs-toggle="tab" data-bs-target="#areas-tab-pane" type="button" role="tab" onclick="loadAreasList()">Manage Areas</button>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Admin Tools</a>
+          <ul class="dropdown-menu">
+            <li id="admin-manage-users-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#clients-tab-pane" type="button" onclick="loadAllClients()">Manage Users</button></li>
+            <li id="admin-register-user-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#register-tab-pane" type="button" onclick="populateNewUserAreaDropdown()">Register User</button></li>
+            <li id="admin-divider-1" class="d-none"><hr class="dropdown-divider"></li>
+            <li id="admin-area-overview-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#area-overview-tab-pane" type="button" onclick="loadAreaOverview()">Area Overview</button></li>
+            <li id="admin-manage-areas-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#areas-tab-pane" type="button" onclick="loadAreasList()">Manage Areas</button></li>
+            <li id="admin-tool-inventory-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tools-tab-pane" type="button" onclick="loadToolsList()">Tool Inventory</button></li>
+          </ul>
         </li>
       </ul>
 
@@ -181,7 +194,7 @@
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-hover mb-0" id="techTicketsTable">
-                  <thead class="navy text-white"><tr><th>Area</th><th>Machine</th><th>Client</th><th>Ticket ID</th><th>Opened</th><th>Action</th></tr></thead>
+                  <thead class="navy text-white"><tr><th>Area</th><th>Machine</th><th>Client</th><th>Ticket ID</th><th>Opened</th><th>Service Count</th><th>Action</th></tr></thead>
                   <tbody></tbody>
                 </table>
               </div>
@@ -215,10 +228,10 @@
         <!-- Manage Clients Pane -->
         <div class="tab-pane fade" id="clients-tab-pane" role="tabpanel">
           <div class="card mt-3">
-            <div class="card-header teal fw-bold">All Client Accounts</div>
+            <div class="card-header teal fw-bold">Manage All Users</div>
             <div class="card-body p-0">
               <div class="table-responsive">
-                <table class="table table-hover mb-0"><thead class="navy text-white"><tr><th>Full Name</th><th>Username</th><th>Email</th><th>Actions</th></tr></thead><tbody id="allClientsTbody"></tbody></table>
+                <table class="table table-hover mb-0"><thead class="navy text-white"><tr><th>Full Name</th><th>Username</th><th>Role</th><th>Email</th><th>Actions</th></tr></thead><tbody id="allClientsTbody"></tbody></table>
               </div>
             </div>
           </div>
@@ -232,6 +245,9 @@
               <input type="text" id="newUserUsername" class="form-control mb-2" placeholder="Username"><input type="password" id="newUserPassword" class="form-control mb-2" placeholder="Password">
               <input type="text" id="newUserFullname" class="form-control mb-2" placeholder="Full Name"><input type="email" id="newUserEmail" class="form-control mb-2" placeholder="Email">
               <input type="text" id="newUserPhone" class="form-control mb-2" placeholder="Phone Number">
+              <select id="newUserArea" class="form-select mb-2">
+                <option value="">Select User Area...</option>
+              </select>
               <select id="newUserRole" class="form-select mb-3">
                 <option value="CLIENT">Client</option><option value="TECHNICIAN">Technician</option>
               </select>
@@ -253,6 +269,96 @@
             </div>
           </div>
         </div>
+
+        <!-- Tool Inventory Pane -->
+        <div class="tab-pane fade" id="tools-tab-pane" role="tabpanel">
+          <div class="card mt-3 border-0 shadow-sm">
+            <div class="card-header navy text-white fw-bold d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-tools me-2"></i>Advanced Tool Inventory</span>
+              <button class="btn btn-sm btn-light text-navy fw-bold" onclick="openAddToolModal()"><i class="fas fa-plus me-1"></i> Add New Tool</button>
+            </div>
+            <div class="card-body bg-light">
+              
+              <!-- Stats Row -->
+              <div class="row g-3 mb-4" id="toolStatsRow">
+                <!-- Injected via JS -->
+              </div>
+
+              <!-- Filters -->
+              <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body p-2">
+                  <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                      <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" id="toolSearch" class="form-control border-start-0" placeholder="Search tools, serials, techs..." onkeyup="filterTools()">
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <select id="toolFilterStatus" class="form-select" onchange="filterTools()">
+                        <option value="">All Statuses</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="IN_REPAIR">In Repair</option>
+                        <option value="LOST">Lost</option>
+                        <option value="RETIRED">Retired</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3">
+                       <select id="toolFilterMaint" class="form-select" onchange="filterTools()">
+                        <option value="">Maintenance: Any</option>
+                        <option value="OVERDUE">Overdue</option>
+                        <option value="UPCOMING">Upcoming (7 Days)</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2 text-end">
+                       <button class="btn btn-outline-secondary w-100" onclick="loadToolsList()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tools Table -->
+              <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary text-uppercase small fw-bold">
+                      <tr>
+                        <th>Tool Details</th>
+                        <th>Assigned To</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Maintenance</th>
+                        <th class="text-end">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="toolsTableBody" class="bg-white"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Area Overview Pane -->
+        <div class="tab-pane fade" id="area-overview-tab-pane" role="tabpanel">
+          <div class="card mt-3">
+            <div class="card-header navy text-white fw-bold">Area Overview Workflow</div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label for="areaOverviewSelect" class="form-label">Select an Area to build workflow</label>
+                <div class="input-group">
+                  <select id="areaOverviewSelect" class="form-select" onchange="fetchAreaOverview()">
+                    <option value="">-- Select an Area --</option>
+                  </select>
+                  <button class="btn btn-outline-secondary" type="button" onclick="forceReloadAreas()"><i class="fas fa-sync-alt"></i></button>
+                </div>
+              </div>
+              <div id="areaOverviewContainer" class="mt-3">
+                <!-- Accordion will be injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -268,6 +374,7 @@
       </div>
       <div class="modal-body">
         <p><strong>Username:</strong> <span id="modalClientUser"></span> &nbsp;|&nbsp; <strong>Email:</strong> <span id="modalClientEmail"></span></p>
+        <p><strong>Phone:</strong> <span id="modalClientPhone"></span> &nbsp;|&nbsp; <strong>Area:</strong> <span id="modalClientArea"></span></p>
         <hr>
         
         <!-- Technician Add Machine Control -->
@@ -287,8 +394,1288 @@
   </div>
 </div>
 
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white">
+        <h5 class="modal-title">Change Password</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cpUsername">
+        <label class="form-label fw-bold">New Password</label>
+        <input type="text" id="cpNewPassword" class="form-control" placeholder="Enter new password">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="submitChangePassword()">Update Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white">
+        <h5 class="modal-title">Edit User Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editUserId">
+        <div class="mb-2">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="editFullName" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Email</label>
+          <input type="email" id="editEmail" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Phone</label>
+          <input type="text" id="editPhone" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Area</label>
+          <select id="editArea" class="form-select"><option value="">Select Area...</option></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="submitEditUser()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Close Ticket Modal (Repair Log) -->
+<div class="modal fade" id="closeTicketModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white">
+        <h5 class="modal-title">Complete Repair & Close Ticket</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="closeTicketId">
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Resolution Notes</label>
+          <textarea id="closeNotes" class="form-control" rows="3" placeholder="Describe the fix..."></textarea>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Spare Parts Used</label>
+          <input type="text" id="closeParts" class="form-control" placeholder="e.g. 2x Bearings, 1x Belt">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Repair Cost (₦)</label>
+          <input type="number" id="closeCost" class="form-control" placeholder="0.00">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Proof of Repair (Photo)</label>
+          <input type="file" id="closeProof" class="form-control" accept="image/*">
+        </div>
+        <div class="mb-3"><label class="form-label fw-bold">Pickup Appointment</label><input type="datetime-local" id="closePickup" class="form-control"></div>
+        <div class="mb-3">
+           <button type="button" class="btn btn-sm btn-outline-secondary" onclick="getLocation('closeTicketLoc', this)"><i class="fas fa-map-marker-alt"></i> Share Repair Location</button>
+           <small id="closeTicketLocMsg" class="text-muted ms-2"></small>
+           <input type="hidden" id="closeTicketLoc">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" onclick="submitCloseTicket()">Close Ticket</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Ticket Modal -->
+<div class="modal fade" id="rejectTicketModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Reject & Reassign Ticket</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="rejectTicketId">
+        <div class="mb-3"><label class="form-label fw-bold">Reason for Rejection</label><textarea id="rejectReason" class="form-control" rows="2" placeholder="Why was the repair unsatisfactory?"></textarea></div>
+        <div class="mb-3"><label class="form-label fw-bold">Assign To (Technician)</label><select id="rejectTechSelect" class="form-select"><option value="">Keep Current Technician</option></select></div>
+        <div class="mb-3"><label class="form-label fw-bold">Preferred Return Date (Deadline)</label><input type="date" id="rejectDeadline" class="form-control"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="submitRejectTicket()">Submit Rejection</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rate & Confirm Modal -->
+<div class="modal fade" id="rateModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">Rate Service & Confirm</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <input type="hidden" id="rateTicketId">
+        <p>How would you rate the repair service?</p>
+        <div class="fs-1 text-warning mb-3" style="cursor: pointer;">
+          <i class="far fa-star" onclick="setRating(1)" id="star1"></i>
+          <i class="far fa-star" onclick="setRating(2)" id="star2"></i>
+          <i class="far fa-star" onclick="setRating(3)" id="star3"></i>
+          <i class="far fa-star" onclick="setRating(4)" id="star4"></i>
+          <i class="far fa-star" onclick="setRating(5)" id="star5"></i>
+        </div>
+        <input type="hidden" id="selectedRating" value="5">
+        <button class="btn btn-success w-100" onclick="submitRatingConfirm()">Confirm & Close Ticket</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Tool Modal -->
+<div class="modal fade" id="addToolModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white"><h5 class="modal-title">Add New Tool</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="mb-2"><label class="form-label">Tool Name</label><input type="text" id="addToolName" class="form-control"></div>
+        <div class="mb-2"><label class="form-label">Serial Number</label><input type="text" id="addToolSerial" class="form-control"></div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label">Assigned Tech</label><input type="text" id="addToolTech" class="form-control"></div>
+          <div class="col-6"><label class="form-label">Location</label><input type="text" id="addToolLoc" class="form-control"></div>
+        </div>
+        <div class="mb-3"><label class="form-label">Next Maintenance</label><input type="date" id="addToolMaint" class="form-control"></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-success" onclick="submitAddTool()">Add Tool</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Tool Modal -->
+<div class="modal fade" id="editToolModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white"><h5 class="modal-title">Edit Tool</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="editToolId">
+        <div class="mb-2"><label class="form-label">Tool Name</label><input type="text" id="editToolName" class="form-control"></div>
+        <div class="mb-2"><label class="form-label">Serial Number</label><input type="text" id="editToolSerial" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Status</label>
+          <select id="editToolStatus" class="form-select">
+            <option value="ACTIVE">Active</option><option value="IN_REPAIR">In Repair</option><option value="LOST">Lost</option><option value="RETIRED">Retired</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" onclick="submitEditTool()">Save Changes</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer Tool Modal -->
+<div class="modal fade" id="transferToolModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white"><h5 class="modal-title">Transfer / Assign Tool</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="transferToolId">
+        <p class="text-muted">Current Assignment: <span id="transferCurrentAssign" class="fw-bold"></span></p>
+        <div class="mb-3"><label class="form-label">New Technician</label>
+          <select id="transferNewTech" class="form-select"><option value="">Select Technician...</option></select>
+        </div>
+        <div class="mb-3"><label class="form-label">New Location</label><input type="text" id="transferNewLoc" class="form-control"></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-primary" onclick="submitTransferTool()">Transfer Tool</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal fade" id="maintToolModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header navy text-white"><h5 class="modal-title">Log Maintenance</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="maintToolId">
+        <div class="mb-3"><label class="form-label">Next Maintenance Date</label><input type="date" id="maintNextDate" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Update Status</label>
+          <select id="maintNewStatus" class="form-select">
+            <option value="ACTIVE">Active (Ready)</option><option value="IN_REPAIR">In Repair</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-success" onclick="submitMaintenance()">Update Maintenance</button></div>
+    </div>
+  </div>
+</div>
+
 <script>
-const _0x_0x5007a8=_0x_0x2eba,_0x_0x42365f=_0x_0x2eba;(function(_0x120d10,_0x1c3ccf){const _0xdfc5ee=_0x_0x2eba,_0x5d26ed=_0x_0x2eba,_0x39b3e1=_0x120d10();while(!![]){try{const _0x3c4a98=parseInt(_0xdfc5ee(0x1fc))/(0x1c1b+-0x43*-0x57+-0x32df)+-parseInt(_0xdfc5ee(0x1a9))/(-0x1f18+-0x28a+0x21a4)+parseInt(_0x5d26ed(0x183))/(0x1aba+-0x56e*-0x5+-0x35dd)*(parseInt(_0xdfc5ee(0x2f6))/(-0x1118+0x1*0x14d9+-0x3bd))+-parseInt(_0xdfc5ee(0x106))/(0x1*-0xff7+0x9e7+0x615)*(-parseInt(_0x5d26ed(0x1d9))/(0x5d*-0x25+-0x717*-0x1+0x660))+-parseInt(_0x5d26ed(0x2e2))/(0x839*-0x1+0x5*-0x46d+0x1e61)*(-parseInt(_0xdfc5ee(0x123))/(0x24e2+-0x17ad+0xd2d*-0x1))+parseInt(_0xdfc5ee(0xfa))/(-0x1b95+-0xa9+0x1c47)+-parseInt(_0x5d26ed(0x247))/(-0x416+0x222+0x1fe);if(_0x3c4a98===_0x1c3ccf)break;else _0x39b3e1['push'](_0x39b3e1['shift']());}catch(_0x2f7092){_0x39b3e1['push'](_0x39b3e1['shift']());}}}(_0x_0x5498,-0x97f7*0x3+0x1399a4+0x4d819*-0x1));const _0x_0x4884c2=(function(){let _0x21ac0d=!![];return function(_0x4d67ae,_0x2b2b25){const _0x808204=_0x21ac0d?function(){const _0x56670d=_0x_0x2eba;if(_0x2b2b25){const _0x2e6548=_0x2b2b25[_0x56670d(0x11b)](_0x4d67ae,arguments);return _0x2b2b25=null,_0x2e6548;}}:function(){};return _0x21ac0d=![],_0x808204;};}()),_0x_0x3ba75a=_0x_0x4884c2(this,function(){const _0xbc1d3a=_0x_0x2eba,_0x55297d=_0x_0x2eba,_0x5c8245={};_0x5c8245[_0xbc1d3a(0x1d5)]=_0x55297d(0x10e)+'+$';const _0x15d4a0=_0x5c8245;return _0x_0x3ba75a[_0xbc1d3a(0x286)]()['search'](_0x15d4a0['UGVuy'])['toString']()['constructo'+'r'](_0x_0x3ba75a)[_0xbc1d3a(0x207)](_0x15d4a0[_0xbc1d3a(0x1d5)]);});_0x_0x3ba75a();const _0x_0x42794e=(function(){let _0x34dd45=!![];return function(_0x307449,_0xff5727){const _0xb6929=_0x34dd45?function(){const _0x18c2e5=_0x_0x2eba;if(_0xff5727){const _0x5d15ea=_0xff5727[_0x18c2e5(0x11b)](_0x307449,arguments);return _0xff5727=null,_0x5d15ea;}}:function(){};return _0x34dd45=![],_0xb6929;};}());(function(){const _0x112562=_0x_0x2eba,_0x8e9528=_0x_0x2eba,_0x18a81f={'TkEdT':_0x112562(0xd5)+_0x8e9528(0x124)+_0x8e9528(0x216)+_0x112562(0x18c),'ewqRD':function(_0x1fde02,_0x20be2a){return _0x1fde02(_0x20be2a);},'byeWE':_0x112562(0x259),'fMdAG':function(_0x1e2e9e,_0x90473b){return _0x1e2e9e+_0x90473b;},'GLtPt':_0x112562(0xd8),'sVmUt':function(_0x83272a,_0xa7062a){return _0x83272a+_0xa7062a;},'FbWka':_0x112562(0x121),'foONr':function(_0x392fcc){return _0x392fcc();}};_0x_0x42794e(this,function(){const _0x5d9272=_0x8e9528,_0x1707c0=_0x8e9528,_0x68d06d=new RegExp('function\x20*'+_0x5d9272(0xf4)),_0xa6770c=new RegExp(_0x18a81f[_0x1707c0(0x2d7)],'i'),_0x34ea17=_0x18a81f[_0x1707c0(0x2f2)](_0x_0x431629,_0x18a81f[_0x5d9272(0x2cb)]);!_0x68d06d[_0x5d9272(0x236)](_0x18a81f[_0x1707c0(0x2ed)](_0x34ea17,_0x18a81f[_0x5d9272(0x2e4)]))||!_0xa6770c[_0x1707c0(0x236)](_0x18a81f[_0x1707c0(0x1d3)](_0x34ea17,_0x18a81f[_0x5d9272(0x24b)]))?_0x34ea17('0'):_0x18a81f['foONr'](_0x_0x431629);})();}());const _0x_0x5e169d=(function(){let _0x271a1c=!![];return function(_0x396310,_0x2ff996){const _0x800c36=_0x271a1c?function(){const _0xf46fbc=_0x_0x2eba;if(_0x2ff996){const _0x28ead1=_0x2ff996[_0xf46fbc(0x11b)](_0x396310,arguments);return _0x2ff996=null,_0x28ead1;}}:function(){};return _0x271a1c=![],_0x800c36;};}()),_0x_0x1f5366=_0x_0x5e169d(this,function(){const _0x195ff1=_0x_0x2eba,_0x3e2505=_0x_0x2eba,_0x1b7272={'mcxaG':function(_0x17eab4,_0x4376b9){return _0x17eab4(_0x4376b9);},'rdNsq':function(_0x418f70,_0x3c8b12){return _0x418f70+_0x3c8b12;},'dXyOR':function(_0x53e308,_0x3b8b01){return _0x53e308+_0x3b8b01;},'XPCGy':_0x195ff1(0x22c)+_0x195ff1(0x27e)+_0x195ff1(0x29b)+'\x20)','OOkbu':function(_0xa5d3e0){return _0xa5d3e0();},'BKZBy':_0x3e2505(0xb1),'rjiel':_0x3e2505(0x2e7),'ZpSzA':_0x195ff1(0x2b3),'oEtgo':_0x195ff1(0x2a1),'JNBVy':_0x195ff1(0x1af),'RedyW':function(_0x49bf89,_0xf9298e){return _0x49bf89<_0xf9298e;}},_0x2aae50=function(){const _0x495284=_0x3e2505,_0x179477=_0x195ff1;let _0x279d3a;try{_0x279d3a=_0x1b7272[_0x495284(0x146)](Function,_0x1b7272[_0x495284(0x135)](_0x1b7272['dXyOR'](_0x179477(0xed)+_0x179477(0xf8),_0x1b7272[_0x495284(0x1bc)]),');'))();}catch(_0x48d2e3){_0x279d3a=window;}return _0x279d3a;},_0x2199bd=_0x1b7272['OOkbu'](_0x2aae50),_0x270d53=_0x2199bd[_0x195ff1(0x1b9)]=_0x2199bd[_0x195ff1(0x1b9)]||{},_0x3ca561=[_0x1b7272[_0x3e2505(0x151)],_0x195ff1(0x2bc),_0x1b7272[_0x3e2505(0xf0)],_0x1b7272[_0x3e2505(0x1c9)],_0x1b7272['oEtgo'],_0x1b7272['JNBVy'],_0x3e2505(0x1b6)];for(let _0x3f03e6=0x13fb+0x463+-0x185e;_0x1b7272[_0x195ff1(0xee)](_0x3f03e6,_0x3ca561[_0x3e2505(0xd2)]);_0x3f03e6++){const _0x40a945=_0x_0x5e169d[_0x195ff1(0xaf)+'r'][_0x195ff1(0x16c)][_0x195ff1(0x28e)](_0x_0x5e169d),_0x116df5=_0x3ca561[_0x3f03e6],_0x344bd2=_0x270d53[_0x116df5]||_0x40a945;_0x40a945['__proto__']=_0x_0x5e169d[_0x195ff1(0x28e)](_0x_0x5e169d),_0x40a945[_0x195ff1(0x286)]=_0x344bd2[_0x195ff1(0x286)][_0x3e2505(0x28e)](_0x344bd2),_0x270d53[_0x116df5]=_0x40a945;}});_0x_0x1f5366();const API_URL=_0x_0x5007a8(0x100)+_0x_0x5007a8(0x2a8)+_0x_0x42365f(0x13c)+_0x_0x42365f(0x1de)+'by27ze7Lh9'+_0x_0x5007a8(0x13d)+_0x_0x42365f(0x1db)+_0x_0x42365f(0x18e)+_0x_0x42365f(0x272)+_0x_0x5007a8(0x179)+'f1Pj3hWvg/'+_0x_0x42365f(0xb2);let currentUser=null,allClosedTickets=[];function _0x_0x2eba(_0x4aeda4,_0x48a9a3){const _0x207fd3=_0x_0x5498();return _0x_0x2eba=function(_0x348515,_0x4058f6){_0x348515=_0x348515-(-0x1d*0x155+0x1a*0x3e+0x2103);let _0x47b4de=_0x207fd3[_0x348515];if(_0x_0x2eba['ryXeNw']===undefined){var _0x17b662=function(_0x302ae){const _0x1fe240='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/=';let _0x41b951='',_0x4bf077='',_0x53776d=_0x41b951+_0x17b662;for(let _0xa93bf4=-0x23a3+0xc5*0x14+-0x1*-0x143f,_0x3a59e7,_0x53585d,_0x5046bc=0x3*-0x1d6+-0x79f+0xd21;_0x53585d=_0x302ae['charAt'](_0x5046bc++);~_0x53585d&&(_0x3a59e7=_0xa93bf4%(-0x2421*-0x1+0x4*-0x1a6+-0x1d85)?_0x3a59e7*(-0x10d2*-0x2+-0x14a+-0x201a)+_0x53585d:_0x53585d,_0xa93bf4++%(0x2e9*0x5+-0x7a*-0xa+0x66f*-0x3))?_0x41b951+=_0x53776d['charCodeAt'](_0x5046bc+(-0x2f5*0x2+-0x7*-0x1a3+-0x581))-(-0xdb*0x6+-0xb32+0x105e)!==-0x72f+0x1293+0x9*-0x144?String['fromCharCode'](0x20a6+-0x7bc+-0xd*0x1d7&_0x3a59e7>>(-(0x6e7+0x5*0x2a4+-0x15*0xf5)*_0xa93bf4&-0x6*0x2f6+0xfa0+0x22a)):_0xa93bf4:0x2*0x12ea+-0x20*-0xb1+-0x2*0x1dfa){_0x53585d=_0x1fe240['indexOf'](_0x53585d);}for(let _0x54ac4d=-0x1d55+0x2ef+0x1a66,_0x24793d=_0x41b951['length'];_0x54ac4d<_0x24793d;_0x54ac4d++){_0x4bf077+='%'+('00'+_0x41b951['charCodeAt'](_0x54ac4d)['toString'](-0x1*-0x18bd+-0x135a*0x2+0xe07))['slice'](-(-0x1535+0x142c+-0x59*-0x3));}return decodeURIComponent(_0x4bf077);};_0x_0x2eba['OTshay']=_0x17b662,_0x4aeda4=arguments,_0x_0x2eba['ryXeNw']=!![];}const _0x4edc29=_0x207fd3[-0x22f*-0x3+-0x2224+-0x1b97*-0x1],_0x5e2b58=_0x348515+_0x4edc29,_0x184f9d=_0x4aeda4[_0x5e2b58];if(!_0x184f9d){const _0x48519c=function(_0x15ca37){this['ONOYnJ']=_0x15ca37,this['tgonTK']=[0x1*-0x5fb+-0x1*0xe12+0x140e,0x1*-0x271+-0x5*0x656+0x221f*0x1,-0x1ed7+0xb*0x1b1+0xc3c],this['UgoiGU']=function(){return'newState';},this['PxAXGv']='\x5cw+\x20*\x5c(\x5c)\x20*{\x5cw+\x20*',this['uYPQfv']='[\x27|\x22].+[\x27|\x22];?\x20*}';};_0x48519c['prototype']['wFuRXx']=function(){const _0x95ef28=new RegExp(this['PxAXGv']+this['uYPQfv']),_0x40fd95=_0x95ef28['test'](this['UgoiGU']['toString']())?--this['tgonTK'][-0x1*0x2af+-0x2*-0x502+0xe*-0x86]:--this['tgonTK'][-0xb15*-0x2+-0x4*0x2fb+-0xa3e];return this['OWNKWy'](_0x40fd95);},_0x48519c['prototype']['OWNKWy']=function(_0x4c6bf7){if(!Boolean(~_0x4c6bf7))return _0x4c6bf7;return this['cjZpZK'](this['ONOYnJ']);},_0x48519c['prototype']['cjZpZK']=function(_0x3b5d8e){for(let _0x11e998=0x136+-0x54*-0x1b+-0xa12,_0x2e4f92=this['tgonTK']['length'];_0x11e998<_0x2e4f92;_0x11e998++){this['tgonTK']['push'](Math['round'](Math['random']())),_0x2e4f92=this['tgonTK']['length'];}return _0x3b5d8e(this['tgonTK'][0x19df+-0xeef*-0x1+-0x28ce]);},new _0x48519c(_0x_0x2eba)['wFuRXx'](),_0x47b4de=_0x_0x2eba['OTshay'](_0x47b4de),_0x4aeda4[_0x5e2b58]=_0x47b4de;}else _0x47b4de=_0x184f9d;return _0x47b4de;},_0x_0x2eba(_0x4aeda4,_0x48a9a3);}async function login(){const _0x1ac2a5=_0x_0x5007a8,_0x5d4ebf=_0x_0x42365f,_0x3562fd={'dnuSE':'username','ZYhrw':_0x1ac2a5(0x296),'sZAik':function(_0x44d512,_0x57667c){return _0x44d512||_0x57667c;},'wdlfP':function(_0x3e0190,_0x4570ce){return _0x3e0190(_0x4570ce);},'LAfqi':_0x5d4ebf(0x14b)+_0x5d4ebf(0x297),'ryWVB':_0x1ac2a5(0x1e2)+'n','zArqK':'dashboardS'+_0x5d4ebf(0xe7),'xBZFv':_0x5d4ebf(0xcb)},_0x1ddee7=document[_0x1ac2a5(0x1f7)+_0x5d4ebf(0x1ef)](_0x3562fd['dnuSE'])[_0x1ac2a5(0x237)][_0x5d4ebf(0x1bb)](),_0x13b14b=document['getElement'+_0x5d4ebf(0x1ef)](_0x1ac2a5(0x217))['value'][_0x1ac2a5(0x1bb)](),_0x3ca012=document[_0x1ac2a5(0x1f7)+_0x5d4ebf(0x1ef)](_0x3562fd[_0x5d4ebf(0xc1)]);if(_0x3562fd[_0x1ac2a5(0xb4)](!_0x1ddee7,!_0x13b14b)){_0x3ca012[_0x5d4ebf(0x25c)]=_0x5d4ebf(0x240)+'s=\x22text-da'+'nger\x22>Plea'+_0x1ac2a5(0x1d2)+_0x1ac2a5(0x299)+_0x1ac2a5(0x162)+'</span>';return;}_0x3ca012[_0x5d4ebf(0x25c)]=_0x5d4ebf(0x240)+'s=\x22text-in'+_0x1ac2a5(0xb0)+'g\x20in...</s'+_0x5d4ebf(0x141);try{const _0x522ef8=await fetch(API_URL+(_0x1ac2a5(0x23b)+_0x1ac2a5(0x181)+_0x5d4ebf(0x109))+_0x3562fd[_0x5d4ebf(0xf5)](encodeURIComponent,_0x1ddee7)+'&password='+_0x3562fd[_0x5d4ebf(0xf5)](encodeURIComponent,_0x13b14b)),_0x5952ec=await _0x522ef8[_0x5d4ebf(0x1df)]();if(_0x5952ec[_0x5d4ebf(0x2b3)]){_0x3ca012['innerHTML']='<span\x20clas'+_0x5d4ebf(0x204)+_0x1ac2a5(0x281)+_0x5952ec[_0x5d4ebf(0x2b3)]+_0x5d4ebf(0xec);return;}currentUser=_0x5952ec[_0x1ac2a5(0x2f1)],localStorage[_0x1ac2a5(0x21e)](_0x3562fd[_0x5d4ebf(0x2fa)],JSON['stringify'](currentUser)),document[_0x1ac2a5(0x1f7)+_0x1ac2a5(0x1ef)](_0x3562fd[_0x5d4ebf(0x2e8)])[_0x1ac2a5(0x1ba)][_0x5d4ebf(0x227)](_0x1ac2a5(0xcb)),document[_0x5d4ebf(0x1f7)+_0x1ac2a5(0x1ef)](_0x3562fd['zArqK'])[_0x1ac2a5(0x1ba)][_0x5d4ebf(0x20c)](_0x3562fd['xBZFv']),loadDashboard();}catch(_0x4f438c){_0x3ca012['innerHTML']=_0x1ac2a5(0x240)+_0x5d4ebf(0x204)+_0x5d4ebf(0x1a8)+_0x1ac2a5(0x177)+_0x1ac2a5(0x24d)+'ain.</span'+'>';}}async function registerNewUser(){const _0x20e590=_0x_0x42365f,_0x1ab174=_0x_0x42365f,_0x1cff18={'DXPGI':_0x20e590(0x2c4)+_0x1ab174(0x186),'ervoc':_0x20e590(0x1ed)+_0x20e590(0x2d1),'WoCkZ':_0x20e590(0x255)+'lname','mPXWL':_0x20e590(0x235)+'il','TPLBu':'newUserPho'+'ne','PeWHU':_0x1ab174(0x137)+'e','JyIur':function(_0x189829,_0x41e434){return _0x189829||_0x41e434;},'PhHtj':function(_0x50a7aa,_0x19e51d){return _0x50a7aa(_0x19e51d);},'iEFlr':_0x20e590(0x1be)+_0x20e590(0x2b0)+'ds','eaLyW':function(_0x520764,_0x31d9a5,_0x3cb978){return _0x520764(_0x31d9a5,_0x3cb978);},'oOSjN':'POST','OwAzZ':_0x20e590(0x1aa)+'5','eyiFs':function(_0x12a1ce,_0x167618){return _0x12a1ce(_0x167618);},'ftdng':function(_0x256bdb,_0x25b67a){return _0x256bdb+_0x25b67a;},'zKTEr':_0x1ab174(0x175),'ssbPF':_0x20e590(0x2c1)+_0x1ab174(0x29a)},_0x71455c=document['getElement'+_0x1ab174(0x1ef)](_0x1cff18['DXPGI'])[_0x1ab174(0x237)][_0x1ab174(0x1bb)](),_0x12895d=document[_0x20e590(0x1f7)+'ById'](_0x1cff18['ervoc'])[_0x20e590(0x237)]['trim'](),_0x53b7a0=document['getElement'+_0x20e590(0x1ef)](_0x1cff18['WoCkZ'])[_0x20e590(0x237)][_0x1ab174(0x1bb)](),_0x223e86=document[_0x1ab174(0x1f7)+_0x20e590(0x1ef)](_0x1cff18[_0x1ab174(0x165)])[_0x1ab174(0x237)][_0x1ab174(0x1bb)](),_0x310f69=document['getElement'+_0x1ab174(0x1ef)](_0x1cff18['TPLBu'])[_0x1ab174(0x237)][_0x1ab174(0x1bb)](),_0x299970=document[_0x20e590(0x1f7)+_0x1ab174(0x1ef)](_0x1cff18[_0x1ab174(0x153)])[_0x1ab174(0x237)];if(_0x1cff18[_0x20e590(0x1e7)](!_0x71455c,!_0x12895d)||!_0x53b7a0||!_0x310f69)return _0x1cff18[_0x1ab174(0x269)](alert,_0x1cff18['iEFlr']);try{const _0xe548c9={};_0xe548c9[_0x1ab174(0x128)]=_0x20e590(0x125),_0xe548c9[_0x1ab174(0x25a)]=_0x71455c,_0xe548c9[_0x1ab174(0x217)]=_0x12895d,_0xe548c9['fullName']=_0x53b7a0,_0xe548c9[_0x20e590(0x1c5)]=_0x223e86,_0xe548c9[_0x1ab174(0x202)]=_0x310f69,_0xe548c9[_0x1ab174(0x1ea)]=_0x299970,_0xe548c9[_0x20e590(0x214)]=currentUser['username'];const _0x32e022=await _0x1cff18[_0x20e590(0x21f)](fetch,API_URL,{'method':_0x1cff18['oOSjN'],'body':JSON['stringify'](_0xe548c9)}),_0x6c6680=await _0x32e022[_0x1ab174(0x1df)]();if(_0x6c6680['success']){const _0x454960=_0x1cff18[_0x20e590(0x1f5)][_0x1ab174(0xe1)]('|');let _0x47f27c=0x1d6a+-0x2d*0x47+-0x3*0x5a5;while(!![]){switch(_0x454960[_0x47f27c++]){case'0':alert(_0x1ab174(0x248)+_0x71455c+(_0x20e590(0xe3)+_0x20e590(0xfe)+'y!'));continue;case'1':document[_0x1ab174(0x1f7)+_0x20e590(0x1ef)](_0x1cff18[_0x1ab174(0x165)])[_0x1ab174(0x237)]='';continue;case'2':document[_0x20e590(0x1f7)+_0x1ab174(0x1ef)](_0x1cff18[_0x1ab174(0x154)])[_0x20e590(0x237)]='';continue;case'3':document['getElement'+_0x1ab174(0x1ef)](_0x1cff18['WoCkZ'])[_0x1ab174(0x237)]='';continue;case'4':document[_0x20e590(0x1f7)+_0x20e590(0x1ef)](_0x1ab174(0x1ed)+_0x20e590(0x2d1))[_0x20e590(0x237)]='';continue;case'5':document[_0x20e590(0x1f7)+_0x20e590(0x1ef)](_0x1cff18[_0x1ab174(0xe9)])[_0x1ab174(0x237)]='';continue;}break;}}else _0x1cff18['eyiFs'](alert,_0x1cff18['ftdng'](_0x1cff18[_0x20e590(0x2c9)],_0x6c6680[_0x1ab174(0x2b3)]));}catch(_0x1a3ce6){_0x1cff18[_0x20e590(0x1d0)](alert,_0x1cff18[_0x20e590(0x2dd)]);}}function loadDashboard(){const _0x427fb4=_0x_0x42365f,_0x58d650=_0x_0x42365f,_0x236637={'VBtqm':_0x427fb4(0x134),'aFcLp':function(_0x114081,_0x3bdf9f){return _0x114081===_0x3bdf9f;},'gYUtv':'CLIENT','JhmGb':'clientView','kjqYp':_0x58d650(0xcb),'WKPSu':_0x58d650(0xae),'nbmRu':function(_0x56edca){return _0x56edca();},'ZxJek':function(_0x53bd6f,_0x5166a1){return _0x53bd6f===_0x5166a1;},'JRKTe':_0x58d650(0x2a9),'ADzeF':_0x58d650(0x196),'HKQyG':_0x427fb4(0x2fe),'qRkUM':function(_0x3d83a1){return _0x3d83a1();},'gHUNt':'techName'};document['getElement'+_0x427fb4(0x1ef)](_0x236637[_0x427fb4(0xbc)])['innerHTML']=_0x427fb4(0x2f4)+currentUser[_0x58d650(0x291)]+(_0x427fb4(0xc5)+_0x427fb4(0x1da)+_0x58d650(0x282)+'ccess\x22>')+currentUser['role']+_0x58d650(0x268);if(_0x236637[_0x427fb4(0x2ab)](currentUser['role'],_0x236637['gYUtv']))document[_0x427fb4(0x1f7)+_0x427fb4(0x1ef)](_0x236637['JhmGb'])[_0x427fb4(0x1ba)][_0x427fb4(0x20c)](_0x236637['kjqYp']),document['getElement'+_0x427fb4(0x1ef)](_0x427fb4(0x2fe))[_0x427fb4(0x1ba)][_0x58d650(0x227)](_0x236637[_0x427fb4(0x274)]),document[_0x427fb4(0x1f7)+'ById'](_0x236637['WKPSu'])[_0x427fb4(0x290)+'t']=currentUser[_0x427fb4(0x291)],_0x236637[_0x427fb4(0x2d0)](loadClientData);else{if(_0x236637['ZxJek'](currentUser[_0x427fb4(0x1ea)],_0x236637[_0x427fb4(0x278)])){const _0x1e7620=_0x236637[_0x58d650(0x147)]['split']('|');let _0x28f1a3=0xe*-0x81+-0x1c7d+0x3f3*0x9;while(!![]){switch(_0x1e7620[_0x28f1a3++]){case'0':_0x236637[_0x427fb4(0x2d0)](loadAllClients);continue;case'1':document[_0x427fb4(0x1f7)+_0x427fb4(0x1ef)](_0x236637[_0x58d650(0x30d)])['classList']['remove'](_0x427fb4(0xcb));continue;case'2':_0x236637['qRkUM'](loadTechnicianTickets);continue;case'3':document['getElement'+'ById'](_0x236637[_0x58d650(0x10a)])[_0x58d650(0x1ba)][_0x58d650(0x227)](_0x236637[_0x427fb4(0x274)]);continue;case'4':document[_0x58d650(0x1f7)+'ById'](_0x236637['gHUNt'])[_0x427fb4(0x290)+'t']=currentUser[_0x427fb4(0x291)];continue;}break;}}}}async function loadClientData(){const _0x55812d=_0x_0x5007a8,_0x4aeab6=_0x_0x5007a8,_0xec7dbd={'SrzBs':_0x55812d(0x223),'bySat':'<ul\x20class='+_0x55812d(0x1c8)+'p\x27>','wpohT':_0x4aeab6(0x140),'GeEyI':function(_0x3b6354,_0x37e817){return _0x3b6354||_0x37e817;},'gsZKc':'ticketMach'+_0x4aeab6(0x2ae),'QyBvp':_0x4aeab6(0xc8)+'lue=\x27\x27>Sel'+_0x4aeab6(0x2e9)+_0x55812d(0x2f9),'gSbSc':function(_0x4ae894){return _0x4ae894();},'AUJTJ':function(_0x377827){return _0x377827();}},_0x1a8d46=await fetch(API_URL+(_0x55812d(0x23a)+_0x4aeab6(0x191)+'nes&userId'+'=')+currentUser[_0x4aeab6(0x311)]),_0x4977ec=await _0x1a8d46['json']();let _0x130228=_0xec7dbd[_0x55812d(0xdf)];_0x4977ec[_0x55812d(0x1b1)](_0x55865f=>{const _0xcfcf8d=_0x4aeab6,_0x62b5dd=_0x4aeab6;_0x130228+=_0xcfcf8d(0x225)+'\x22list-grou'+'p-item\x22>'+_0x55865f[_0xcfcf8d(0x2ec)]+('\x20<span\x20cla'+_0xcfcf8d(0x1d8)+_0x62b5dd(0x16d)+_0x62b5dd(0x2d6))+_0x55865f[_0x62b5dd(0x145)]+(_0x62b5dd(0x1e5)+'i>');}),_0x130228+=_0xec7dbd[_0x55812d(0x1fb)],document['getElement'+_0x4aeab6(0x1ef)]('myMachines'+_0x4aeab6(0x212))['innerHTML']=_0xec7dbd[_0x55812d(0x26f)](_0x130228,_0x55812d(0x18b)+'text-muted'+_0x55812d(0x2aa)+_0x4aeab6(0xb3)+_0x55812d(0xff)+'ve.</p>');const _0x253149=document[_0x55812d(0x1f7)+_0x55812d(0x1ef)](_0xec7dbd[_0x55812d(0x302)]);_0x253149[_0x4aeab6(0x25c)]=_0xec7dbd[_0x4aeab6(0x210)],_0x4977ec[_0x55812d(0x1b1)](_0x5b065a=>{const _0x539445=_0x4aeab6,_0xf8ff5=_0x55812d,_0x54895e=document[_0x539445(0x26d)+_0x539445(0x256)](_0xec7dbd[_0x539445(0x252)]),_0x1d8ff9={};_0x1d8ff9['name']=_0x5b065a[_0x539445(0x2ec)],_0x1d8ff9[_0x539445(0x145)]=_0x5b065a[_0xf8ff5(0x145)],_0x54895e['value']=JSON[_0xf8ff5(0x173)](_0x1d8ff9),_0x54895e[_0xf8ff5(0x290)+'t']=_0x5b065a[_0xf8ff5(0x2ec)],_0x253149[_0x539445(0x1b5)+'d'](_0x54895e);}),_0xec7dbd[_0x55812d(0x27f)](loadRecipientDropdown),_0xec7dbd[_0x4aeab6(0x27f)](loadAreasDropdown),_0xec7dbd[_0x55812d(0x25f)](loadClientTickets);}function updateTicketSerial(){const _0x276e11=_0x_0x42365f,_0x141598=_0x_0x5007a8,_0x51316a=document['getElement'+_0x276e11(0x1ef)](_0x276e11(0x14e)+_0x276e11(0x2ae))[_0x141598(0x237)];if(_0x51316a){const _0x1a5335=JSON[_0x276e11(0x131)](_0x51316a);document[_0x141598(0x1f7)+'ById'](_0x276e11(0x25d)+_0x141598(0x2d2))['value']=_0x1a5335['serial'];}}async function loadRecipientDropdown(){const _0x257097=_0x_0x5007a8,_0x3b36d7=_0x_0x5007a8,_0x598b38={'ErnlL':_0x257097(0x223),'WJxvE':function(_0x38d6b2,_0x6e872c){return _0x38d6b2(_0x6e872c);},'TWRpY':_0x3b36d7(0xbf)+_0x257097(0x238),'LqPot':_0x3b36d7(0xc8)+_0x3b36d7(0x2a2)+_0x3b36d7(0x312)+'cian</opti'+_0x3b36d7(0x2a6)},_0x3458d3=await _0x598b38[_0x257097(0x2f0)](fetch,API_URL+(_0x3b36d7(0x23a)+_0x3b36d7(0x2b7)+'ns')),_0x3c1ec1=await _0x3458d3[_0x257097(0x1df)](),_0xe35d84=document[_0x257097(0x1f7)+'ById'](_0x598b38[_0x257097(0x1cc)]);_0xe35d84[_0x3b36d7(0x25c)]=_0x598b38['LqPot'],_0x3c1ec1[_0x3b36d7(0x1b1)](_0x41578c=>{const _0x306a1b=_0x3b36d7,_0x3e77f7=_0x257097,_0x14949d=document[_0x306a1b(0x26d)+_0x306a1b(0x256)](_0x598b38[_0x3e77f7(0x267)]);_0x14949d[_0x306a1b(0x237)]=_0x41578c[_0x306a1b(0x291)],_0x14949d[_0x3e77f7(0x290)+'t']=_0x41578c[_0x306a1b(0x291)],_0xe35d84[_0x306a1b(0x1b5)+'d'](_0x14949d);});}async function loadAreasDropdown(){const _0x3f9c09=_0x_0x5007a8,_0x4973e3=_0x_0x42365f,_0x4ea4d7={'AQmHz':_0x3f9c09(0x223),'QXWJZ':function(_0x520988,_0xf73585){return _0x520988(_0xf73585);},'VpdPp':_0x4973e3(0x2c7),'JeGtX':_0x3f9c09(0xc8)+'lue=\x27GENER'+'AL\x20AREA\x27>G'+_0x3f9c09(0xcf)+_0x3f9c09(0x13b)},_0x122f76=await _0x4ea4d7['QXWJZ'](fetch,API_URL+('?action=ge'+_0x3f9c09(0x1a7))),_0x5222b7=await _0x122f76[_0x4973e3(0x1df)](),_0xe1fb38=document[_0x4973e3(0x1f7)+_0x3f9c09(0x1ef)](_0x4ea4d7['VpdPp']);_0xe1fb38[_0x4973e3(0x25c)]=_0x4ea4d7['JeGtX'],_0x5222b7[_0x3f9c09(0x1b1)](_0x463298=>{const _0x21be42=_0x3f9c09,_0x5a9034=_0x4973e3,_0x5ec29f=document['createElem'+_0x21be42(0x256)](_0x4ea4d7[_0x21be42(0x2b6)]);_0x5ec29f[_0x21be42(0x237)]=_0x463298,_0x5ec29f['textConten'+'t']=_0x463298,_0xe1fb38[_0x21be42(0x1b5)+'d'](_0x5ec29f);});}async function loadClientTickets(){const _0x362016=_0x_0x5007a8,_0x587f3f=_0x_0x5007a8,_0x50a692={'OKyJx':_0x362016(0xe8)+'n','kAINB':function(_0x2cf6cd,_0x2e65c1){return _0x2cf6cd===_0x2e65c1;},'CaFGM':_0x587f3f(0x2eb),'pvHXY':_0x587f3f(0x12e)+_0x587f3f(0x1ff),'kvRQx':_0x362016(0x2c0),'JLaPm':'status-res'+_0x587f3f(0x139),'prlQa':'#clientTic'+_0x362016(0x309)+_0x587f3f(0x20e),'dtbIS':_0x587f3f(0x24e)+_0x362016(0x2bb)+_0x587f3f(0x19c)+_0x362016(0x2ee)+_0x587f3f(0x2fb)+_0x362016(0x2b5)+'td></tr>','LoqXG':function(_0xa9ece7,_0x3e0e25){return _0xa9ece7(_0x3e0e25);},'gNgKE':function(_0x22f5f7,_0x26bfd5){return _0x22f5f7(_0x26bfd5);},'SwyBF':_0x587f3f(0x24e)+'lspan=\x226\x22\x20'+_0x362016(0x19c)+_0x362016(0x29e)+_0x587f3f(0x1ad)+_0x587f3f(0x10c)+_0x587f3f(0x26e)+_0x587f3f(0x150)},_0x2f5910=document[_0x587f3f(0x2db)+_0x362016(0x211)](_0x50a692['prlQa']);_0x2f5910[_0x587f3f(0x25c)]=_0x50a692[_0x362016(0x20d)];const _0x551fd8=await _0x50a692['LoqXG'](fetch,API_URL+('?action=ge'+'tClientTic'+_0x362016(0x2c5)+_0x587f3f(0x23f))+_0x50a692[_0x587f3f(0x1f3)](encodeURIComponent,currentUser[_0x362016(0x25a)])),_0x25cd66=await _0x551fd8[_0x587f3f(0x1df)]();_0x2f5910[_0x587f3f(0x25c)]='';if(!_0x25cd66[_0x362016(0xd2)]){_0x2f5910['innerHTML']=_0x50a692[_0x362016(0x118)];return;}_0x25cd66[_0x362016(0x1b1)](_0x5caf57=>{const _0x4d6946=_0x362016,_0x4a9a5a=_0x362016;let _0x1d5357=_0x50a692['OKyJx'];if(_0x50a692[_0x4d6946(0x263)](_0x5caf57[_0x4a9a5a(0xe5)],_0x50a692['CaFGM']))_0x1d5357=_0x50a692['pvHXY'];if(_0x50a692[_0x4a9a5a(0x263)](_0x5caf57['status'],_0x50a692[_0x4a9a5a(0x10f)]))_0x1d5357=_0x50a692[_0x4a9a5a(0x222)];let _0x401d03=_0x4d6946(0x246)+(_0x5caf57[_0x4a9a5a(0x159)]||'-')+_0x4a9a5a(0x172);_0x50a692['kAINB'](_0x5caf57[_0x4d6946(0xe5)],_0x50a692[_0x4a9a5a(0x10f)])&&(_0x401d03=_0x4a9a5a(0x14c)+_0x4d6946(0xb9)+_0x4d6946(0xef)+_0x4a9a5a(0x2cc)+_0x4a9a5a(0x308)+_0x4d6946(0x18f)+_0x4a9a5a(0x1ca)+'cket(\x27'+_0x5caf57['ticketId']+('\x27,\x20true)\x22>'+_0x4a9a5a(0x155)+_0x4d6946(0xde)+_0x4d6946(0x1c1)+'tton\x20class'+'=\x22btn\x20btn-'+_0x4d6946(0x206)+'ger\x22\x20oncli'+_0x4d6946(0x280)+_0x4a9a5a(0x314))+_0x5caf57['ticketId']+(_0x4d6946(0x30f)+_0x4a9a5a(0x219)+_0x4a9a5a(0xde)+_0x4d6946(0xe4)));const _0x3f2da3=document['createElem'+_0x4a9a5a(0x256)]('tr');_0x3f2da3['innerHTML']='\x0a\x20\x20\x20\x20\x20\x20<td'+'><strong>'+_0x5caf57[_0x4d6946(0x2e0)]+(_0x4a9a5a(0x27a)+'/td><td>')+_0x5caf57[_0x4d6946(0x2ec)]+'</td><td>'+_0x5caf57['technician']+(_0x4a9a5a(0x245)+'\x20\x20<td><spa'+_0x4a9a5a(0x1da)+_0x4a9a5a(0x271))+_0x1d5357+'\x22>'+_0x5caf57[_0x4d6946(0xe5)]+(_0x4a9a5a(0x292)+_0x4d6946(0x306)+_0x4a9a5a(0x157))+_0x5caf57['opened']+('</small></'+_0x4a9a5a(0x1e1))+_0x401d03+'</td>',_0x2f5910['appendChil'+'d'](_0x3f2da3);});}async function addMachine(){const _0x3aa583=_0x_0x5007a8,_0x570ec4=_0x_0x42365f,_0x426c78={'eDmie':_0x3aa583(0xf9)+'e','PCiXP':function(_0x57dc62,_0x37947c){return _0x57dc62||_0x37947c;},'tcERO':function(_0x5e4150,_0x59b443){return _0x5e4150(_0x59b443);},'GbmGK':_0x3aa583(0x1b4)+_0x570ec4(0x28b),'eulDn':'btnAddMach'+'ine','kOqHS':_0x570ec4(0x152)+_0x570ec4(0x102)+_0x570ec4(0x2d5)+'in\x22></i>\x20A'+_0x3aa583(0x20a),'RnYUN':_0x570ec4(0x29c)+_0x570ec4(0x15a)+'sfully!','qqsOv':function(_0x5b8f60){return _0x5b8f60();},'laZOW':_0x3aa583(0x13a)},_0x194c61=document[_0x570ec4(0x1f7)+_0x570ec4(0x1ef)](_0x426c78['eDmie'])[_0x570ec4(0x237)][_0x3aa583(0x1bb)](),_0x1e25a1=document[_0x3aa583(0x1f7)+_0x570ec4(0x1ef)](_0x3aa583(0x19b)+'er')[_0x570ec4(0x237)][_0x570ec4(0x1bb)]();if(_0x426c78[_0x570ec4(0x316)](!_0x194c61,!_0x1e25a1))return _0x426c78[_0x570ec4(0x112)](alert,_0x426c78['GbmGK']);const _0x3f6e9a=document[_0x570ec4(0x1f7)+'ById'](_0x426c78[_0x570ec4(0x11a)]),_0x269661=_0x3f6e9a[_0x3aa583(0x25c)];_0x3f6e9a[_0x570ec4(0x243)]=!![],_0x3f6e9a[_0x570ec4(0x25c)]=_0x426c78['kOqHS'];try{const _0x1a4134=_0x570ec4(0x275)[_0x3aa583(0xe1)]('|');let _0x5a87ed=-0x11ca+-0x1139+-0x2303*-0x1;while(!![]){switch(_0x1a4134[_0x5a87ed++]){case'0':alert(_0x426c78[_0x3aa583(0x24c)]);continue;case'1':_0x426c78[_0x570ec4(0x1b8)](loadClientData);continue;case'2':const _0x2e3303={};_0x2e3303['action']=_0x3aa583(0x300),_0x2e3303[_0x3aa583(0x311)]=currentUser[_0x3aa583(0x311)],_0x2e3303[_0x3aa583(0xf9)+'e']=_0x194c61,_0x2e3303[_0x3aa583(0x19b)+'er']=_0x1e25a1,_0x2e3303[_0x3aa583(0x201)+_0x3aa583(0x15d)]=currentUser['username'],await fetch(API_URL,{'method':_0x426c78[_0x570ec4(0x23d)],'body':JSON['stringify'](_0x2e3303)});continue;case'3':document[_0x570ec4(0x1f7)+'ById'](_0x3aa583(0x19b)+'er')[_0x570ec4(0x237)]='';continue;case'4':document[_0x570ec4(0x1f7)+_0x570ec4(0x1ef)](_0x426c78[_0x3aa583(0x11c)])[_0x570ec4(0x237)]='';continue;}break;}}catch(_0x1559d0){alert(_0x3aa583(0x2c1)+_0x570ec4(0x29a));}finally{_0x3f6e9a[_0x3aa583(0x243)]=![],_0x3f6e9a['innerHTML']=_0x269661;}}async function createTicket(){const _0x4f9acd=_0x_0x5007a8,_0x170ddc=_0x_0x5007a8,_0x310ed8={'pAmCi':'ticketMach'+'ine','DHrZz':function(_0x5c40a1,_0x36d229){return _0x5c40a1(_0x36d229);},'rpQtZ':_0x4f9acd(0x1b3)+'achine','qRYmm':'recipientS'+_0x4f9acd(0x238),'UzuPF':_0x170ddc(0x2c6),'nvzRe':_0x4f9acd(0x2c7),'xpjIe':function(_0x7a9cbe,_0x19490f){return _0x7a9cbe||_0x19490f;},'DEVSB':function(_0x3c29e8,_0x4149b5){return _0x3c29e8(_0x4149b5);},'nrvts':_0x4f9acd(0x19d)+_0x170ddc(0x168)+_0x4f9acd(0x115)+_0x4f9acd(0x2cf)+_0x170ddc(0x187),'ESJNr':'btnCreateT'+_0x4f9acd(0xbd),'lRRYr':function(_0x143b77){return _0x143b77();},'AfJEq':_0x170ddc(0x25d)+_0x4f9acd(0x2d2),'fCmTy':function(_0xc1139c,_0xa59bd4){return _0xc1139c(_0xa59bd4);},'LlFTe':_0x170ddc(0x15c)+'mitted\x20suc'+_0x4f9acd(0x14f)+_0x170ddc(0x17f)+_0x4f9acd(0x129)+_0x170ddc(0xcc)+'t.','vEUzB':function(_0x4ec798,_0x2f8f3b,_0x3e4b17){return _0x4ec798(_0x2f8f3b,_0x3e4b17);},'byxrA':_0x4f9acd(0x2e5)+'et','lgNGQ':_0x4f9acd(0x2c1)+_0x170ddc(0x29a)},_0x4226f4=document[_0x4f9acd(0x1f7)+_0x170ddc(0x1ef)](_0x310ed8[_0x170ddc(0x19f)])[_0x170ddc(0x237)];if(!_0x4226f4)return _0x310ed8[_0x4f9acd(0x26c)](alert,_0x310ed8[_0x170ddc(0x22b)]);const _0x27d0ef=JSON['parse'](_0x4226f4),_0x2abf83=document[_0x170ddc(0x1f7)+'ById'](_0x310ed8[_0x170ddc(0xfc)])[_0x4f9acd(0x237)],_0x4830b5=document[_0x170ddc(0x1f7)+'ById'](_0x310ed8['UzuPF'])[_0x4f9acd(0x237)][_0x4f9acd(0x1bb)](),_0x24cdd7=document[_0x170ddc(0x1f7)+_0x4f9acd(0x1ef)](_0x310ed8[_0x170ddc(0x1f8)])[_0x4f9acd(0x237)];if(_0x310ed8['xpjIe'](!_0x2abf83,!_0x4830b5))return _0x310ed8['DEVSB'](alert,_0x310ed8[_0x170ddc(0x14d)]);const _0x4d0ba7=document[_0x4f9acd(0x1f7)+_0x170ddc(0x1ef)](_0x310ed8[_0x170ddc(0x2e3)]),_0xd09018=_0x4d0ba7['innerHTML'];_0x4d0ba7['disabled']=!![],_0x4d0ba7[_0x4f9acd(0x25c)]=_0x170ddc(0x152)+_0x4f9acd(0x102)+_0x170ddc(0x2d5)+_0x4f9acd(0x2fd)+_0x170ddc(0x289);try{const _0x55399d=(_0x4f9acd(0x27b)+'3|0')[_0x170ddc(0xe1)]('|');let _0x157734=-0x3d*-0x8b+-0x1*0xd98+-0x1387;while(!![]){switch(_0x55399d[_0x157734++]){case'0':_0x310ed8[_0x170ddc(0x2d3)](loadClientTickets);continue;case'1':document[_0x170ddc(0x1f7)+_0x170ddc(0x1ef)](_0x310ed8['AfJEq'])[_0x4f9acd(0x237)]='';continue;case'2':document[_0x4f9acd(0x1f7)+_0x4f9acd(0x1ef)](_0x310ed8[_0x4f9acd(0x19f)])['value']='';continue;case'3':document[_0x170ddc(0x1f7)+_0x170ddc(0x1ef)](_0x310ed8[_0x170ddc(0xfc)])['value']='';continue;case'4':document['getElement'+_0x4f9acd(0x1ef)](_0x310ed8[_0x170ddc(0x113)])[_0x170ddc(0x237)]='';continue;case'5':_0x310ed8[_0x170ddc(0x287)](alert,_0x310ed8['LlFTe']);continue;case'6':const _0x12000a={};_0x12000a[_0x170ddc(0x1ee)]=_0x24cdd7,_0x12000a[_0x170ddc(0xf9)+'e']=_0x27d0ef[_0x170ddc(0x182)],_0x12000a[_0x4f9acd(0x19b)+'er']=_0x27d0ef[_0x170ddc(0x145)],_0x12000a[_0x4f9acd(0x1ce)]=_0x2abf83,_0x12000a[_0x4f9acd(0x2c6)]=_0x4830b5,await _0x310ed8[_0x170ddc(0x2ac)](fetch,API_URL,{'method':_0x4f9acd(0x13a),'body':JSON[_0x4f9acd(0x173)]({'action':_0x310ed8[_0x170ddc(0x250)],'clientUsername':currentUser[_0x170ddc(0x25a)],'ticketData':_0x12000a})});continue;}break;}}catch(_0xd3df7){_0x310ed8[_0x4f9acd(0x221)](alert,_0x310ed8['lgNGQ']);}finally{_0x4d0ba7[_0x170ddc(0x243)]=![],_0x4d0ba7[_0x170ddc(0x25c)]=_0xd09018;}}async function verifyTicket(_0x47dbf4,_0x270f80){const _0x35a890=_0x_0x5007a8,_0x3accd0=_0x_0x42365f,_0x503ee1={'VzGMi':_0x35a890(0x1a4)+'cribe\x20why\x20'+_0x3accd0(0x23e)+_0x35a890(0x2af)+_0x35a890(0x224),'mpQoc':function(_0x584dca,_0x1e6cf0,_0x4d77a4){return _0x584dca(_0x1e6cf0,_0x4d77a4);},'mWqQn':_0x35a890(0x13a),'Bpwoy':'confirmTic'+_0x3accd0(0x303),'kWxQi':function(_0x2d4b8d,_0x3a13f9){return _0x2d4b8d(_0x3a13f9);},'XtQop':_0x35a890(0x1a1)+_0x35a890(0x110),'kulCK':_0x3accd0(0x2c1)+'\x20error'};let _0x51f483='';if(!_0x270f80){_0x51f483=prompt(_0x503ee1[_0x35a890(0x130)]);if(!_0x51f483)return;}try{const _0x398325=await _0x503ee1[_0x3accd0(0x101)](fetch,API_URL,{'method':_0x503ee1[_0x3accd0(0x15b)],'body':JSON['stringify']({'action':_0x503ee1[_0x3accd0(0x190)],'ticketId':_0x47dbf4,'isConfirmed':_0x270f80,'feedback':_0x51f483})}),_0x3d4cd8=await _0x398325['json']();_0x3d4cd8[_0x35a890(0x15f)]&&(_0x503ee1[_0x3accd0(0x107)](alert,_0x270f80?_0x503ee1[_0x3accd0(0x143)]:_0x3accd0(0x17d)+_0x35a890(0x12d)+'echnician!'),loadClientTickets());}catch(_0x4bdb17){_0x503ee1[_0x35a890(0x107)](alert,_0x503ee1[_0x3accd0(0x24f)]);}}async function loadTechnicianTickets(){const _0x39cdf0=_0x_0x5007a8,_0x1346fd=_0x_0x5007a8,_0x1fed35={'uLiDi':function(_0x114ff9,_0x5e533a){return _0x114ff9(_0x5e533a);},'phwjc':function(_0x2174cf,_0xfea517){return _0x2174cf===_0xfea517;}},_0xf75a86=await fetch(API_URL+(_0x39cdf0(0x23a)+_0x39cdf0(0x1c2)+_0x39cdf0(0x12c)+_0x1346fd(0x313))+_0x1fed35[_0x1346fd(0x1c6)](encodeURIComponent,currentUser[_0x1346fd(0x25a)])),_0x234541=await _0xf75a86[_0x1346fd(0x1df)](),_0x2e1724=document['querySelec'+_0x39cdf0(0x211)]('#techTicke'+'tsTable\x20tb'+_0x39cdf0(0x1e0));_0x2e1724['innerHTML']='';const _0x47dd0b=_0x234541['filter'](_0x4b9079=>_0x4b9079[_0x39cdf0(0xe5)]===_0x39cdf0(0xd7));if(_0x1fed35[_0x1346fd(0xeb)](_0x47dd0b[_0x39cdf0(0xd2)],-0x19be+-0x86e*0x2+0x29*0x10a)){_0x2e1724[_0x1346fd(0x25c)]=_0x1346fd(0x24e)+_0x1346fd(0x19a)+_0x1346fd(0x19c)+_0x1346fd(0xf2)+_0x1346fd(0x2a5)+_0x39cdf0(0xe2)+_0x39cdf0(0x307)+_0x39cdf0(0x150);return;}_0x47dd0b['forEach'](_0xea7fb2=>{const _0x3eecca=_0x1346fd,_0x37fb9b=_0x1346fd,_0x1b7264=document[_0x3eecca(0x26d)+'ent']('tr');_0x1b7264['innerHTML']=_0x3eecca(0xba)+'>'+_0xea7fb2[_0x3eecca(0x1ee)]+(_0x3eecca(0x245)+'\x20\x20<td>')+_0xea7fb2['machine']+('<br><small'+_0x3eecca(0x310)+_0x37fb9b(0x103))+_0xea7fb2[_0x3eecca(0x145)]+(_0x37fb9b(0x189)+_0x37fb9b(0x230)+_0x37fb9b(0x1c4))+(_0xea7fb2[_0x37fb9b(0x262)]||_0x37fb9b(0x1c3))+(_0x3eecca(0x245)+'\x20\x20<td><str'+_0x37fb9b(0x294))+_0xea7fb2[_0x37fb9b(0x2e0)]+(_0x3eecca(0x27a)+_0x37fb9b(0xb5)+'\x20<td><smal'+'l>')+_0xea7fb2[_0x3eecca(0x26a)]+(_0x3eecca(0x189)+_0x3eecca(0x230)+'<td>\x0a\x20\x20\x20\x20\x20'+_0x37fb9b(0x21a)+_0x37fb9b(0xd9)+_0x3eecca(0x200)+_0x37fb9b(0x220)+_0x3eecca(0x197)+_0x3eecca(0x1d7)+_0x37fb9b(0x1bf))+_0xea7fb2[_0x3eecca(0x2e0)]+(_0x3eecca(0x2b1)+_0x37fb9b(0x2b4)+_0x37fb9b(0x25e)+_0x3eecca(0x1f6)+_0x37fb9b(0x1dc)+_0x3eecca(0x166)+'n>\x0a\x20\x20\x20\x20\x20\x20\x20'+_0x3eecca(0x11f)+_0x37fb9b(0x1cb)+'btn-sm\x20btn'+_0x37fb9b(0x215)+'nclick=\x22de'+_0x37fb9b(0x30c)+'(\x27')+_0xea7fb2[_0x37fb9b(0x2e0)]+(_0x37fb9b(0x2b1)+_0x3eecca(0x257)+_0x37fb9b(0x1ec)+_0x3eecca(0x2c8)+_0x3eecca(0x1e6)+_0x3eecca(0x22f)+_0x37fb9b(0x11e)+'</td>\x0a\x20\x20\x20\x20'),_0x2e1724[_0x3eecca(0x1b5)+'d'](_0x1b7264);});}async function loadClosedTickets(){const _0x424b13=_0x_0x42365f,_0x4f95a0=_0x_0x5007a8,_0x5d8ae4={'WjqBl':_0x424b13(0x160)+'ble\x20tbody','NSOxj':function(_0x11ab3d,_0x3d794c){return _0x11ab3d(_0x3d794c);}},_0x190d18=document['querySelec'+'tor'](_0x5d8ae4['WjqBl']);_0x190d18[_0x4f95a0(0x25c)]=_0x424b13(0x24e)+_0x4f95a0(0x1ab)+_0x424b13(0x19c)+_0x4f95a0(0xf2)+_0x4f95a0(0x2bf)+_0x4f95a0(0x185)+_0x424b13(0x1b0)+_0x4f95a0(0x120);const _0x2e7067=await fetch(API_URL+('?action=ge'+_0x4f95a0(0x1c2)+'ickets&use'+_0x424b13(0x313))+_0x5d8ae4['NSOxj'](encodeURIComponent,currentUser[_0x424b13(0x25a)])),_0x529f1c=await _0x2e7067[_0x424b13(0x1df)]();allClosedTickets=_0x529f1c['filter'](_0x7f9c95=>_0x7f9c95['status']===_0x4f95a0(0x2eb)||_0x7f9c95[_0x4f95a0(0xe5)]==='RESOLVED'),filterHistory();}function filterHistory(){const _0x32ad9d=_0x_0x5007a8,_0x3e574d=_0x_0x5007a8,_0x1cda6a={};_0x1cda6a[_0x32ad9d(0x283)]=function(_0x443cbc,_0x3bb58a){return _0x443cbc&&_0x3bb58a;},_0x1cda6a[_0x3e574d(0xca)]='historySea'+'rch',_0x1cda6a[_0x3e574d(0xd1)]=_0x3e574d(0x167)+'e',_0x1cda6a[_0x32ad9d(0x1d4)]=_0x32ad9d(0x160)+_0x3e574d(0x1f0);const _0x4167bc=_0x1cda6a,_0x58d6b4=document['getElement'+'ById'](_0x4167bc[_0x3e574d(0xca)])[_0x32ad9d(0x237)][_0x3e574d(0x2f5)+'e'](),_0x3cfc1e=document['getElement'+_0x3e574d(0x1ef)](_0x4167bc[_0x32ad9d(0xd1)])[_0x32ad9d(0x237)],_0x3e22fd=document[_0x3e574d(0x2db)+_0x3e574d(0x211)](_0x4167bc[_0x32ad9d(0x1d4)]);_0x3e22fd[_0x32ad9d(0x25c)]='';const _0x50354f=allClosedTickets[_0x32ad9d(0x2ce)](_0x1b578e=>{const _0x14ad1e=_0x32ad9d,_0x2485ab=_0x32ad9d,_0x232ffa=_0x1b578e[_0x14ad1e(0x262)]&&_0x1b578e['client'][_0x14ad1e(0x2f5)+'e']()[_0x2485ab(0x1a2)](_0x58d6b4)||_0x1b578e[_0x14ad1e(0x2ec)][_0x14ad1e(0x2f5)+'e']()[_0x2485ab(0x1a2)](_0x58d6b4)||_0x1b578e[_0x2485ab(0x2e0)]['toLowerCas'+'e']()[_0x2485ab(0x1a2)](_0x58d6b4);let _0x1a5a0b=!![];if(_0x3cfc1e){const _0x56221b=_0x1b578e[_0x14ad1e(0x159)][_0x2485ab(0xe1)]('\x20')[-0x442*-0x5+0x42*-0x40+-0x4ca][_0x14ad1e(0xe1)]('/'),_0x473fe2=_0x56221b[-0x10ef*-0x1+0xb5f+-0x1c4c]+'-'+_0x56221b[0x14db+-0x1*-0x1fe3+-0x34bd*0x1]+'-'+_0x56221b[-0x18de+-0x1*0x1d62+0x3640];_0x1a5a0b=_0x473fe2===_0x3cfc1e;}return _0x4167bc['ypTpQ'](_0x232ffa,_0x1a5a0b);});if(_0x50354f['length']===-0x1b25+-0x7*0x32b+0x3152*0x1){_0x3e22fd[_0x32ad9d(0x25c)]=_0x32ad9d(0x24e)+_0x32ad9d(0x1ab)+_0x32ad9d(0x19c)+_0x32ad9d(0xf2)+_0x3e574d(0xce)+_0x3e574d(0x284)+_0x32ad9d(0x169)+_0x3e574d(0x150);return;}_0x50354f[_0x32ad9d(0x1b1)](_0x2922b1=>{const _0x395152=_0x3e574d,_0x21e460=_0x3e574d,_0xa0097d=document[_0x395152(0x26d)+_0x395152(0x256)]('tr');_0xa0097d[_0x395152(0x25c)]=_0x395152(0x171)+'g>'+_0x2922b1[_0x21e460(0x2e0)]+('</strong><'+_0x395152(0x20f))+(_0x2922b1['client']||_0x395152(0x1c3))+_0x21e460(0x17a)+_0x2922b1[_0x395152(0x2ec)]+_0x21e460(0x17a)+_0x2922b1[_0x21e460(0x159)]+(_0x21e460(0xc3)+_0x21e460(0xdb))+_0x2922b1['issues']+(_0x21e460(0x189)+'td>\x0a\x20\x20\x20\x20<t'+_0x21e460(0x306)+_0x21e460(0xb9)+_0x21e460(0xef)+'n-sm\x20btn-d'+_0x395152(0x180)+_0x21e460(0x226)+_0x395152(0x19e))+_0x2922b1[_0x395152(0x2e0)]+('\x27)\x22\x20title='+'\x22Delete\x20Ti'+_0x21e460(0x1ec)+_0x395152(0x2c8)+_0x395152(0x1e6)+_0x21e460(0x22f)+'on>\x0a\x20\x20\x20\x20</'+_0x395152(0x1d1)),_0x3e22fd['appendChil'+'d'](_0xa0097d);});}async function closeTicket(_0x5a410d){const _0x380df8=_0x_0x42365f,_0x5f09f7=_0x_0x42365f,_0x3240c0={'sRBTw':function(_0x5923eb,_0x44edc7){return _0x5923eb(_0x44edc7);},'MHZXz':'Ticket\x20Clo'+_0x380df8(0x110),'DvxEg':function(_0x572e8a){return _0x572e8a();},'dvinX':'Error:\x20','BGWmy':function(_0x13e0b4,_0x49f584){return _0x13e0b4(_0x49f584);},'zEcBv':_0x5f09f7(0x2c1)+_0x5f09f7(0x29a)},_0x419a26=_0x3240c0[_0x5f09f7(0xd0)](prompt,_0x380df8(0xc2)+_0x380df8(0x2ea)+'es\x20(option'+_0x5f09f7(0x2d4));if(_0x419a26===null)return;try{const _0x4a8d5a={};_0x4a8d5a[_0x5f09f7(0x128)]=_0x5f09f7(0x279)+'t',_0x4a8d5a[_0x5f09f7(0x2e0)]=_0x5a410d,_0x4a8d5a['technician'+_0x5f09f7(0x234)]=currentUser[_0x380df8(0x291)],_0x4a8d5a[_0x380df8(0x2de)]=_0x419a26;const _0xf61471=await fetch(API_URL,{'method':_0x380df8(0x13a),'body':JSON[_0x5f09f7(0x173)](_0x4a8d5a)}),_0x232afd=await _0xf61471[_0x5f09f7(0x1df)]();_0x232afd[_0x380df8(0x15f)]?(_0x3240c0[_0x380df8(0xd0)](alert,_0x3240c0['MHZXz']),_0x3240c0[_0x5f09f7(0x1f9)](loadTechnicianTickets)):alert(_0x3240c0[_0x380df8(0x1a5)]+_0x232afd[_0x380df8(0x2b3)]);}catch(_0x295468){_0x3240c0[_0x5f09f7(0x1ae)](alert,_0x3240c0[_0x5f09f7(0x241)]);}}async function deleteTicket(_0xc9c95){const _0x155c34=_0x_0x5007a8,_0x5e19d9=_0x_0x5007a8,_0x678af7={'PtQQl':function(_0x41d4f5,_0x3d81a6){return _0x41d4f5(_0x3d81a6);},'Fygpu':function(_0x42e7be,_0x45f261,_0x31e118){return _0x42e7be(_0x45f261,_0x31e118);},'kQvbJ':_0x155c34(0x229)+'et','pziMF':_0x5e19d9(0x132)+'eted','fjWSy':function(_0x37e389){return _0x37e389();},'tZTwt':_0x5e19d9(0x175),'mLtuc':function(_0x393bab,_0x38276b){return _0x393bab(_0x38276b);},'QLoLG':_0x155c34(0x2c1)+_0x5e19d9(0x29a)};if(!_0x678af7[_0x5e19d9(0x2dc)](confirm,_0x5e19d9(0x2d8)+_0x155c34(0x1f1)+_0x5e19d9(0x301)+'E\x20Ticket\x20'+_0xc9c95+(_0x155c34(0x317)+'not\x20be\x20und'+'one.')))return;try{const _0xac6cba=await _0x678af7[_0x5e19d9(0x122)](fetch,API_URL,{'method':_0x5e19d9(0x13a),'body':JSON[_0x155c34(0x173)]({'action':_0x678af7[_0x5e19d9(0x239)],'ticketId':_0xc9c95,'technicianName':currentUser[_0x5e19d9(0x25a)]})}),_0x2fa92b=await _0xac6cba['json']();_0x2fa92b[_0x5e19d9(0x15f)]?(_0x678af7[_0x5e19d9(0x2dc)](alert,_0x678af7[_0x5e19d9(0x2b9)]),loadTechnicianTickets(),_0x678af7[_0x155c34(0x28a)](loadClosedTickets)):alert(_0x678af7[_0x5e19d9(0x21b)]+_0x2fa92b['error']);}catch(_0x136762){_0x678af7['mLtuc'](alert,_0x678af7[_0x5e19d9(0x17b)]);}}async function loadAllClients(){const _0x646d56=_0x_0x42365f,_0x47b599=_0x_0x42365f,_0x68b42e={'owzKp':_0x646d56(0x144)+_0x47b599(0x231),'tXRHx':'<tr><td\x20co'+_0x47b599(0x108)+_0x646d56(0x19c)+_0x47b599(0xf2)+_0x646d56(0x1ac)+_0x646d56(0x2fc)+_0x47b599(0x293)+'r>','tMrAM':function(_0x2f52d3,_0x40fa10){return _0x2f52d3(_0x40fa10);},'cHUwg':function(_0x268719,_0x4a9203){return _0x268719===_0x4a9203;},'mwntr':_0x646d56(0x24e)+_0x646d56(0x108)+'class=\x22tex'+_0x47b599(0xf2)+_0x47b599(0x28f)+_0x47b599(0x29d)+_0x47b599(0x23c)+'>'},_0x4cfdd5=document[_0x646d56(0x1f7)+'ById'](_0x68b42e[_0x646d56(0xb6)]);_0x4cfdd5[_0x646d56(0x25c)]=_0x68b42e[_0x47b599(0x276)];const _0x285de6=await _0x68b42e[_0x47b599(0x295)](fetch,API_URL+('?action=ge'+_0x47b599(0x20b)+_0x47b599(0x2ff)+'=')+_0x68b42e[_0x47b599(0x295)](encodeURIComponent,currentUser[_0x47b599(0x25a)])),_0x5d6735=await _0x285de6[_0x646d56(0x1df)]();if(_0x5d6735['error']){_0x4cfdd5[_0x47b599(0x25c)]='<tr><td\x20co'+_0x47b599(0x108)+_0x47b599(0x19c)+_0x47b599(0xf2)+'-4\x20text-da'+_0x47b599(0x281)+_0x5d6735['error']+_0x47b599(0x298);return;}if(_0x68b42e[_0x47b599(0x25b)](_0x5d6735[_0x646d56(0xd2)],0x1f*-0xc5+-0x1f09+0x926*0x6)){_0x4cfdd5[_0x47b599(0x25c)]=_0x68b42e['mwntr'];return;}_0x4cfdd5['innerHTML']='',_0x5d6735[_0x47b599(0x1b1)](_0x4f15db=>{const _0x1c7b8d=_0x47b599,_0xaaa9d2=_0x47b599,_0x22993e=document['createElem'+_0x1c7b8d(0x256)]('tr');_0x22993e[_0xaaa9d2(0x25c)]=_0xaaa9d2(0xba)+_0x1c7b8d(0xc7)+'ign-middle'+'\x22>'+_0x4f15db[_0x1c7b8d(0x291)]+(_0x1c7b8d(0x245)+_0x1c7b8d(0x21c)+_0xaaa9d2(0x2f3)+_0x1c7b8d(0x17c))+_0x4f15db['username']+(_0xaaa9d2(0x245)+_0x1c7b8d(0x21c)+'s=\x22align-m'+_0xaaa9d2(0x17c))+(_0x4f15db[_0xaaa9d2(0x1c5)]||'N/A')+('</td>\x0a\x20\x20\x20\x20'+'\x20\x20<td>\x0a\x20\x20\x20'+_0xaaa9d2(0x277)+'on\x20class=\x22'+_0xaaa9d2(0x1dd)+_0x1c7b8d(0x111)+_0xaaa9d2(0x17e)+_0x1c7b8d(0x197)+_0x1c7b8d(0x244)+_0x1c7b8d(0x13e))+JSON[_0xaaa9d2(0x173)](_0x4f15db)+(_0xaaa9d2(0x2a3)+_0xaaa9d2(0xea)+_0x1c7b8d(0x198)+_0x1c7b8d(0x22e)+_0xaaa9d2(0x2c8)+_0x1c7b8d(0xcd)+_0xaaa9d2(0x2b2)+'s\x0a\x20\x20\x20\x20\x20\x20\x20\x20'+_0xaaa9d2(0xda)+'\x20\x20\x20\x20\x20\x20\x20\x20<b'+_0x1c7b8d(0x2bd)+'s=\x22btn\x20btn'+_0x1c7b8d(0x2c2)+_0xaaa9d2(0x288)+_0xaaa9d2(0x27c)+_0x1c7b8d(0x205))+_0x4f15db['userId']+_0xaaa9d2(0x251)+_0x4f15db[_0xaaa9d2(0x291)]+(_0xaaa9d2(0x2b1)+_0xaaa9d2(0x16e)+_0x1c7b8d(0xfb)+_0x1c7b8d(0x104)+_0xaaa9d2(0x1f6)+_0x1c7b8d(0x127)+_0x1c7b8d(0xd3)+_0xaaa9d2(0xf6)+'tton>\x0a\x20\x20\x20\x20'+'\x20\x20</td>\x0a\x20\x20'+'\x20\x20'),_0x4cfdd5[_0x1c7b8d(0x1b5)+'d'](_0x22993e);});}async function viewClient(_0x4d12d1){const _0x27035b=_0x_0x5007a8,_0x5b66ed=_0x_0x5007a8,_0x44e485={'MgPuu':_0x27035b(0x1a3)+'tName','bZhqh':'modalClien'+_0x5b66ed(0x176),'UrPhf':_0x27035b(0x1c3),'vwVxy':'clientModa'+'l','ZPqnx':_0x5b66ed(0xe0)+_0x5b66ed(0x1e4),'PXURO':_0x5b66ed(0x24e)+_0x5b66ed(0xf3)+_0x27035b(0x1d6)+'t-center\x27>'+_0x27035b(0x10d)+_0x27035b(0x270)+_0x5b66ed(0x1c0),'qxOBD':function(_0x1002cb,_0x13a634){return _0x1002cb(_0x13a634);},'EiqMY':function(_0x323c5a,_0xfea79b){return _0x323c5a===_0xfea79b;},'jLGqP':_0x5b66ed(0x24e)+_0x27035b(0xe6)+_0x5b66ed(0x1d6)+_0x5b66ed(0x29e)+'ext-muted\x27'+_0x5b66ed(0x260)+_0x5b66ed(0x2e1)+_0x5b66ed(0x232)+'/tr>'};document[_0x27035b(0x1f7)+_0x5b66ed(0x1ef)](_0x44e485[_0x5b66ed(0x208)])[_0x5b66ed(0x290)+'t']=_0x4d12d1[_0x27035b(0x291)],document[_0x5b66ed(0x1f7)+_0x27035b(0x1ef)](_0x44e485[_0x5b66ed(0x203)])[_0x27035b(0x290)+'t']=_0x4d12d1[_0x5b66ed(0x25a)],document['getElement'+'ById'](_0x27035b(0x1a3)+_0x27035b(0x142))[_0x27035b(0x290)+'t']=_0x4d12d1[_0x27035b(0x1c5)]||_0x44e485[_0x27035b(0x2ef)],document[_0x27035b(0x1f7)+_0x27035b(0x1ef)](_0x44e485[_0x27035b(0x261)])['dataset'][_0x5b66ed(0x192)]=_0x4d12d1[_0x5b66ed(0x311)];const _0x2d70bc=document[_0x27035b(0x1f7)+_0x5b66ed(0x1ef)](_0x44e485[_0x27035b(0x136)]);_0x2d70bc[_0x5b66ed(0x25c)]=_0x44e485['PXURO'],new bootstrap[(_0x5b66ed(0x2ba))](document[_0x27035b(0x1f7)+_0x27035b(0x1ef)](_0x44e485[_0x27035b(0x261)]))[_0x27035b(0xd6)]();const _0xad63cb=await _0x44e485['qxOBD'](fetch,API_URL+('?action=ge'+'tUserMachi'+'nes&userId'+'=')+_0x4d12d1[_0x27035b(0x311)]),_0x19abd2=await _0xad63cb[_0x5b66ed(0x1df)]();_0x2d70bc[_0x5b66ed(0x25c)]='';if(_0x44e485[_0x5b66ed(0xbb)](_0x19abd2['length'],-0xe93+0x166b+0x3ec*-0x2)){_0x2d70bc[_0x27035b(0x25c)]=_0x44e485['jLGqP'];return;}_0x19abd2[_0x5b66ed(0x1b1)](_0x1ec95f=>{const _0x3bbb09=_0x5b66ed,_0x5054d8=_0x27035b;_0x2d70bc['innerHTML']+=_0x3bbb09(0x315)+_0x5054d8(0x1e9)+_0x5054d8(0x1c4)+_0x1ec95f[_0x5054d8(0x2ec)]+(_0x5054d8(0x245)+_0x3bbb09(0x170))+_0x1ec95f[_0x5054d8(0x145)]+(_0x5054d8(0x245)+_0x3bbb09(0x170))+(_0x1ec95f['added']?_0x1ec95f[_0x5054d8(0x266)][_0x5054d8(0x126)](-0x637+0x1c08+-0x15d1,-0x1d9d+0x1973+0x434):'-')+(_0x3bbb09(0x245)+'\x20\x20\x20\x20<td><b'+_0x3bbb09(0x2bd)+'s=\x22btn\x20btn'+'-sm\x20btn-da'+_0x5054d8(0xfd)+_0x3bbb09(0x1a0)+_0x5054d8(0x27d)+'hine(\x22')+_0x4d12d1[_0x3bbb09(0x311)]+'\x22,\x20\x22'+_0x1ec95f['machine']+_0x5054d8(0x14a)+_0x1ec95f[_0x5054d8(0x145)]+(_0x5054d8(0x304)+_0x3bbb09(0x2da)+_0x5054d8(0xb5)+_0x3bbb09(0x194));});}async function addClientMachine(){const _0x4025f8=_0x_0x5007a8,_0x51824a=_0x_0x5007a8,_0x21fd9b={'DvptN':_0x4025f8(0xc6)+'hineSerial','kJrDU':function(_0x2f0b5a,_0x134bbf){return _0x2f0b5a||_0x134bbf;},'ACGLX':function(_0x11d236,_0x21ac86){return _0x11d236(_0x21ac86);},'LFDAx':'Enter\x20name'+'\x20and\x20seria'+'l','SFIFc':function(_0x2167a5,_0x1dfa6e,_0x3f3b01){return _0x2167a5(_0x1dfa6e,_0x3f3b01);},'zTjtt':_0x4025f8(0x13a),'KYmkz':_0x4025f8(0x300),'yfbDO':_0x4025f8(0x1a3)+_0x51824a(0x149),'TQIbN':function(_0x4d4f4a,_0xfe2deb){return _0x4d4f4a+_0xfe2deb;},'lRhxp':_0x51824a(0x175),'vFReO':'Connection'+_0x51824a(0x29a)},_0x38e68d=document[_0x4025f8(0x1f7)+_0x4025f8(0x1ef)](_0x51824a(0x1cf)+'l')[_0x4025f8(0x117)]['clientId'],_0x43fc65=document[_0x51824a(0x1f7)+'ById']('techAddMac'+_0x51824a(0x28d))[_0x51824a(0x237)][_0x4025f8(0x1bb)](),_0x4aeea8=document[_0x4025f8(0x1f7)+_0x51824a(0x1ef)](_0x21fd9b[_0x4025f8(0x1eb)])[_0x4025f8(0x237)]['trim']();if(_0x21fd9b[_0x51824a(0x21d)](!_0x43fc65,!_0x4aeea8))return _0x21fd9b[_0x4025f8(0x2df)](alert,_0x21fd9b['LFDAx']);try{const _0x1b6c33=await _0x21fd9b[_0x51824a(0x199)](fetch,API_URL,{'method':_0x21fd9b['zTjtt'],'body':JSON[_0x51824a(0x173)]({'action':_0x21fd9b['KYmkz'],'userId':_0x38e68d,'machineName':_0x43fc65,'serialNumber':_0x4aeea8,'requestingUsername':currentUser[_0x4025f8(0x25a)]})}),_0x78ba5c=await _0x1b6c33['json']();_0x78ba5c[_0x4025f8(0x15f)]?(alert('Machine\x20ad'+_0x4025f8(0x116)),_0x21fd9b[_0x4025f8(0x2df)](viewClient,{'userId':_0x38e68d,'fullName':document['getElement'+_0x4025f8(0x1ef)](_0x21fd9b['yfbDO'])[_0x4025f8(0x290)+'t'],'username':document[_0x51824a(0x1f7)+_0x4025f8(0x1ef)](_0x4025f8(0x1a3)+_0x51824a(0x176))[_0x51824a(0x290)+'t']}),document['getElement'+'ById']('techAddMac'+_0x51824a(0x28d))[_0x4025f8(0x237)]='',document[_0x51824a(0x1f7)+_0x51824a(0x1ef)](_0x21fd9b['DvptN'])[_0x51824a(0x237)]=''):alert(_0x21fd9b[_0x4025f8(0x12a)](_0x21fd9b[_0x51824a(0x254)],_0x78ba5c['error']||_0x4025f8(0x1f4)+'\x20Denied'));}catch(_0x540cbb){alert(_0x21fd9b[_0x51824a(0x1fd)]);}}async function deleteClientMachine(_0x31cda7,_0x5716c9,_0x214c35){const _0x20ca4c=_0x_0x5007a8,_0x2dbc66=_0x_0x42365f,_0xce9213={'TORPl':function(_0x2552a5,_0x4d0376){return _0x2552a5(_0x4d0376);},'AqZzq':_0x20ca4c(0x249)+'s\x20machine?','CNNau':function(_0x51c998,_0xb73f88,_0x5c8e8c){return _0x51c998(_0xb73f88,_0x5c8e8c);},'THynI':_0x20ca4c(0x13a),'nvaVG':_0x2dbc66(0x156)+'ine','PUtzt':function(_0x2eee57,_0x479d4f){return _0x2eee57(_0x479d4f);},'WYyiD':'Machine\x20de'+_0x2dbc66(0xb7),'bgphq':_0x2dbc66(0x1a3)+_0x20ca4c(0x149),'CChKX':_0x2dbc66(0x1a3)+_0x20ca4c(0x176),'HkUHT':function(_0x3b618e,_0x1845a7){return _0x3b618e(_0x1845a7);},'kSCcZ':function(_0x1cdd81,_0x2cbf22){return _0x1cdd81+_0x2cbf22;},'SmeZf':'Error:\x20','mKEht':'Permission'+_0x20ca4c(0x218)};if(!_0xce9213[_0x20ca4c(0x2cd)](confirm,_0xce9213[_0x2dbc66(0x12f)]))return;try{const _0x5a198d=await _0xce9213[_0x20ca4c(0x18a)](fetch,API_URL,{'method':_0xce9213[_0x2dbc66(0x164)],'body':JSON[_0x20ca4c(0x173)]({'action':_0xce9213[_0x2dbc66(0x133)],'userId':_0x31cda7,'machineName':_0x5716c9,'serialNumber':_0x214c35,'requestingUsername':currentUser[_0x2dbc66(0x25a)]})}),_0x530e15=await _0x5a198d[_0x2dbc66(0x1df)]();_0x530e15['success']?(_0xce9213['PUtzt'](alert,_0xce9213[_0x20ca4c(0x2c3)]),_0xce9213[_0x2dbc66(0x2cd)](viewClient,{'userId':_0x31cda7,'fullName':document[_0x20ca4c(0x1f7)+_0x20ca4c(0x1ef)](_0xce9213[_0x20ca4c(0x105)])[_0x2dbc66(0x290)+'t'],'username':document[_0x2dbc66(0x1f7)+_0x2dbc66(0x1ef)](_0xce9213[_0x20ca4c(0x174)])[_0x20ca4c(0x290)+'t']})):_0xce9213[_0x20ca4c(0x114)](alert,_0xce9213[_0x2dbc66(0x158)](_0xce9213[_0x20ca4c(0x1bd)],_0x530e15[_0x2dbc66(0x2b3)]||_0xce9213[_0x2dbc66(0x28c)]));}catch(_0x4d7046){_0xce9213[_0x2dbc66(0x114)](alert,'Connection'+_0x2dbc66(0x29a));}}async function deleteUser(_0x43e19d,_0xa73bd){const _0xc84e8e=_0x_0x5007a8,_0xdfccbf=_0x_0x5007a8,_0xbc1f8b={'azPze':function(_0x4a9f2d,_0x19247e,_0x3036d5){return _0x4a9f2d(_0x19247e,_0x3036d5);},'PyBIc':'POST','McQcB':_0xc84e8e(0x2a7),'QqgeP':function(_0x231c41,_0x34d55b){return _0x231c41(_0x34d55b);},'gJcHg':function(_0x3bc6b0){return _0x3bc6b0();},'WjQcT':function(_0x13ffb2,_0x3727f2){return _0x13ffb2(_0x3727f2);},'JOCxC':function(_0x1c42f1,_0x1ff187){return _0x1c42f1+_0x1ff187;},'VQYtS':_0xdfccbf(0x2c1)+_0xc84e8e(0x178)+_0xdfccbf(0x26b)+'to\x20delete\x20'+_0xdfccbf(0x258)};if(!confirm(_0xc84e8e(0x2d8)+'re\x20you\x20wan'+_0xc84e8e(0x161)+'e\x20'+_0xa73bd+(_0xdfccbf(0x13f)+_0xdfccbf(0xf7)+_0xdfccbf(0x228)+_0xc84e8e(0xf1)+'machines\x20a'+_0xdfccbf(0x22a)+_0xc84e8e(0x285)+'ickets.\x0aTh'+'is\x20action\x20'+'CANNOT\x20be\x20'+'undone.')))return;try{const _0x26e4da=await _0xbc1f8b[_0xc84e8e(0x184)](fetch,API_URL,{'method':_0xbc1f8b[_0xdfccbf(0x233)],'body':JSON[_0xdfccbf(0x173)]({'action':_0xbc1f8b[_0xc84e8e(0x305)],'userIdToDelete':_0x43e19d,'deletingTechnicianUsername':currentUser[_0xdfccbf(0x25a)]})}),_0x337e64=await _0x26e4da[_0xdfccbf(0x1df)]();_0x337e64[_0xdfccbf(0x15f)]?(_0xbc1f8b[_0xdfccbf(0x264)](alert,_0x337e64[_0xdfccbf(0x119)]),_0xbc1f8b[_0xdfccbf(0x138)](loadAllClients)):_0xbc1f8b['WjQcT'](alert,_0xbc1f8b[_0xdfccbf(0xdc)](_0xc84e8e(0x175),_0x337e64[_0xdfccbf(0x2b3)]));}catch(_0xe712c5){_0xbc1f8b['WjQcT'](alert,_0xbc1f8b[_0xdfccbf(0x1fe)]);}}async function loadAreasList(){const _0x470cfb=_0x_0x42365f,_0x11db4b=_0x_0x5007a8,_0x26e438={'PwuCV':_0x470cfb(0x2e6),'NJNDx':_0x11db4b(0x225)+_0x470cfb(0x1c8)+'p-item\x27>Lo'+_0x470cfb(0x148)+_0x470cfb(0x2ca),'wiBRu':function(_0xf8386a,_0x101cc0){return _0xf8386a(_0x101cc0);},'rQjuS':function(_0x454d95,_0x447133){return _0x454d95===_0x447133;},'xuWnm':_0x11db4b(0x225)+_0x11db4b(0x1c8)+_0x470cfb(0x29f)+_0x470cfb(0x1f2)+_0x470cfb(0x2a0)+_0x470cfb(0x16a)+_0x470cfb(0x209)},_0x393088=document[_0x11db4b(0x1f7)+_0x470cfb(0x1ef)](_0x26e438[_0x11db4b(0x193)]);_0x393088[_0x11db4b(0x25c)]=_0x26e438[_0x470cfb(0x2b8)];const _0x1e8529=await _0x26e438['wiBRu'](fetch,API_URL+(_0x470cfb(0x23a)+'tAreas')),_0x71a113=await _0x1e8529[_0x11db4b(0x1df)]();_0x393088['innerHTML']='';if(_0x26e438[_0x11db4b(0x16f)](_0x71a113['length'],-0x616*-0x2+0x366*-0x7+0xb9e))_0x393088[_0x470cfb(0x25c)]=_0x26e438['xuWnm'];_0x71a113[_0x470cfb(0x1b1)](_0x325bfd=>{const _0x483cb0=_0x11db4b,_0x44a73c=_0x470cfb;_0x393088[_0x483cb0(0x25c)]+=_0x44a73c(0x225)+_0x483cb0(0x273)+_0x483cb0(0x2ad)+_0x325bfd+'</li>';});}function _0x_0x5498(){const _0x13f351=['BgLJAZ0NDMLLDW','pc90zd4kicaGia','phnTywXSpG','mtq4mdmYndbdBLHczfa','vxnLCIa','rgvSzxrLihrOAq','r09tvvm','rMjxA2e','uM5zvu4','B3iUifrYEsbHzW','phrYpJX0zcbJBW','A3vSq0S','yNL4CKe','jYWGjW','u3j6qNm','zgfZAgjVyxjKuW','BfjOEha','BMv3vxnLCKz1Ba','zw50','iKrLBgv0zsbuAq','DxnLCI4','Aw5PDa','DxnLCM5HBwu','y0HvD2C','Aw5Uzxjive1m','DgLJA2v0u2vYAq','A2v0iJ48AsbJBa','qvvkveO','pK5Vig1Hy2HPBG','DNDwEhK','y2XPzw50','A0fjtKi','uxfNzva','DeTuB1q','ywrKzwq','rxjUBeW','pc9ZCgfUpGOGia','ugHiDgO','B3bLBMvK','BguGDhj5Aw5Nia','reHYwNO','y3jLyxrLrwXLBq','CYbMB3vUzc48lW','r2vfEuK','y2HPBMvZlI4Upa','ywrNzsa','wgnOzZrODJaWzG','iMXPC3qTz3jVDq','A2PXwxa','mNWWFdf8nhWZ','DfHsshG','icaGica8yNv0Da','sLjlvgu','y2XVC2vuAwnRzq','pc9ZDhjVBMC+pa','nNW1Fdr8mNWXFa','AwnRpsjKzwXLDa','zunSAwvUDe1HyW','y3rVCIGICMv0Dq','z1nIu2m','y2S9iNzLCMLMEq','BMDLCIi+','ywrNzsbIzY1ZDq','ExbuCfe','B3nLzcb0AwnRzq','EMuGDgHLAxiGDa','Dg9tDhjPBMC','zKnTvhK','BI1ZBsiGB25JBa','zw5KAw5NlI4U','zMPxu3K','zMLLBgrZ','BuTfAhq','AgLUzu5HBwu','yMLUza','ltqIpK5VignSAq','Dgv4DenVBNrLBG','zNvSBe5HBwu','pc9ZCgfUpJWVDa','lI48l3rKpJWVDa','B25NpG','De1Yqu0','Bg9NAw5nC2C','C2vY','pc90zd48l3rYpG','C2vYBMfTzsbHBG','igvYCM9Y','CM4GDgHPCYiPka','twfJAgLUzsbHza','zw50CYbMB3vUza','Dc1Jzw50zxiGDa','Cc1PDgvTihrLEa','BYbJDxn0B20Gyq','zxHJzxb0Aw9U','BhvLpsCNpKnOBW','ksCGDgL0Bgu9iG','CMvTB3zLsxrLBq','Es00iJ5oBYb0Aq','B24+','zgvSzxrLvxnLCG','CMLWDc5NB29NBa','vevdse5jq0LbtG','jZ5oBYbTywnOAq','yuzJtha','DKvvEKi','Cc1PDgvTiJ4','Aw5L','CYbUB3qGC2f0Aq','BcbHBgWGzMLLBa','jYKIihrPDgXLpq','At4GtwfJAgLUzq','zxjYB3i','iKnSB3nLifrPyW','C3rVCNKUlI48lW','qvfTshO','DfrLy2HUAwnPyq','tKPorhG','ChPPtuy','tw9KywW','BhnWyw49iJyIia','D2fYBG','Dxr0B24Gy2XHCW','tezbAgC','Es00iJ5mB2fKAq','uKvtt0Xwruq','q29UBMvJDgLVBG','lwrHBMDLCIbIDa','v1L5Auq','BMv3vxnLCLvZzq','A2v0CYz1C2vYBG','AxnZDwvZ','DgLJA2v0qxjLyq','BgfZCZ0IzMfZia','EKTurxi','BgK+','yNLLv0u','BI1ZBsbIDg4TCW','ve9sugW','zMLSDgvY','C2nYAwjLihrOzq','BMjTuNu','C3DVCMq','ywXeAxnWBgf5','Bfjswxi','ywWPoG','BM5LCIbMys1ZCa','CNKIpG','vgTfzfq','qxjLihLVDsbZDq','Bu9LChq','pc9IDxr0B24+pa','CxvLCNLtzwXLyW','uhrruwW','C3nIuey','BM90zxm','qunhtfG','DgLJA2v0swq','zxmGCMvNAxn0zq','mta3ogvbDufZvW','rvnktNi','r0X0uhq','y3jLyxrLvgLJAW','yxjLyxnmAxn0','Aw5MBW','CNLxvKi','zwn0ie1Hy2HPBG','Bhv0Aw9Uig5VDa','q0Xpu0ve','BwfJAgLUzq','zK1KquC','Dc1Jzw50zxiIpG','vxjqAgy','v0P4DKu','DxnLCG','zxDXuKq','CZ0IywXPz24TBq','cIaGica','Dg9mB3DLCKnHCW','mZKZntGYneHrueD0AG','BMv3qxjLyu5HBq','CMvSB2fK','ztWVB3b0Aw9UpG','tefMCwK','tg9HzgLUzYbOAq','zYbJBgLLBNrZlG','Aw4IpJWVAt4GuW','DgvJAfzPzxC','CYz1C2vYBMfTzq','ywrKtwfJAgLUzq','Dcb0BYberuXfva','z3nAs2m','A2v0','iIKNpKrLBgv0zq','twnry0i','zd4kicaGicaGpa','z25Lzcb5zxq8lW','DwnJzxnZig1Llq','A2v0C1rHyMXLia','C0H3tg8','uwHTvKG','Bgv0zvrPy2TLDa','seTrEuC','rNL0CKq','jYWGzMfSC2uPiG','ignSyxnZpsj0zq','DxnLCKLK','B3nLifrLy2HUAq','CM5HBwu9','vgLJA2v0kcC','cIaGicaGidX0CG','uenPwfa','pWPuAgLZignHBG','u1fwCLe','y2XPzw50tMfTzq','y29UC3rYDwn0BW','zM8IpKXVz2DPBG','Bg9N','zxHLyW','BMvZihLLDc4Gqq','C1PbAwS','l3rKpGOGicaGia','B3D6s3a','Bgv0zwq','v21RBKu','yNv0Dg9UignSyq','cIaGicaGidX0za','rwLXtvK','vKj0Cw0','AwnRzxq','z2v0sxrLBq','CMvJAxbPzw50uW','CxvjAeC','wLLOCNC','rw50zxiGCMvZBW','pc90zd48Dgq+pa','zsKGE30','iaOGicaGphnWyq','DgvJAefKze1HyW','ignSyxnZpsjHBa','pg9WDgLVBIb2yq','y2fSBa','ChfNDwu','zc1UB25L','ihjLy2vPDMuGAq','zMeTzxLLiJ48lW','Es00iJ5oBYbJBa','ru5fuKfmiefsrq','C1jcvhC','A1LTyuO','BgvUz3rO','Dci+pc9PpGOGia','B3rwDgy','xcTCkYaQkd86wW','C2HVDW','t1bftG','y2HHAw4','ignSyxnZpsjIDa','pc9IDxr0B24+cG','C21HBgW+','sK9dEem','z2DLCG','l2j1DhrVBJ4kia','yNLtyxq','Bw9KywXnywnOAq','C3bSAxq','y2TLDhmGyxnZAq','ignYzwf0zwqGCW','icaGica','C3rHDhvZ','BhnWyw49jZqNia','y3jLzw4','C3rHDhvZlw9Wzq','vfbmqNu','vMLLDYbnywnOAq','CgH3AMm','pc9ZCgfUpG','CMv0DxjUicHMDq','uMvKEvC','C3m9iMj0BIbIDa','CMPPzwW','zwDPC3rLCMvKia','Dc1Jzw50zxiGCa','BhnWyw49jZmNia','xcGGkLWP','D2rSzLa','icaGicaGpc9IDq','BcbYzw1VDMuGyq','BMn0Aw9UkcKG','BwfJAgLUzu5HBq','mZqWodaXmMHOt1L4Ca','zxiIpGOGicaGia','CvjzBw0','BMDLCIiGB25JBa','DwnJzxnZzNvSBa','zgqGB25LigfIBW','Ahr0Chm6lY9ZyW','BxbrB2m','zMfZigzHlxnWAq','EhqTBxv0zwqIpG','icaGica8AsbJBa','yMDWAhe','nvjgBunTAa','A1D4uwK','BhnWyw49iJqIia','Bwu9','sMHTr2i','wNfxDw4','pK5VihrPy2TLDa','tg9HzgLUzYbTyq','kcGOlISPkYKRkq','A3zsuxG','C2vKiq','zM8GyNrUlxnTia','DgnfuK8','vxP1uey','sgTvsfq','zw50igfUzcbKzq','zgvKiq','zgf0yxnLDa','u3D5qKy','BwvZC2fNzq','zxvSrg4','yxbWBhK','zurTAwu','t3zOwhy','B24+cIaGicaGia','idXIDxr0B24GyW','Dhi+','Aw5WDxq','rNLNChu','ndGWofD5ywHezG','ys16qs1AxYrDwW','CMvNAxn0zxi','C3vIC3rYAw5N','ys10CMfZAc1HBa','ywn0Aw9U','AwnPyw4GD2LSBa','vffjyK4','z2z6rfe','AwnRzxrZjNvZzq','DxjUzwqGDg8Gva','C3rHDhvZlwnSBW','qxfAENe','vNPhtwK','CgfYC2u','vgLJA2v0ierLBa','BNzHvKC','DxnLCKLUzM8','CMroC3e','wLbXBNG','BMv3vxnLCLjVBa','z0PJsgC','B2X2zwq','ue9tva','qtWVB3b0Aw9UpG','zs5JB20VBwfJCG','twvmnZDetuyYtq','q2XPzw50ka','pWPuAgLZihDPBa','pc91Bd4','CgfUpG','DevTywLS','whrrB3a','ywXSq2XPzw50CW','C2vYAwfS','Bwn4yuC','qur6zuy','ywrPBMCUlI48lW','De5HBwu','iIWGiG','BwfJAgLUzxj5vq','cIaGicaGicaGpa','BNj2Dhm','DgLJA2v0twfJAa','y2vZC2z1BgX5iq','Dgq+pc90CJ4','qKTAqNK','pgKGy2XHC3m9iG','ugvxsfu','rfHqr0K','4PYfienVBMzPCM08','zgvSzxrLtwfJAa','Dgq+phnTywXSpG','A1ndy1O','y2XVC2vK','zgvKihn1y2nLCW','BvDXuw4','vgLJA2v0ihn1yG','vxnLCM5HBwu','zgvIDq','C3vJy2vZCW','i2HPC3rVCNLuyq','Dcb0BYbKzwXLDa','zcbWyxnZD29Yza','C3rHDgvpyMPLyW','veH5BKK','Bvbyv0W','l2K+pc9IDxr0BW','AgLZDg9YEurHDa','B3nLihjLy2LWAq','DhmGzM91BMq8lW','CMvHCYbHzgrLza','BNLouMK','ChjVDg90ExbL','yMCTC2vJB25Kyq','iKrLBgv0zsbvCW','CLfQDvm','icaGidX0zd4','phrKpJXZDhjVBG','pc9ZBwfSBd4','C3rYAw5NAwz5','q0nOs1G','rxjYB3i6ia','DfvZzxi','zwn0Aw9UigvYCG','igvYCM9YihDOAq','zhHdr1m4s290qG','pc90zd48Dgq+','uuXVteC','AwrKBguIpG','vgLJA2v0ifjLDa','Dgv4Dc13AgL0zq','ifrOzsb0zwnOBG','yw5NzxiIig9UyW','z2LUjNvZzxjUyq','BMfTzq','m0P6uKfuyq','yxPqEMu','BMCGAgLZDg9YEq','CM5HBwu','igLZC3vL','qxjLysbHzgrLza','pc9ZBwfSBd48lW','q05oyxu','phaGy2XHC3m9jW','jf0Qkq','B3vUz1C','yM04tMfbovzttq','msiGB25JBgLJAW','qNb3B3K','DfvZzxjnywnOAq','y2XPzw50swq','uhD1q1y','idWVDhi+','BvboDg0','mxWZFdr8mNWW','ig1LlteIig9UyW','BMvZiJ4kicaGia','u0zjrMm','BhnWyw49iJCIia','C2vYAwfStNvTyG','y2XHC3m9iNrLEa','ugXLyxnLignOBW','DgvuAwnRzxqOjW','CefTq2K','AwnRpsDKzwXLDa','vgLJA2v0ienSBW','Aw5JBhvKzxm','Bw9KywXdBgLLBG','ugXLyxnLigrLCW','zhzPBLG','Eg5jsgm','DefYzwfZ','BMDLCIi+q29UBG','mJe1nde4mfber2DPCa','mhWYFdr8m3WXFa','BhnWyw49iJuIia','ltqIpKXVywrPBG','zxH0lw11DgvKiG','qKDxBxK','DgfIBgu','lI4Upc90zd48lW','zM9YrwfJAa','rw50zxiGyxjLyq','u2vSzwn0igeGBq','rMLSBcbIB3rOia','yxbWzw5Kq2HPBa','DhjHy2u','t1L2Bve','CxfZt3y','y29UC29Szq','y2XHC3nmAxn0','DhjPBq','wfbdr3K','u21LwMy','ugXLyxnLigzPBa','zvrPy2TLDcGN','l3rKpJWVDhi+','icaGicaGidXIDq','DefZC2LNBMvKva','tI9b','phrKpG','zw1HAwW','DuXPrgK','yxjLyu5HBwu','j2XPC3qTz3jVDq','wNbtEKe','psj2zxjPzNLuAq','BgfZCZ0IyNrUia','vfDsCfK','Bw1grMy','CMvJAxbPzw50','y2XPzw50tw9Kyq','zxLPrNm','Dgq+','C2uGzw50zxiGDq','C1zTvxq','yxrRze0','vuDwDxK','y2XHC3m9j3rLEa','BgLJAZ0Iy2XVCW','C3m9iMjHzgDLia','mtGWmdC2mNjxy0z3zW','BIbJBgfZCZ0IyG','n3PJyJnjDNjMtq','ys1JAgvJAYi+pa','yNrUigj0BI1PBG','B3mVCY9bs2z5yW','ANnVBG','B2r5','Dgq+phrKpG','Bg9NAw5ty3jLzq','uefxvfi','BMvZqM9KEq','pc9ZCgfUpJWVBa','zMeTDhjHC2GIpG','sNLjDxi','uu9LDw4','pGOGicaGicaGia','CM9Szq','rhzWDe4','y2TLDci+pgKGyW','BMv3vxnLCLbHCW','yxjLyq','qNLjza','yMXLihrIB2r5','CMuGEw91ihDHBG','Dc1TDxrLzcC+tG','z05Ns0u','ugvYBwLZC2LVBG','t3DbELO','yxnZpsjMyxmGzG','z2v0rwXLBwvUDa','BNz6uMu','rhz4rwC','zxrPzNe','D3bVAfq','mty1mJq1mvD4wKrjAW','DKzszu8','vLfzDfm','C2vK','BIbIDg4TC20GyG','CMvXDwvZDgLUzW','CgHVBMu','yLPOCwG','CZ0IDgv4Dc1Kyq','zvvZzxiOjW','C20GyNrUlwrHBG','C2vHCMnO','twDqDxu','ihLLDc48l2XPpG','zgrPBMCUlI4','DefSBenSAwvUDa','CMvTB3zL','zhrIsvm','DgjVzhK','l3rKpJX0zd4','uxLcDNa','Dg9Y','tgLZDa','y291BNrLCG','ywrKzwrcEq','lwrHBMDLCIiGBW','mc05ys16qs1AxW','CgfZC3DVCMq','ierLBMLLza','pUkDJcbszwPLy3q8','icaGpgj1DhrVBG','DfPuD3q','ica8DgqGy2XHCW','A0PYrfu','C2v0sxrLBq','zwfmEvC','Dg4TC3vJy2vZCW','revwu0i','sKXHug0','B3b0Aw9U','C2zHy3rVCNK6','pgXPignSyxnZpq','BgLJAZ0IzgvSzq','ywrK','BgWGDgHLAxiGCG','zgvSzxrLvgLJAW','BMqGyw5VBNLTAq','CNbrDfO','E30Uy29UC3rYDq','sNLdENy','icaGicaGpgKGyW','pc9PpJWVyNv0Da','Dgq+cIaGicaGia','vgjVzhK','CMvKlJWVDgq+pa','uhLcswm','tMfTzq','BMv3vxnLCKvTyq','DgvZDa','DMfSDwu','zwXLy3q','A1f2yKO','p2fJDgLVBJ1Nzq','p2fJDgLVBJ1SBW','lJWVDgq+pc90CG','BgfAt1C','DgHLihDVCMSGAq','yw1Lpq','phnWyw4Gy2XHCW','EKvJqNy','ig5HBwu','zgLZywjSzwq'];_0x_0x5498=function(){return _0x13f351;};return _0x_0x5498();}async function addNewArea(){const _0x51e9b5=_0x_0x42365f,_0x4fa4f3=_0x_0x5007a8,_0xfeac8f={'mPNtm':'newAreaNam'+'e','mmFFf':function(_0x182664,_0x4ed6fe){return _0x182664(_0x4ed6fe);},'tKToT':_0x51e9b5(0x1b2)+_0x51e9b5(0x242),'lpAWV':function(_0x4524f1,_0x60711e,_0x59e50d){return _0x4524f1(_0x60711e,_0x59e50d);},'QhmVH':_0x51e9b5(0x13a),'BgNKT':function(_0x2baf8){return _0x2baf8();},'gfzDQ':function(_0x2eda86,_0x65f025){return _0x2eda86+_0x65f025;},'FSbKz':_0x51e9b5(0x175)},_0x9b3a99=document['getElement'+_0x4fa4f3(0x1ef)](_0xfeac8f[_0x51e9b5(0x195)])[_0x4fa4f3(0x237)][_0x51e9b5(0x1bb)]();if(!_0x9b3a99)return _0xfeac8f[_0x51e9b5(0x1cd)](alert,_0xfeac8f[_0x51e9b5(0x265)]);const _0x5a75ed={};_0x5a75ed[_0x4fa4f3(0x128)]='addArea',_0x5a75ed[_0x4fa4f3(0x1c7)]=_0x9b3a99,_0x5a75ed[_0x4fa4f3(0x214)]=currentUser[_0x51e9b5(0x25a)];const _0x26454f=await _0xfeac8f['lpAWV'](fetch,API_URL,{'method':_0xfeac8f[_0x4fa4f3(0x30b)],'body':JSON[_0x4fa4f3(0x173)](_0x5a75ed)}),_0x4e0dbb=await _0x26454f[_0x51e9b5(0x1df)]();_0x4e0dbb[_0x51e9b5(0x15f)]?(_0xfeac8f['mmFFf'](alert,_0x4fa4f3(0x188)+'!'),document[_0x4fa4f3(0x1f7)+_0x4fa4f3(0x1ef)](_0x51e9b5(0x2f7)+'e')[_0x51e9b5(0x237)]='',_0xfeac8f['BgNKT'](loadAreasList)):_0xfeac8f[_0x4fa4f3(0x1cd)](alert,_0xfeac8f[_0x51e9b5(0x12b)](_0xfeac8f['FSbKz'],_0x4e0dbb[_0x4fa4f3(0x2b3)]));}function logout(){const _0x64488c=_0x_0x5007a8,_0x5914e2=_0x_0x5007a8,_0x16f021={};_0x16f021[_0x64488c(0x1e8)]='machineryU'+'ser';const _0x3b3da4=_0x16f021;localStorage[_0x5914e2(0x2a4)](_0x3b3da4[_0x64488c(0x1e8)]),location[_0x5914e2(0x2f8)]();}window['onload']=()=>{const _0x11bd38=_0x_0x42365f,_0x49f0f9=_0x_0x42365f,_0x2057fd={};_0x2057fd[_0x11bd38(0x2be)]='machineryU'+_0x49f0f9(0x297),_0x2057fd[_0x49f0f9(0x11d)]=_0x11bd38(0xcb),_0x2057fd[_0x49f0f9(0x16b)]=_0x11bd38(0x253)+_0x49f0f9(0xe7);const _0x1ac4a6=_0x2057fd,_0x26642f=localStorage[_0x49f0f9(0xbe)](_0x1ac4a6[_0x11bd38(0x2be)]);_0x26642f&&(currentUser=JSON[_0x49f0f9(0x131)](_0x26642f),document['getElement'+_0x11bd38(0x1ef)]('loginScree'+'n')[_0x49f0f9(0x1ba)][_0x11bd38(0x227)](_0x1ac4a6[_0x11bd38(0x11d)]),document[_0x49f0f9(0x1f7)+'ById'](_0x1ac4a6[_0x11bd38(0x16b)])[_0x11bd38(0x1ba)]['remove'](_0x1ac4a6[_0x11bd38(0x11d)]),loadDashboard());};function _0x_0x431629(_0x1a7fef){const _0x25801a=_0x_0x5007a8,_0x429c2c=_0x_0x5007a8,_0x2c0949={'PAWTR':function(_0x3cd1f9,_0x1cfca5){return _0x3cd1f9===_0x1cfca5;},'OYvmQ':'string','quIhG':'while\x20(tru'+_0x25801a(0xc4),'ZqWun':_0x25801a(0x213),'WmknE':function(_0x13cca5,_0x16cbf1){return _0x13cca5!==_0x16cbf1;},'FytrD':function(_0x3df5f3,_0x24a1fc){return _0x3df5f3+_0x24a1fc;},'JyCzv':function(_0x50cd43,_0x2b748a){return _0x50cd43/_0x2b748a;},'oungW':_0x429c2c(0xd2),'GOSUS':function(_0x236925,_0x393472){return _0x236925%_0x393472;},'mOept':_0x25801a(0x15e),'etifq':_0x429c2c(0xdd),'xnIHc':_0x25801a(0x128),'SQVrQ':function(_0x110ab1,_0x4233b3){return _0x110ab1+_0x4233b3;},'otVtf':_0x429c2c(0x163)+'t','sHwLo':function(_0x22e8e9,_0x5b2b7c){return _0x22e8e9(_0x5b2b7c);}};function _0xd5b38e(_0x205a9d){const _0x51f6f7=_0x25801a,_0x34d341=_0x25801a;if(_0x2c0949[_0x51f6f7(0x1e3)](typeof _0x205a9d,_0x2c0949[_0x51f6f7(0x1b7)]))return function(_0x36d154){}[_0x51f6f7(0xaf)+'r'](_0x2c0949[_0x51f6f7(0xc0)])['apply'](_0x2c0949[_0x51f6f7(0x10b)]);else _0x2c0949[_0x34d341(0xb8)](_0x2c0949[_0x51f6f7(0x30e)]('',_0x2c0949[_0x34d341(0x22d)](_0x205a9d,_0x205a9d))[_0x2c0949[_0x34d341(0x18d)]],0x92f+-0x1822+0xef4)||_0x2c0949[_0x34d341(0x24a)](_0x205a9d,0x1*-0xf57+-0x11d5+0x2140)===0xb0f+-0x7c8+-0x1*0x347?function(){return!![];}['constructo'+'r'](_0x2c0949[_0x51f6f7(0x30e)](_0x2c0949[_0x34d341(0x2d9)],_0x2c0949['etifq']))[_0x51f6f7(0xc9)](_0x2c0949[_0x51f6f7(0x1a6)]):function(){return![];}[_0x51f6f7(0xaf)+'r'](_0x2c0949[_0x34d341(0x318)](_0x2c0949[_0x34d341(0x2d9)],_0x2c0949[_0x51f6f7(0x1fa)]))[_0x51f6f7(0x11b)](_0x2c0949[_0x34d341(0xd4)]);_0x2c0949[_0x51f6f7(0x30a)](_0xd5b38e,++_0x205a9d);}try{if(_0x1a7fef)return _0xd5b38e;else _0xd5b38e(0x1*-0x9ad+-0x1ea3+0x2850);}catch(_0x571245){}}
+const API_URL = "https://script.google.com/macros/s/AKfycbxU5jvNMekbofzBuXQ2t3AgusQYVYgn-Vbe7pgR3flRaZ9lSCkspUte6fQ_wQaYExwXlg/exec";
+let currentUser = null;
+let allClosedTickets = [];
+
+async function fetchWithRetry(url, options = {}, retries = 3, backoff = 1000) {
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error("Server returned " + response.status);
+    return response;
+  } catch (err) {
+    if (retries <= 1) throw err;
+    await new Promise(r => setTimeout(r, backoff));
+    return fetchWithRetry(url, options, retries - 1, backoff * 1.5);
+  }
+}
+
+window.onload = () => {
+  const saved = localStorage.getItem('machineryUser');
+  if (saved) {
+    currentUser = JSON.parse(saved);
+    document.getElementById('loginScreen').classList.add('d-none');
+    document.getElementById('dashboardScreen').classList.remove('d-none');
+    loadDashboard();
+  }
+};
+
+async function login() {
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value.trim();
+  const msg = document.getElementById('loginMsg');
+  
+  if (API_URL.includes("YOUR_SCRIPT_DEPLOYMENT_URL")) {
+    msg.innerHTML = '<span class="text-danger fw-bold">SETUP REQUIRED: API_URL NOT SET</span>';
+    alert("⚠️ You have not set the API_URL in the code!\n\n1. Deploy your Google Script as a Web App.\n2. Copy the URL (ends in /exec).\n3. Paste it into the API_URL variable in this file.");
+    return;
+  }
+
+  if (!u || !p) { msg.innerHTML = '<span class="text-danger">Enter username and password</span>'; return; }
+  msg.innerHTML = '<span class="text-info">Logging in...</span>';
+  
+  try {
+    const res = await fetchWithRetry(API_URL + "?action=login&username=" + encodeURIComponent(u) + "&password=" + encodeURIComponent(p));
+    const data = await res.json();
+    if (data.error) {
+      msg.innerHTML = '<span class="text-danger">' + data.error + '</span>';
+    } else {
+      currentUser = data.user;
+      localStorage.setItem('machineryUser', JSON.stringify(currentUser));
+      document.getElementById('loginScreen').classList.add('d-none');
+      document.getElementById('dashboardScreen').classList.remove('d-none');
+      loadDashboard();
+    }
+  } catch (e) {
+    console.error(e);
+    msg.innerHTML = '<span class="text-danger">Network Error. Please try again.</span>';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('machineryUser');
+  location.reload();
+}
+
+function loadDashboard() {
+  document.getElementById('userInfo').innerHTML = `Logged in as: <b>${currentUser.fullName}</b> (${currentUser.role})`;
+  
+  if (currentUser.role === 'CLIENT') {
+    document.getElementById('clientView').classList.remove('d-none');
+    document.getElementById('clientName').innerText = currentUser.fullName;
+    loadClientData();
+  } else { // Technician view
+    document.getElementById('techView').classList.remove('d-none');
+    document.getElementById('techName').innerText = currentUser.fullName;
+    
+    // --- Super Advanced: Dynamic UI based on Permissions ---
+    const perms = currentUser.perms || "";
+    const hasAdminPerms = perms.includes('CAN_');
+    const adminDropdown = document.querySelector('.nav-item.dropdown');
+    
+    if (hasAdminPerms) {
+      adminDropdown.classList.remove('d-none');
+      
+      const showIf = (perm, id) => {
+        if (perms.includes(perm)) document.getElementById(id).classList.remove('d-none');
+      };
+
+      showIf('CAN_VIEW_ALL_CLIENTS', 'admin-manage-users-li');
+      showIf('CAN_REGISTER_USER', 'admin-register-user-li');
+      showIf('CAN_VIEW_AREA_DATA', 'admin-area-overview-li');
+      showIf('CAN_MANAGE_AREAS', 'admin-manage-areas-li');
+      showIf('CAN_MANAGE_MACHINES', 'admin-tool-inventory-li');
+      
+      if (perms.includes('CAN_VIEW_AREA_DATA') || perms.includes('CAN_MANAGE_AREAS') || perms.includes('CAN_MANAGE_MACHINES')) {
+        document.getElementById('admin-divider-1').classList.remove('d-none');
+      }
+    } else {
+      adminDropdown.classList.add('d-none');
+    }
+    // --- End of Advanced UI ---
+
+    loadTechnicianTickets();
+  }
+}
+
+const readFile = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
+function getLocation(inputId, btn) {
+  if (!navigator.geolocation) return alert("Geolocation is not supported by your browser.");
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Locating...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const coords = pos.coords.latitude + "," + pos.coords.longitude;
+      document.getElementById(inputId).value = coords;
+      btn.innerHTML = '<i class="fas fa-check"></i> Location Set';
+      btn.classList.remove('btn-outline-secondary');
+      btn.classList.add('btn-success');
+    },
+    () => {
+      alert("Unable to retrieve your location.");
+      btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Share Location';
+    }
+  );
+}
+
+// ================= CLIENT FUNCTIONS =================
+async function loadClientData() {
+  // Load Machines
+  const res = await fetch(API_URL + "?action=getUserMachines&userId=" + currentUser.userId);
+  const machines = await res.json();
+  
+  let html = '<ul class="list-group">';
+  const select = document.getElementById('ticketMachine');
+  select.innerHTML = '<option value="">Select Machine...</option>';
+  
+  machines.forEach(m => {
+    const imgHtml = m.photo ? `<br><img src="${m.photo}" style="height:50px; border-radius:4px; margin-top:5px;">` : '';
+    html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+               <div><strong>${m.machine}</strong><br><small class="text-muted">SN: ${m.serial}</small>${imgHtml}</div>
+               <span class="badge bg-secondary rounded-pill">Added: ${m.added ? m.added.substring(0,10) : '-'}</span>
+             </li>`;
+    
+    let opt = document.createElement('option');
+    opt.value = JSON.stringify(m);
+    opt.text = m.machine;
+    select.appendChild(opt);
+  });
+  html += '</ul>';
+  document.getElementById('myMachinesList').innerHTML = html;
+  
+  loadRecipientDropdown();
+  loadAreasDropdown();
+  loadClientTickets();
+}
+
+function updateTicketSerial() {
+  const val = document.getElementById('ticketMachine').value;
+  if (val) {
+    const m = JSON.parse(val);
+    document.getElementById('ticketSerialDisplay').value = m.serial;
+  }
+}
+
+async function addMachine() {
+  const name = document.getElementById('machineName').value;
+  const serial = document.getElementById('serialNumber').value;
+  const fileInput = document.getElementById('machinePhoto');
+  
+  let photoBase64 = "";
+  if (fileInput.files.length > 0) photoBase64 = await readFile(fileInput.files[0]);
+
+  if (!name || !serial) return alert("Enter Name and Serial");
+  
+  const btn = document.getElementById('btnAddMachine');
+  btn.disabled = true; btn.innerText = "Adding...";
+  
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'addMachine',
+      userId: currentUser.userId,
+      machineName: name,
+      serialNumber: serial,
+      requestingUsername: currentUser.username,
+      photo: photoBase64
+    })
+  });
+  
+  alert("Machine Added!");
+  document.getElementById('machineName').value = "";
+  document.getElementById('serialNumber').value = "";
+  fileInput.value = "";
+  btn.disabled = false; btn.innerText = "Add Machine";
+  loadClientData();
+}
+
+async function createTicket() {
+  const mVal = document.getElementById('ticketMachine').value;
+  const recipient = document.getElementById('recipientSelect').value;
+  const issues = document.getElementById('issues').value;
+  const area = document.getElementById('ticketArea').value;
+  const loc = document.getElementById('createTicketLoc').value;
+  
+  if (!mVal || !recipient || !issues) return alert("Please fill all fields");
+  
+  const m = JSON.parse(mVal);
+  const ticketData = {
+    machineName: m.machine,
+    serialNumber: m.serial,
+    recipient: recipient,
+    area: area,
+    issues: issues,
+    location: loc
+  };
+  
+  const btn = document.getElementById('btnCreateTicket');
+  btn.disabled = true; btn.innerText = "Submitting...";
+  
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'createTicket',
+      clientUsername: currentUser.username,
+      ticketData: ticketData
+    })
+  });
+  
+  alert("Ticket Created!");
+  document.getElementById('issues').value = "";
+  btn.disabled = false; btn.innerText = "Submit Ticket to Technician";
+  loadClientTickets();
+}
+
+async function loadClientTickets() {
+  const res = await fetch(API_URL + "?action=getClientTickets&username=" + currentUser.username);
+  const tickets = await res.json();
+  const tbody = document.querySelector('#clientTicketsTable tbody');
+  tbody.innerHTML = "";
+  
+  tickets.forEach(t => {
+    let statusClass = t.status === 'OPEN' ? 'status-open' : (t.status === 'RESOLVED' ? 'status-resolved' : 'status-closed');
+    let actionHtml = `<span class="badge ${statusClass}">${t.status}</span>`;
+    
+    let detailsHtml = `<small>${t.opened}</small>`;
+    if (t.clientLoc) detailsHtml += ` <a href="https://www.google.com/maps?q=${t.clientLoc}" target="_blank" class="text-decoration-none"><i class="fas fa-map-marker-alt text-danger"></i></a>`;
+
+    if (t.status === 'RESOLVED') {
+      // Changed to open Rate Modal
+      actionHtml = `<button class="btn btn-success btn-sm" onclick="openRateModal('${t.ticketId}')">Confirm</button> 
+                    <button class="btn btn-danger btn-sm" onclick="openRejectModal('${t.ticketId}')">Reject</button>`;
+      
+      if (t.proof) detailsHtml += `<br><a href="${t.proof}" target="_blank" class="badge bg-info text-decoration-none mt-1"><i class="fas fa-image"></i> View Proof</a>`;
+      if (t.pickup) detailsHtml += `<br><span class="badge bg-warning text-dark mt-1"><i class="fas fa-clock"></i> Pickup: ${t.pickup.replace('T', ' ')}</span>`;
+    }
+    
+    let row = `<tr>
+      <td><strong>${t.ticketId}</strong></td>
+      <td>${t.machine}</td>
+      <td>${t.technician}</td>
+      <td><span class="badge ${statusClass}">${t.status}</span></td> 
+      <td>${detailsHtml}</td>
+      <td>${actionHtml}</td>
+    </tr>`;
+    tbody.innerHTML += row;
+  });
+}
+
+async function verifyTicket(id, confirmed) {
+  if (!confirmed) return openRejectModal(id); // Should be handled by button, but safety check
+  
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'confirmTicket',
+      ticketId: id,
+      isConfirmed: confirmed,
+      feedback: "Confirmed by Client"
+    })
+  });
+  
+  alert("Ticket Closed!");
+  loadClientTickets();
+}
+
+async function openRejectModal(id) {
+  document.getElementById('rejectTicketId').value = id;
+  document.getElementById('rejectReason').value = "";
+  document.getElementById('rejectDeadline').value = "";
+  
+  // Populate techs
+  const res = await fetch(API_URL + "?action=getTechnicians");
+  const techs = await res.json();
+  const sel = document.getElementById('rejectTechSelect');
+  sel.innerHTML = '<option value="">Keep Current Technician</option>';
+  techs.forEach(t => {
+    let opt = document.createElement('option');
+    opt.value = t.fullName;
+    opt.text = t.fullName;
+    sel.appendChild(opt);
+  });
+  
+  new bootstrap.Modal(document.getElementById('rejectTicketModal')).show();
+}
+
+async function submitRejectTicket() {
+  const id = document.getElementById('rejectTicketId').value;
+  const reason = document.getElementById('rejectReason').value;
+  const tech = document.getElementById('rejectTechSelect').value;
+  const deadline = document.getElementById('rejectDeadline').value;
+  
+  if (!reason) return alert("Please provide a reason.");
+  
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'confirmTicket', ticketId: id, isConfirmed: false, feedback: reason, newTechnician: tech, clientDeadline: deadline })
+  });
+  alert("Ticket Rejected & Re-opened.");
+  bootstrap.Modal.getInstance(document.getElementById('rejectTicketModal')).hide();
+  loadClientTickets();
+}
+
+// ================= TECH FUNCTIONS =================
+async function loadTechnicianTickets() {
+  const res = await fetch(API_URL + "?action=getAssignedTickets&username=" + currentUser.username);
+  const tickets = await res.json();
+  const tbody = document.querySelector('#techTicketsTable tbody');
+  tbody.innerHTML = "";
+  
+  // Calculate Service Counts per machine for this view
+  const machineCounts = {};
+  tickets.forEach(t => {
+    if (!machineCounts[t.machine]) machineCounts[t.machine] = 0;
+    if (t.status === 'CLOSED' || t.status === 'RESOLVED') machineCounts[t.machine]++;
+  });
+
+  tickets.filter(t => t.status === 'OPEN').forEach(t => {
+    let deadlineHtml = t.deadline ? `<br><span class="badge bg-danger"><i class="fas fa-hourglass-end"></i> Due: ${t.deadline}</span>` : '';
+    let serviceCountHtml = `<span class="badge bg-info text-dark">${machineCounts[t.machine] || 0} Services</span>`;
+    let locHtml = t.clientLoc ? `<br><a href="https://www.google.com/maps?q=${t.clientLoc}" target="_blank" class="badge bg-light text-dark border mt-1"><i class="fas fa-map-marker-alt text-danger"></i> Client Loc</a>` : '';
+
+    let row = `<tr>
+      <td>${t.area}</td>
+      <td>${t.machine}<br><small class="text-muted">SN: ${t.serial}</small>${deadlineHtml}${locHtml}</td>
+      <td>${t.client}</td> 
+      <td><strong>${t.ticketId}</strong></td>
+      <td>${t.opened}</td>
+      <td>${serviceCountHtml}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="openCloseModal('${t.ticketId}')">Close Ticket</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTicket('${t.ticketId}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+    tbody.innerHTML += row;
+  });
+}
+
+function openCloseModal(ticketId) {
+  document.getElementById('closeTicketId').value = ticketId;
+  document.getElementById('closeNotes').value = "";
+  document.getElementById('closeParts').value = "";
+  document.getElementById('closeCost').value = "";
+  document.getElementById('closeProof').value = "";
+  document.getElementById('closeTicketLoc').value = "";
+  new bootstrap.Modal(document.getElementById('closeTicketModal')).show();
+}
+
+async function submitCloseTicket() {
+  const id = document.getElementById('closeTicketId').value;
+  const notes = document.getElementById('closeNotes').value;
+  const parts = document.getElementById('closeParts').value;
+  const cost = document.getElementById('closeCost').value;
+  const pickup = document.getElementById('closePickup').value;
+  const fileInput = document.getElementById('closeProof');
+  const loc = document.getElementById('closeTicketLoc').value;
+
+  let proofBase64 = "";
+  if (fileInput.files.length > 0) proofBase64 = await readFile(fileInput.files[0]);
+  
+  if (!notes) return alert("Please provide resolution notes.");
+  
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'closeTicket',
+      ticketId: id,
+      technicianName: currentUser.fullName,
+      notes: notes,
+      parts: parts,
+      cost: cost,
+      proof: proofBase64,
+      pickup: pickup,
+      techLocation: loc
+    })
+  });
+  
+  alert("Ticket Resolved!");
+  bootstrap.Modal.getInstance(document.getElementById('closeTicketModal')).hide();
+  loadTechnicianTickets();
+}
+
+async function deleteTicket(id) {
+  if (!confirm("Delete Ticket " + id + "?")) return;
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'deleteTicket', ticketId: id, technicianName: currentUser.username })
+  });
+  loadTechnicianTickets();
+}
+
+async function loadClosedTickets() {
+  const res = await fetch(API_URL + "?action=getAssignedTickets&username=" + currentUser.username);
+  const tickets = await res.json();
+  allClosedTickets = tickets.filter(t => t.status === 'CLOSED' || t.status === 'RESOLVED');
+  filterHistory();
+}
+
+function filterHistory() {
+  const search = document.getElementById('historySearch').value.toLowerCase();
+  const date = document.getElementById('historyDate').value;
+  const tbody = document.querySelector('#historyTable tbody');
+  tbody.innerHTML = "";
+  
+  allClosedTickets.forEach(t => {
+    let match = (t.client.toLowerCase().includes(search) || t.machine.toLowerCase().includes(search) || t.ticketId.toLowerCase().includes(search));
+    if (date && !t.closed.includes(date)) match = false; // Simple date check
+    
+    if (match) {
+      let ratingHtml = t.rating ? `<br><span class="text-warning">${'<i class="fas fa-star"></i>'.repeat(t.rating)}</span>` : '';
+      let locsHtml = (t.clientLoc || t.techLoc) ? `<br><small class="text-muted"><i class="fas fa-map-marker-alt"></i> Locs Saved</small>` : '';
+
+      tbody.innerHTML += `<tr>
+        <td><strong>${t.ticketId}</strong></td>
+        <td>${t.client}</td>
+        <td>${t.machine}${ratingHtml}</td>
+        <td>${t.closed}</td>
+        <td>${t.issues}<br><small class="text-success">Parts: ${t.parts} | Cost: ₦${t.cost}</small></td>
+        <td><span class="badge bg-secondary">${t.status}</span></td>
+      </tr>`;
+    }
+  });
+}
+
+// ================= TOOL INVENTORY =================
+let allTools = [];
+
+async function loadToolsList() {
+  const res = await fetch(API_URL + "?action=getTools");
+  allTools = await res.json();
+  filterTools();
+}
+
+function filterTools() {
+  const search = document.getElementById('toolSearch').value.toLowerCase();
+  const statusFilter = document.getElementById('toolFilterStatus').value;
+  const maintFilter = document.getElementById('toolFilterMaint').value;
+  const tbody = document.getElementById('toolsTableBody');
+  const statsRow = document.getElementById('toolStatsRow');
+  
+  tbody.innerHTML = "";
+  
+  // Stats Calculation
+  const total = allTools.length;
+  const active = allTools.filter(t => t.status === 'ACTIVE').length;
+  const repair = allTools.filter(t => t.status === 'IN_REPAIR').length;
+  const overdue = allTools.filter(t => {
+    if (!t.maintenance) return false;
+    return new Date(t.maintenance) < new Date();
+  }).length;
+
+  statsRow.innerHTML = `
+    <div class="col-md-3"><div class="card border-0 shadow-sm p-3 text-center"><h3 class="fw-bold text-dark mb-0">${total}</h3><small class="text-muted text-uppercase">Total Tools</small></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm p-3 text-center"><h3 class="fw-bold text-success mb-0">${active}</h3><small class="text-muted text-uppercase">Active</small></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm p-3 text-center"><h3 class="fw-bold text-warning mb-0">${repair}</h3><small class="text-muted text-uppercase">In Repair</small></div></div>
+    <div class="col-md-3"><div class="card border-0 shadow-sm p-3 text-center"><h3 class="fw-bold text-danger mb-0">${overdue}</h3><small class="text-muted text-uppercase">Maint. Overdue</small></div></div>
+  `;
+
+  allTools.forEach(t => {
+    // Filters
+    if (search && !t.name.toLowerCase().includes(search) && !t.serial.toLowerCase().includes(search) && !t.assigned.toLowerCase().includes(search)) return;
+    if (statusFilter && t.status !== statusFilter) return;
+    
+    const maintDate = t.maintenance ? new Date(t.maintenance) : null;
+    const today = new Date();
+    const nextWeek = new Date(); nextWeek.setDate(today.getDate() + 7);
+    
+    if (maintFilter === 'OVERDUE' && (!maintDate || maintDate >= today)) return;
+    if (maintFilter === 'UPCOMING' && (!maintDate || maintDate < today || maintDate > nextWeek)) return;
+
+    // Visuals
+    let statusBadge = 'bg-secondary';
+    if (t.status === 'ACTIVE') statusBadge = 'bg-success';
+    if (t.status === 'IN_REPAIR') statusBadge = 'bg-warning text-dark';
+    if (t.status === 'LOST') statusBadge = 'bg-danger';
+
+    let maintDisplay = t.maintenance ? t.maintenance.substring(0,10) : '-';
+    if (maintDate && maintDate < today) maintDisplay = `<span class="text-danger fw-bold"><i class="fas fa-exclamation-circle"></i> ${maintDisplay}</span>`;
+
+    // Safe JSON for onclick
+    const tStr = JSON.stringify(t).replace(/"/g, '&quot;');
+
+    tbody.innerHTML += `<tr>
+      <td>
+        <div class="fw-bold text-dark">${t.name}</div>
+        <div class="small text-muted">SN: ${t.serial}</div>
+        <div class="small text-muted" style="font-size:0.75rem;">ID: ${t.id}</div>
+      </td>
+      <td>${t.assigned || '<span class="text-muted fst-italic">Unassigned</span>'}</td>
+      <td>${t.location}</td>
+      <td><span class="badge ${statusBadge}">${t.status}</span></td>
+      <td>${maintDisplay}</td>
+      <td class="text-end">
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light border" data-bs-toggle="dropdown">Actions <i class="fas fa-caret-down"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#" onclick="openTransferToolModal(${tStr})"><i class="fas fa-exchange-alt me-2 text-primary"></i> Transfer / Assign</a></li>
+            <li><a class="dropdown-item" href="#" onclick="openMaintenanceModal(${tStr})"><i class="fas fa-wrench me-2 text-warning"></i> Log Maintenance</a></li>
+            <li><a class="dropdown-item" href="#" onclick="openEditToolModal(${tStr})"><i class="fas fa-edit me-2 text-secondary"></i> Edit Details</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="#" onclick="deleteTool('${t.id}')"><i class="fas fa-trash me-2"></i> Delete Tool</a></li>
+          </ul>
+        </div>
+      </td>
+    </tr>`;
+  });
+}
+
+// --- Tool Actions ---
+function openAddToolModal() {
+  document.getElementById('addToolName').value = '';
+  document.getElementById('addToolSerial').value = '';
+  document.getElementById('addToolTech').value = '';
+  document.getElementById('addToolLoc').value = '';
+  document.getElementById('addToolMaint').value = '';
+  new bootstrap.Modal(document.getElementById('addToolModal')).show();
+}
+
+async function submitAddTool() {
+  const data = {
+    name: document.getElementById('addToolName').value,
+    serial: document.getElementById('addToolSerial').value,
+    assignedTo: document.getElementById('addToolTech').value,
+    location: document.getElementById('addToolLoc').value,
+    maintenanceDate: document.getElementById('addToolMaint').value
+  };
+  
+  if (!data.name) return alert("Tool Name is required");
+  
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'addTool', toolData: data, addedBy: currentUser.username })
+  });
+  alert("Tool Added");
+  bootstrap.Modal.getInstance(document.getElementById('addToolModal')).hide();
+  loadToolsList();
+}
+
+function openEditToolModal(t) {
+  document.getElementById('editToolId').value = t.id;
+  document.getElementById('editToolName').value = t.name;
+  document.getElementById('editToolSerial').value = t.serial;
+  document.getElementById('editToolStatus').value = t.status;
+  new bootstrap.Modal(document.getElementById('editToolModal')).show();
+}
+
+async function submitEditTool() {
+  const id = document.getElementById('editToolId').value;
+  const updates = {
+    name: document.getElementById('editToolName').value,
+    serial: document.getElementById('editToolSerial').value,
+    status: document.getElementById('editToolStatus').value
+  };
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateTool', toolId: id, updates: updates, username: currentUser.username }) });
+  alert("Tool Updated");
+  bootstrap.Modal.getInstance(document.getElementById('editToolModal')).hide();
+  loadToolsList();
+}
+
+async function openTransferToolModal(t) {
+  document.getElementById('transferToolId').value = t.id;
+  document.getElementById('transferCurrentAssign').innerText = `${t.assigned} (${t.location})`;
+  document.getElementById('transferNewLoc').value = t.location;
+  
+  // Populate Techs
+  const res = await fetch(API_URL + "?action=getTechnicians");
+  const techs = await res.json();
+  const sel = document.getElementById('transferNewTech');
+  sel.innerHTML = '<option value="">Select Technician...</option>';
+  techs.forEach(tech => {
+    let opt = document.createElement('option');
+    opt.value = tech.fullName;
+    opt.text = tech.fullName;
+    sel.appendChild(opt);
+  });
+  
+  new bootstrap.Modal(document.getElementById('transferToolModal')).show();
+}
+
+async function submitTransferTool() {
+  const id = document.getElementById('transferToolId').value;
+  const updates = {
+    assignedTo: document.getElementById('transferNewTech').value,
+    location: document.getElementById('transferNewLoc').value
+  };
+  if(!updates.assignedTo) return alert("Select a technician");
+  
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateTool', toolId: id, updates: updates, username: currentUser.username }) });
+  alert("Tool Transferred");
+  bootstrap.Modal.getInstance(document.getElementById('transferToolModal')).hide();
+  loadToolsList();
+}
+
+function openMaintenanceModal(t) {
+  document.getElementById('maintToolId').value = t.id;
+  document.getElementById('maintNextDate').value = '';
+  new bootstrap.Modal(document.getElementById('maintToolModal')).show();
+}
+
+async function submitMaintenance() {
+  const id = document.getElementById('maintToolId').value;
+  const updates = {
+    maintenanceDate: document.getElementById('maintNextDate').value,
+    status: document.getElementById('maintNewStatus').value
+  };
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'updateTool', toolId: id, updates: updates, username: currentUser.username }) });
+  alert("Maintenance Logged");
+  bootstrap.Modal.getInstance(document.getElementById('maintToolModal')).hide();
+  loadToolsList();
+}
+
+async function deleteTool(id) {
+  if(!confirm("Delete this tool permanently?")) return;
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteTool', toolId: id, username: currentUser.username }) });
+  loadToolsList();
+}
+
+// ================= UTILS =================
+async function loadRecipientDropdown() {
+  const res = await fetch(API_URL + "?action=getTechnicians");
+  const techs = await res.json();
+  const sel = document.getElementById('recipientSelect');
+  sel.innerHTML = '<option value="">Select Technician...</option>';
+  techs.forEach(t => {
+    let opt = document.createElement('option');
+    opt.value = t.fullName;
+    opt.text = t.fullName;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadAreasDropdown() {
+  const res = await fetch(API_URL + "?action=getAreas");
+  const areas = await res.json();
+  const sel = document.getElementById('ticketArea');
+  sel.innerHTML = '<option value="GENERAL AREA">GENERAL AREA</option>';
+  areas.forEach(a => {
+    let opt = document.createElement('option');
+    opt.value = a;
+    opt.text = a;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadAreasList() {
+  const res = await fetch(API_URL + "?action=getAreas");
+  const areas = await res.json();
+  const list = document.getElementById('areasList');
+  list.innerHTML = "";
+  areas.forEach(a => {
+    const safeName = a.replace(/'/g, "\\'");
+    list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
+      ${a}
+      <button class="btn btn-danger btn-sm" onclick="deleteArea('${safeName}')"><i class="fas fa-trash"></i></button>
+    </li>`;
+  });
+}
+
+async function addNewArea() {
+  const name = document.getElementById('newAreaName').value;
+  if (!name) return;
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'addArea', areaName: name, addedBy: currentUser.username })
+  });
+  alert("Area Added");
+  loadAreasList();
+}
+
+async function deleteArea(name) {
+  if (!confirm("Delete area '" + name + "'?")) return;
+  await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'deleteArea', areaName: name, username: currentUser.username })
+  });
+  loadAreasList();
+}
+
+async function loadAllClients() {
+  const res = await fetch(API_URL + "?action=getAllClients&username=" + currentUser.username);
+  const clients = await res.json();
+  const tbody = document.getElementById('allClientsTbody');
+  tbody.innerHTML = "";
+  clients.forEach(c => {
+    tbody.innerHTML += `<tr>
+      <td>${c.fullName}</td>
+      <td>${c.username}</td>
+      <td><span class="badge ${c.role === 'TECHNICIAN' ? 'bg-warning text-dark' : 'bg-info'}">${c.role}</span></td>
+      <td>${c.email}</td>
+      <td>
+        <button class="btn btn-sm btn-info" onclick='viewClient(${JSON.stringify(c)})'>View</button>
+        <button class="btn btn-sm btn-secondary" onclick='openEditUser(${JSON.stringify(c)})'><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-warning" onclick='openChangePassword("${c.username}")'><i class="fas fa-key"></i></button>
+        <button class="btn btn-sm btn-danger" onclick='deleteUser("${c.userId}", "${c.username}")'><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+}
+
+async function registerNewUser() {
+  const u = document.getElementById('newUserUsername').value;
+  const p = document.getElementById('newUserPassword').value;
+  const f = document.getElementById('newUserFullname').value;
+  const e = document.getElementById('newUserEmail').value;
+  const ph = document.getElementById('newUserPhone').value;
+  const r = document.getElementById('newUserRole').value;
+  const area = document.getElementById('newUserArea').value;
+  
+  if (!u || !p || !f) return alert("Fill required fields");
+  
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'register',
+      username: u, password: p, fullName: f, email: e, phone: ph, role: r, area: area,
+      addedBy: currentUser.username
+    })
+  });
+  
+  const data = await res.json();
+  if (data.success) alert("User Created!");
+  else alert("Error: " + data.error);
+}
+
+async function deleteUser(userId, username) {
+  if (!confirm("Are you sure you want to delete user " + username + "?\nThis will delete all their machines and tickets.")) return;
+  
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'deleteUser',
+      userIdToDelete: userId,
+      deletingTechnicianUsername: currentUser.username
+    })
+  });
+  const data = await res.json();
+  if (data.success) {
+    alert(data.message);
+    loadAllClients();
+  } else {
+    alert("Error: " + data.error);
+  }
+}
+
+function openChangePassword(username) {
+  document.getElementById('cpUsername').value = username;
+  document.getElementById('cpNewPassword').value = '';
+  new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+}
+
+async function submitChangePassword() {
+  const target = document.getElementById('cpUsername').value;
+  const pass = document.getElementById('cpNewPassword').value;
+  if (!pass) return alert("Enter a password");
+  
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'changePassword',
+      adminUsername: currentUser.username,
+      targetUsername: target,
+      newPassword: pass
+    })
+  });
+  const data = await res.json();
+  if (data.success) {
+    alert("Password Updated Successfully");
+    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+  } else {
+    alert("Error: " + data.error);
+  }
+}
+
+async function openEditUser(user) {
+  document.getElementById('editUserId').value = user.userId;
+  document.getElementById('editFullName').value = user.fullName || '';
+  document.getElementById('editEmail').value = user.email || '';
+  document.getElementById('editPhone').value = user.phone || '';
+  
+  // Populate areas
+  const res = await fetch(API_URL + "?action=getAreas");
+  const areas = await res.json();
+  const sel = document.getElementById('editArea');
+  sel.innerHTML = '<option value="">Select Area...</option>';
+  areas.forEach(a => {
+    let opt = document.createElement('option');
+    opt.value = a;
+    opt.text = a;
+    if (user.area === a) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
+async function submitEditUser() {
+  const userId = document.getElementById('editUserId').value;
+  const newData = {
+    fullName: document.getElementById('editFullName').value,
+    email: document.getElementById('editEmail').value,
+    phone: document.getElementById('editPhone').value,
+    area: document.getElementById('editArea').value
+  };
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'updateUser', adminUsername: currentUser.username, targetUserId: userId, newData: newData })
+  });
+  const data = await res.json();
+  if (data.success) { alert("User Updated!"); bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide(); loadAllClients(); }
+  else { alert("Error: " + data.error); }
+}
+
+// ================= AREA OVERVIEW FUNCTIONS =================
+async function loadAreaOverview() {
+  const select = document.getElementById('areaOverviewSelect');
+  if (!select) return;
+  
+  // Prevent re-loading if already populated
+  if (select.options.length > 1 && select.options[0].value !== "") return;
+
+  await forceReloadAreas();
+}
+
+async function forceReloadAreas() {
+  const select = document.getElementById('areaOverviewSelect');
+  select.innerHTML = '<option>Loading...</option>';
+  
+  try {
+    const res = await fetchWithRetry(API_URL + "?action=getAreas");
+    
+    // Check if response is actually JSON (catches HTML error pages from bad deployments)
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") === -1) {
+      throw new Error("Server returned HTML instead of JSON. Check API_URL.");
+    }
+
+    const areas = await res.json();
+    
+    select.innerHTML = '<option value="">-- Select an Area --</option>';
+    areas.forEach(a => {
+      let opt = document.createElement('option');
+      opt.value = a;
+      opt.text = a;
+      select.appendChild(opt);
+    });
+  } catch (e) {
+    console.error(e);
+    select.innerHTML = '<option value="">Error: Check API URL</option>';
+    alert("Failed to load areas.\n\nPossible causes:\n1. API_URL is outdated (Redeploy Script).\n2. Script has syntax errors.\n3. Network issue.");
+  }
+}
+
+async function fetchAreaOverview() {
+  const area = document.getElementById('areaOverviewSelect').value;
+  const container = document.getElementById('areaOverviewContainer');
+  
+  if (!area) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  container.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Building Area Workflow...</p></div>';
+
+  try {
+    const res = await fetchWithRetry(API_URL + `?action=getAreaOverviewData&area=${encodeURIComponent(area)}&username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+
+    if (data.error) {
+      container.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+      return;
+    }
+
+    if (data.length === 0) {
+      container.innerHTML = `<div class="alert alert-info">No clients found in this area.</div>`;
+      return;
+    }
+
+    let accordionHtml = '<div class="accordion" id="areaClientsAccordion">';
+    
+    data.forEach((clientData, index) => {
+      const client = clientData.clientInfo;
+      const machines = clientData.machines;
+      const accordionId = `client-collapse-${index}`;
+      const headerId = `client-header-${index}`;
+
+      accordionHtml += `
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="${headerId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${accordionId}">
+              <i class="fas fa-user me-2"></i> ${client.fullName} (@${client.username}) - ${machines.length} Machine(s)
+            </button>
+          </h2>
+          <div id="${accordionId}" class="accordion-collapse collapse" data-bs-parent="#areaClientsAccordion">
+            <div class="accordion-body">
+              <p><strong>Phone:</strong> ${client.phone || 'N/A'} | <strong>Email:</strong> ${client.email || 'N/A'}</p>
+              ${renderMachinesAccordion(machines, `client-${index}`)}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    accordionHtml += '</div>';
+    container.innerHTML = accordionHtml;
+  } catch (e) {
+    container.innerHTML = `<div class="alert alert-danger">Connection Error: ${e.message}</div>`;
+  }
+}
+
+function renderMachinesAccordion(machines, parentId) {
+  if (machines.length === 0) return '<p class="text-muted">No machines registered for this client.</p>';
+
+  let machinesAccordionHtml = `<div class="accordion" id="machinesAccordion-${parentId}">`;
+  machines.forEach((machineData, index) => {
+    const machine = machineData.machineInfo;
+    const tickets = machineData.tickets;
+    const accordionId = `machine-collapse-${parentId}-${index}`;
+    const headerId = `machine-header-${parentId}-${index}`;
+    
+    machinesAccordionHtml += `
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="${headerId}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${accordionId}">
+            <i class="fas fa-cogs me-2"></i> ${machine.name} (SN: ${machine.serial}) - ${tickets.length} Ticket(s)
+          </button>
+        </h2>
+        <div id="${accordionId}" class="accordion-collapse collapse" data-bs-parent="#machinesAccordion-${parentId}">
+          <div class="accordion-body">
+            ${machine.photo ? `<img src="${machine.photo}" class="img-thumbnail mb-3" style="max-height: 100px;">` : ''}
+            ${renderTicketsList(tickets)}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  machinesAccordionHtml += '</div>';
+  return machinesAccordionHtml;
+}
+
+function renderTicketsList(tickets) {
+  if (tickets.length === 0) return '<p class="text-muted">No ticket history for this machine.</p>';
+  
+  let listHtml = '<ul class="list-group">';
+  tickets.forEach(ticket => {
+    let statusClass = 'list-group-item-secondary';
+    if (ticket.status === 'OPEN') statusClass = 'list-group-item-danger';
+    if (ticket.status === 'CLOSED') statusClass = 'list-group-item-success';
+    if (ticket.status === 'RESOLVED') statusClass = 'list-group-item-warning';
+    
+    const ratingHtml = ticket.rating ? `<span class="text-warning ms-2">${'<i class="fas fa-star"></i>'.repeat(ticket.rating)}</span>` : '';
+
+    listHtml += `
+      <li class="list-group-item ${statusClass}">
+        <div class="d-flex w-100 justify-content-between">
+          <h6 class="mb-1">${ticket.ticketId} - <span class="fw-normal">${ticket.technician}</span></h6>
+          <small>Opened: ${ticket.opened}</small>
+        </div>
+        <p class="mb-1">${ticket.issues}</p>
+        <small><strong>Status:</strong> ${ticket.status} ${ratingHtml}</small>
+      </li>
+    `;
+  });
+  listHtml += '</ul>';
+  return listHtml;
+}
+
+// ================= VIEW CLIENT & MACHINE MANAGER =================
+async function viewClient(c) {
+  // Handle both object passed directly or from JSON string
+  const client = (typeof c === 'string') ? JSON.parse(c) : c;
+  
+  document.getElementById('modalClientName').innerText = client.fullName;
+  document.getElementById('modalClientUser').innerText = client.username;
+  document.getElementById('modalClientEmail').innerText = client.email || 'N/A';
+  document.getElementById('modalClientPhone').innerText = client.phone || 'N/A';
+  document.getElementById('modalClientArea').innerText = client.area || 'N/A';
+  
+  // Set dataset for add/delete operations
+  const modal = document.getElementById('clientModal');
+  modal.dataset.userId = client.userId;
+  modal.dataset.username = client.username;
+
+  const tbody = document.getElementById('modalMachinesBody');
+  tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading machines...</td></tr>';
+  
+  new bootstrap.Modal(document.getElementById('clientModal')).show();
+  
+  await refreshClientMachines(client.userId);
+}
+
+async function refreshClientMachines(userId) {
+  const tbody = document.getElementById('modalMachinesBody');
+  try {
+    const res = await fetch(API_URL + "?action=getUserMachines&userId=" + userId);
+    const machines = await res.json();
+    
+    tbody.innerHTML = "";
+    if (machines.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No machines registered.</td></tr>';
+      return;
+    }
+    
+    machines.forEach(m => {
+      const dateStr = m.added ? new Date(m.added).toLocaleDateString() : 'N/A';
+      tbody.innerHTML += `<tr>
+        <td>${m.machine}</td>
+        <td>${m.serial}</td>
+        <td>${dateStr}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteClientMachine('${userId}', '${m.machine}', '${m.serial}')"><i class="fas fa-trash"></i></button></td>
+      </tr>`;
+    });
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading machines</td></tr>';
+  }
+}
+
+async function addClientMachine() {
+  const userId = document.getElementById('clientModal').dataset.userId;
+  const name = document.getElementById('techAddMachineName').value;
+  const serial = document.getElementById('techAddMachineSerial').value;
+  
+  if (!name || !serial) return alert("Please enter Machine Name and Serial Number");
+  
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'addMachine', userId: userId, machineName: name, serialNumber: serial, requestingUsername: currentUser.username, photo: "" }) });
+  
+  alert("Machine Added to Client Profile");
+  document.getElementById('techAddMachineName').value = "";
+  document.getElementById('techAddMachineSerial').value = "";
+  refreshClientMachines(userId);
+}
+
+async function deleteClientMachine(userId, name, serial) {
+  if (!confirm(`Delete machine: ${name} (${serial})?`)) return;
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteMachine', userId: userId, machineName: name, serialNumber: serial, requestingUsername: currentUser.username }) });
+  refreshClientMachines(userId);
+}
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
