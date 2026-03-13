@@ -1,1 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FOB Ticket Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#080a0f;
+  --surface:#0e1118;
+  --surface2:#141820;
+  --surface3:#1c2230;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.11);
+  --accent:#00d4ff;
+  --accent-dim:rgba(0,212,255,0.12);
+  --accent-glow:rgba(0,212,255,0.3);
+  --green:#22c55e;
+  --green-dim:rgba(34,197,94,0.1);
+  --red:#f87171;
+  --red-dim:rgba(248,113,113,0.1);
+  --amber:#fbbf24;
+  --amber-dim:rgba(251,191,36,0.1);
+  --orange:#fb923c;
+  --orange-dim:rgba(251,146,60,0.1);
+  --text:#dde1eb;
+  --text2:#8b95a8;
+  --muted:#4a5568;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);overflow-x:hidden;}
 
+/* Scanline + noise */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px),
+    linear-gradient(135deg,rgba(0,212,255,0.025) 0%,transparent 50%,rgba(0,212,255,0.015) 100%);
+}
+
+/* HEADER */
+header{
+  position:sticky;top:0;z-index:200;height:52px;
+  background:rgba(8,10,15,0.92);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;
+}
+.logo{
+  font-family:var(--mono);font-size:0.82rem;color:var(--accent);
+  letter-spacing:0.12em;display:flex;align-items:center;gap:12px;
+}
+.logo-rule{width:1px;height:18px;background:var(--border2);}
+.logo-sub{font-size:0.65rem;color:var(--muted);letter-spacing:0.05em;font-family:var(--mono);}
+.hdr-r{display:flex;align-items:center;gap:8px;}
+.sync-pill{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:4px;padding:4px 11px;
+  font-size:0.68rem;color:var(--text2);font-family:var(--mono);
+}
+.sync-dot{width:5px;height:5px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background 0.3s;}
+.sync-dot.ok{background:var(--green);box-shadow:0 0 5px var(--green);}
+.sync-dot.err{background:var(--red);}
+.sync-dot.loading{background:var(--amber);animation:pulse 0.7s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.hdr-btn{
+  display:flex;align-items:center;gap:5px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text2);padding:5px 13px;border-radius:4px;
+  font-size:0.75rem;cursor:pointer;transition:all 0.12s;
+  font-family:var(--sans);
+}
+.hdr-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border2);}
+.hdr-btn.accent{
+  background:var(--accent-dim);color:var(--accent);
+  border-color:rgba(0,212,255,0.2);font-family:var(--mono);font-size:0.72rem;
+}
+.hdr-btn.accent:hover{background:rgba(0,212,255,0.2);}
+
+/* SHELL */
+.shell{position:relative;z-index:1;display:flex;min-height:calc(100vh - 52px);}
+
+/* SIDEBAR */
+aside{
+  width:220px;flex-shrink:0;
+  border-right:1px solid var(--border);
+  padding:0.75rem 0.6rem;
+  display:flex;flex-direction:column;gap:1px;
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;
+}
+.nav-label{
+  font-family:var(--mono);font-size:0.58rem;color:var(--muted);
+  letter-spacing:0.15em;padding:1rem 0.6rem 0.4rem;
+  text-transform:uppercase;
+}
+.nav-item{
+  display:flex;align-items:center;gap:8px;
+  padding:0.52rem 0.6rem;border-radius:3px;
+  border:1px solid transparent;background:none;
+  color:var(--text2);cursor:pointer;
+  font-family:var(--sans);font-size:0.84rem;
+  transition:all 0.1s;width:100%;text-align:left;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{
+  background:var(--accent-dim);color:var(--accent);
+  border-color:rgba(0,212,255,0.15);
+}
+.nav-ico{font-size:0.78rem;width:14px;text-align:center;flex-shrink:0;}
+.nav-badge{
+  margin-left:auto;font-family:var(--mono);font-size:0.62rem;
+  background:rgba(0,212,255,0.1);color:var(--accent);
+  padding:1px 6px;border-radius:2px;
+}
+.nav-badge.warn{background:var(--amber-dim);color:var(--amber);}
+.nav-badge.danger{background:var(--red-dim);color:var(--red);}
+.nav-badge.orange{background:var(--orange-dim);color:var(--orange);}
+
+/* MAIN */
+main{flex:1;padding:1.5rem 1.75rem;overflow-y:auto;min-width:0;}
+.page{display:none;}
+.page.active{display:block;animation:fadeUp 0.15s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+.pg-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap;}
+.pg-title{font-family:var(--mono);font-size:0.9rem;color:var(--accent);letter-spacing:0.06em;}
+.pg-sub{color:var(--muted);font-size:0.79rem;margin-top:4px;font-family:var(--mono);}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-bottom:1.5rem;}
+.stat{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:1rem;
+  position:relative;overflow:hidden;
+}
+.stat::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),transparent);
+  opacity:0.4;
+}
+.stat.green::after{background:linear-gradient(90deg,var(--green),transparent);}
+.stat.red::after{background:linear-gradient(90deg,var(--red),transparent);}
+.stat.amber::after{background:linear-gradient(90deg,var(--amber),transparent);}
+.stat.orange::after{background:linear-gradient(90deg,var(--orange),transparent);}
+.stat-val{font-family:var(--mono);font-size:1.75rem;color:var(--accent);line-height:1;font-weight:600;}
+.stat.green .stat-val{color:var(--green);}
+.stat.red .stat-val{color:var(--red);}
+.stat.amber .stat-val{color:var(--amber);}
+.stat.orange .stat-val{color:var(--orange);}
+.stat-lbl{font-size:0.69rem;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);}
+
+/* BREACHBAR */
+.breach-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:0.75rem 1rem;
+  margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;
+}
+.bbar-lbl{font-size:0.72rem;color:var(--muted);font-family:var(--mono);white-space:nowrap;}
+.bbar-track{flex:1;min-width:140px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+.bbar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--amber) 50%,var(--red));transition:width 0.6s ease;}
+.bbar-stat{font-family:var(--mono);font-size:0.72rem;color:var(--text2);white-space:nowrap;}
+
+/* TYPE BREAKDOWN */
+.type-row{display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.type-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:0.75rem 1.1rem;
+  display:flex;align-items:center;gap:10px;flex:1;min-width:140px;
+}
+.type-ico{font-size:1.1rem;}
+.type-count{font-family:var(--mono);font-size:1.3rem;color:var(--text);font-weight:600;}
+.type-name{font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);}
+
+/* FILTERS */
+.filters{
+  display:flex;gap:6px;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:0.65rem;margin-bottom:1rem;align-items:center;
+}
+.fi{
+  flex:1;min-width:130px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);padding:0.48rem 0.75rem;border-radius:3px;
+  font-size:0.82rem;font-family:var(--sans);
+  transition:border-color 0.1s;
+}
+.fi:focus{outline:none;border-color:rgba(0,212,255,0.35);}
+.fi option{background:var(--surface2);}
+
+/* TABLE */
+.tbl-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;overflow:hidden;
+}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--surface2);border-bottom:1px solid var(--border);}
+th{
+  padding:0.6rem 0.85rem;text-align:left;
+  font-family:var(--mono);font-size:0.62rem;font-weight:500;
+  color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;
+  white-space:nowrap;
+}
+td{
+  padding:0.62rem 0.85rem;border-bottom:1px solid rgba(255,255,255,0.04);
+  font-size:0.82rem;vertical-align:middle;
+}
+tr:last-child td{border-bottom:none;}
+tr.r-assigned:hover td{background:rgba(0,212,255,0.025);}
+tr.r-unassigned:hover td{background:rgba(251,146,60,0.025);}
+tr.r-escalated:hover td{background:rgba(251,191,36,0.025);}
+tr.r-closed:hover td{background:rgba(34,197,94,0.025);}
+tr.r-unassigned td:first-child{border-left:2px solid var(--orange);}
+tr.r-escalated td:first-child{border-left:2px solid var(--amber);}
+tr.r-closed td:first-child{border-left:2px solid var(--green);}
+tr.r-assigned td:first-child{border-left:2px solid var(--accent);}
+
+/* BADGES */
+.badge{
+  display:inline-block;padding:2px 7px;border-radius:2px;
+  font-family:var(--mono);font-size:0.64rem;font-weight:500;
+  letter-spacing:0.06em;white-space:nowrap;
+}
+.bd-assigned  {background:var(--accent-dim);color:var(--accent);}
+.bd-unassigned{background:var(--orange-dim);color:var(--orange);}
+.bd-escalated {background:var(--amber-dim);color:var(--amber);}
+.bd-closed    {background:var(--green-dim);color:var(--green);}
+.bd-yes       {background:var(--green-dim);color:var(--green);}
+.bd-no        {background:var(--red-dim);color:var(--red);}
+.bd-type      {background:var(--surface3);color:var(--text2);border:1px solid var(--border);}
+.bd-support    {color:#60a5fa;background:rgba(96,165,250,0.1);}
+.bd-installation{color:#a78bfa;background:rgba(167,139,250,0.1);}
+.bd-relocation {color:#34d399;background:rgba(52,211,153,0.1);}
+
+/* ACTION BUTTONS */
+.act-btn{
+  padding:3px 9px;border-radius:2px;font-size:0.7rem;cursor:pointer;
+  font-family:var(--mono);transition:all 0.1s;border:1px solid var(--border);
+  background:var(--surface2);color:var(--text2);
+}
+.act-btn:hover{background:var(--surface3);color:var(--text);}
+.act-view{color:var(--accent);border-color:rgba(0,212,255,0.2);background:var(--accent-dim);}
+.act-view:hover{background:rgba(0,212,255,0.2);}
+.act-ext{color:var(--text2);}
+
+.mono{font-family:var(--mono) !important;font-size:0.78rem !important;}
+
+/* EMPTY */
+.empty{text-align:center;padding:3.5rem 2rem;color:var(--muted);}
+.empty-ico{font-size:1.8rem;margin-bottom:0.75rem;opacity:0.5;}
+.empty h3{font-family:var(--mono);font-size:0.78rem;margin-bottom:6px;}
+.empty p{font-size:0.79rem;}
+
+/* MODAL */
+.overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;padding:1.5rem;
+}
+.overlay.show{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:6px;width:100%;max-width:760px;max-height:90vh;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.modal-title{
+  padding:1rem 1.25rem;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:0.82rem;color:var(--accent);
+  flex-shrink:0;
+}
+.modal-body{flex:1;overflow-y:auto;padding:1.1rem 1.25rem;}
+.modal-footer{
+  padding:0.75rem 1.25rem;border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;
+}
+
+/* DETAIL GRID */
+.detail-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:0.6rem;margin-bottom:0.75rem;
+}
+.detail-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:3px;padding:0.6rem 0.75rem;
+}
+.detail-lbl{font-family:var(--mono);font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;}
+.detail-val{font-size:0.83rem;color:var(--text);word-break:break-word;}
+.detail-wide{grid-column:1/-1;}
+
+/* SETUP */
+.setup-wrap{display:flex;flex-direction:column;gap:1.25rem;max-width:720px;}
+.setup-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:1.25rem;
+}
+.setup-card h3{font-family:var(--mono);font-size:0.72rem;color:var(--accent);letter-spacing:0.1em;margin-bottom:1rem;}
+.cfg-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;}
+.cfg-input{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);padding:0.52rem 0.85rem;border-radius:3px;
+  font-size:0.83rem;font-family:var(--sans);min-width:200px;
+  transition:border-color 0.1s;
+}
+.cfg-input:focus{outline:none;border-color:rgba(0,212,255,0.35);}
+.cfg-msg{font-size:0.74rem;min-height:18px;margin-top:6px;color:var(--muted);font-family:var(--mono);}
+
+.btn-primary{
+  background:var(--accent-dim);color:var(--accent);
+  border:1px solid rgba(0,212,255,0.22);
+  padding:6px 16px;border-radius:3px;font-size:0.8rem;font-weight:600;
+  cursor:pointer;transition:all 0.12s;white-space:nowrap;font-family:var(--sans);
+}
+.btn-primary:hover{background:rgba(0,212,255,0.2);}
+.btn-secondary{
+  background:var(--surface);color:var(--text2);
+  border:1px solid var(--border);
+  padding:6px 14px;border-radius:3px;font-size:0.8rem;
+  cursor:pointer;transition:all 0.12s;font-family:var(--sans);
+}
+.btn-secondary:hover{background:var(--surface2);color:var(--text);}
+
+.step-list{display:flex;flex-direction:column;gap:0.9rem;}
+.step{display:flex;gap:10px;}
+.step-num{
+  width:24px;height:24px;flex-shrink:0;border-radius:2px;
+  background:var(--accent-dim);border:1px solid rgba(0,212,255,0.2);
+  color:var(--accent);font-family:var(--mono);font-size:0.7rem;
+  display:flex;align-items:center;justify-content:center;
+}
+.step-body h4{font-size:0.84rem;color:var(--text);margin-bottom:3px;}
+.step-body p{font-size:0.78rem;color:var(--text2);line-height:1.65;}
+.step-body code{background:var(--surface3);color:var(--accent);padding:1px 5px;border-radius:2px;font-family:var(--mono);font-size:0.73rem;}
+.step-body a{color:var(--accent);}
+.snippet-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:3px;padding:10px;margin-top:8px;
+  font-family:var(--mono);font-size:0.7rem;color:var(--accent);
+  line-height:1.7;white-space:pre-wrap;word-break:break-all;
+}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:4px;padding:0.7rem 1rem;font-size:0.82rem;
+  max-width:280px;opacity:0;transform:translateY(8px);
+  transition:all 0.2s;pointer-events:none;font-family:var(--mono);
+}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{border-color:rgba(34,197,94,0.35);color:var(--green);}
+.toast.err{border-color:rgba(248,113,113,0.35);color:var(--red);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px;}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  aside{display:none;}
+  main{padding:1rem;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .type-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    FOB / TICKET_HUB
+    <div class="logo-rule"></div>
+    <span class="logo-sub">LIVE SYNC</span>
+  </div>
+  <div class="hdr-r">
+    <div class="sync-pill">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncTxt">Not configured</span>
+    </div>
+    <button class="hdr-btn accent" id="refreshBtn" onclick="loadData()">↻ REFRESH</button>
+    <button class="hdr-btn" onclick="nav('setup')">⚙ CONFIG</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside>
+    <button class="nav-item active" data-page="dash" onclick="nav('dash')">
+      <span class="nav-ico">◈</span> Dashboard
+      <span class="nav-badge" id="nb-total">—</span>
+    </button>
+    <div class="nav-label">Tickets</div>
+    <button class="nav-item" data-page="all" onclick="nav('all')">
+      <span class="nav-ico">≡</span> All Tickets
+    </button>
+    <button class="nav-item" data-page="open" onclick="nav('open')">
+      <span class="nav-ico">◎</span> Open
+      <span class="nav-badge warn" id="nb-open">—</span>
+    </button>
+    <button class="nav-item" data-page="escalated" onclick="nav('escalated')">
+      <span class="nav-ico">⚠</span> Escalated
+      <span class="nav-badge danger" id="nb-esc">—</span>
+    </button>
+    <button class="nav-item" data-page="unassigned" onclick="nav('unassigned')">
+      <span class="nav-ico">○</span> Unassigned
+      <span class="nav-badge orange" id="nb-una">—</span>
+    </button>
+    <button class="nav-item" data-page="closed" onclick="nav('closed')">
+      <span class="nav-ico">✓</span> Closed
+    </button>
+    <div class="nav-label">By Type</div>
+    <button class="nav-item" data-page="support" onclick="navType('support')">
+      <span class="nav-ico">🔧</span> Support
+    </button>
+    <button class="nav-item" data-page="installation" onclick="navType('installation')">
+      <span class="nav-ico">📡</span> Installation
+    </button>
+    <button class="nav-item" data-page="relocation" onclick="navType('relocation')">
+      <span class="nav-ico">🚛</span> Relocation
+    </button>
+    <div class="nav-label">System</div>
+    <button class="nav-item" data-page="setup" onclick="nav('setup')">
+      <span class="nav-ico">⚙</span> Setup / Config
+    </button>
+  </aside>
+
+  <main>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dash">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// DASHBOARD</div>
+          <div class="pg-sub" id="dash-sub">Loading…</div>
+        </div>
+        <button class="btn-secondary" onclick="nav('all')">View All →</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-val" id="s-total">—</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+        <div class="stat amber">
+          <div class="stat-val" id="s-open">—</div>
+          <div class="stat-lbl">Open</div>
+        </div>
+        <div class="stat red">
+          <div class="stat-val" id="s-esc">—</div>
+          <div class="stat-lbl">Escalated</div>
+        </div>
+        <div class="stat orange">
+          <div class="stat-val" id="s-una">—</div>
+          <div class="stat-lbl">Unassigned</div>
+        </div>
+        <div class="stat green">
+          <div class="stat-val" id="s-closed">—</div>
+          <div class="stat-lbl">Closed</div>
+        </div>
+        <div class="stat red">
+          <div class="stat-val" id="s-sla">—</div>
+          <div class="stat-lbl">SLA Breach</div>
+        </div>
+      </div>
+
+      <div class="breach-bar" id="breachBar" style="display:none">
+        <span class="bbar-lbl">SLA COMPLIANCE</span>
+        <div class="bbar-track"><div class="bbar-fill" id="bbar-fill" style="width:0%"></div></div>
+        <span class="bbar-stat" id="bbar-stat">—</span>
+      </div>
+
+      <div class="type-row">
+        <div class="type-card">
+          <span class="type-ico">🔧</span>
+          <div>
+            <div class="type-count" id="tc-support">—</div>
+            <div class="type-name">Support</div>
+          </div>
+        </div>
+        <div class="type-card">
+          <span class="type-ico">📡</span>
+          <div>
+            <div class="type-count" id="tc-install">—</div>
+            <div class="type-name">Installation</div>
+          </div>
+        </div>
+        <div class="type-card">
+          <span class="type-ico">🚛</span>
+          <div>
+            <div class="type-count" id="tc-reloc">—</div>
+            <div class="type-name">Relocation</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap" id="dashTable"></div>
+    </div>
+
+    <!-- ── ALL TICKETS ── -->
+    <div class="page" id="page-all">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// ALL TICKETS</div>
+          <div class="pg-sub" id="all-sub"></div>
+        </div>
+      </div>
+      <div class="filters">
+        <input class="fi" id="q" placeholder="Search ID, name, area, service ID, stage…" oninput="renderFiltered()">
+        <select class="fi" id="f-type" onchange="renderFiltered()">
+          <option value="">All Types</option>
+          <option value="support">Support</option>
+          <option value="installation">Installation</option>
+          <option value="relocation">Relocation</option>
+        </select>
+        <select class="fi" id="f-bucket" onchange="renderFiltered()">
+          <option value="">All Buckets</option>
+          <option value="assigned">Assigned</option>
+          <option value="unassigned">Unassigned</option>
+          <option value="escalated">Escalated</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select class="fi" id="f-sla" onchange="renderFiltered()">
+          <option value="">All SLA</option>
+          <option value="YES">SLA Met</option>
+          <option value="NO">SLA Breached</option>
+        </select>
+        <select class="fi" id="f-region" onchange="renderFiltered()">
+          <option value="">All Regions</option>
+        </select>
+        <button class="btn-secondary" onclick="clearFilters()">Clear</button>
+      </div>
+      <div class="tbl-wrap" id="allTable"></div>
+    </div>
+
+    <!-- ── OPEN ── -->
+    <div class="page" id="page-open">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// OPEN TICKETS</div>
+          <div class="pg-sub" id="open-sub"></div>
+        </div>
+      </div>
+      <div class="tbl-wrap" id="openTable"></div>
+    </div>
+
+    <!-- ── ESCALATED ── -->
+    <div class="page" id="page-escalated">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// ESCALATED</div>
+          <div class="pg-sub">Tickets requiring supervisor attention</div>
+        </div>
+      </div>
+      <div class="tbl-wrap" id="escalatedTable"></div>
+    </div>
+
+    <!-- ── UNASSIGNED ── -->
+    <div class="page" id="page-unassigned">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// UNASSIGNED</div>
+          <div class="pg-sub">Not yet picked up by a technician</div>
+        </div>
+      </div>
+      <div class="tbl-wrap" id="unassignedTable"></div>
+    </div>
+
+    <!-- ── CLOSED ── -->
+    <div class="page" id="page-closed">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// CLOSED TICKETS</div>
+          <div class="pg-sub" id="closed-sub"></div>
+        </div>
+      </div>
+      <div class="tbl-wrap" id="closedTable"></div>
+    </div>
+
+    <!-- ── TYPE PAGES ── -->
+    <div class="page" id="page-support">
+      <div class="pg-hdr"><div><div class="pg-title">// SUPPORT</div></div></div>
+      <div class="tbl-wrap" id="supportTable"></div>
+    </div>
+    <div class="page" id="page-installation">
+      <div class="pg-hdr"><div><div class="pg-title">// INSTALLATION</div></div></div>
+      <div class="tbl-wrap" id="installationTable"></div>
+    </div>
+    <div class="page" id="page-relocation">
+      <div class="pg-hdr"><div><div class="pg-title">// RELOCATION</div></div></div>
+      <div class="tbl-wrap" id="relocationTable"></div>
+    </div>
+
+    <!-- ── SETUP ── -->
+    <div class="page" id="page-setup">
+      <div class="pg-hdr">
+        <div>
+          <div class="pg-title">// SETUP & CONFIG</div>
+          <div class="pg-sub">Connect to your GitHub Gist database</div>
+        </div>
+      </div>
+      <div class="setup-wrap">
+        <div class="setup-card">
+          <h3>GIST CONNECTION</h3>
+          <div class="cfg-row">
+            <input class="cfg-input" id="cfg-gist-id" placeholder="Gist ID (from the Gist URL)">
+          </div>
+          <div class="cfg-row">
+            <input class="cfg-input" id="cfg-token" type="password" placeholder="GitHub token (gist scope)">
+          </div>
+          <div class="cfg-row">
+            <input class="cfg-input" id="cfg-file" placeholder="Filename e.g. tickets.json" value="tickets.json">
+          </div>
+          <div class="cfg-row">
+            <button class="btn-primary" onclick="saveConfig()">Save & Test</button>
+            <button class="btn-secondary" onclick="clearConfig()">Clear</button>
+          </div>
+          <div class="cfg-msg" id="cfg-msg"></div>
+        </div>
+
+        <div class="setup-card">
+          <h3>RAW GIST URL</h3>
+          <p style="font-size:0.78rem;color:var(--text2);margin-bottom:10px;line-height:1.6;">This is the URL the site fetches every 5 minutes. No auth needed for a secret Gist if you know the URL.</p>
+          <div class="snippet-box" id="rawUrlBox">Enter your Gist ID above to see the URL.</div>
+        </div>
+
+        <div class="setup-card">
+          <h3>HOW IT WORKS</h3>
+          <div class="step-list">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <h4>Create a GitHub Gist</h4>
+                <p>Go to <a href="https://gist.github.com" target="_blank">gist.github.com</a> → New Gist → filename <code>tickets.json</code> → content <code>[]</code> → Secret → Create. Copy the Gist ID from the URL.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <h4>Create a GitHub Token</h4>
+                <p>GitHub → Settings → <a href="https://github.com/settings/tokens/new" target="_blank">Developer Settings → Tokens (Classic)</a> → tick <strong>gist</strong> scope → Generate. Paste above — stored in session only.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <h4>Create a private GitHub repo for the sync worker</h4>
+                <p>Create any private repo. Under Settings → Secrets → Actions add: <code>BITRIX_WEBHOOK</code>, <code>GIST_TOKEN</code>, <code>GIST_ID</code>.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">4</div>
+              <div class="step-body">
+                <h4>Add the two sync files to the repo</h4>
+                <p>Put <code>sync.js</code> at <code>scripts/sync.js</code> and the workflow at <code>.github/workflows/sync-bitrix-to-gist.yml</code>. Push → Actions runs every 10 min.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">5</div>
+              <div class="step-body">
+                <h4>Enter config above and click Refresh</h4>
+                <p>Paste Gist ID + token, click Save & Test. The hub auto-refreshes every 5 minutes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="overlay" id="viewOverlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-title" id="viewTitle">// TICKET DETAIL</div>
+    <div class="modal-body" id="viewBody"></div>
+    <div class="modal-footer">
+      <a id="viewBitrixLink" href="#" target="_blank" class="btn-secondary" style="text-decoration:none;display:none;">↗ Open in Bitrix24</a>
+      <button class="btn-secondary" onclick="closeOverlay()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let tickets  = [];
+let lastSync = null;
+let CFG      = { gistId:'', token:'', filename:'tickets.json' };
+let _owner   = '';
+
+// ── CONFIG (sessionStorage only — never localStorage) ─────────────────────
+function loadCfg() {
+  try { const s = sessionStorage.getItem('fob-hub-v4'); if (s) Object.assign(CFG, JSON.parse(s)); } catch(e) {}
+}
+function storeCfg() {
+  try { sessionStorage.setItem('fob-hub-v4', JSON.stringify(CFG)); } catch(e) {}
+}
+
+// ── FETCH DATA ─────────────────────────────────────────────────────────────
+async function loadData() {
+  if (!CFG.gistId) { nav('setup'); return; }
+  setSyncState('loading', 'Fetching…');
+  document.getElementById('refreshBtn').textContent = '↻ …';
+
+  try {
+    // Resolve owner if not cached
+    if (!_owner) {
+      const meta = await fetch(`https://api.github.com/gists/${CFG.gistId}`, {
+        headers: CFG.token ? { Authorization: `token ${CFG.token}` } : {}
+      });
+      if (!meta.ok) throw new Error(`Gist API: HTTP ${meta.status}${meta.status===401?' (bad token)':meta.status===404?' (gist not found)':''}`);
+      const mj = await meta.json();
+      _owner = mj.owner?.login || '';
+    }
+
+    // Fetch raw file (cache-bust with timestamp)
+    const rawUrl = `https://gist.githubusercontent.com/${_owner}/${CFG.gistId}/raw/${CFG.filename}?t=${Date.now()}`;
+    const resp   = await fetch(rawUrl);
+    if (!resp.ok) throw new Error(`Raw fetch HTTP ${resp.status}`);
+
+    const data = await resp.json();
+    if (!Array.isArray(data)) throw new Error('Gist content is not a JSON array');
+
+    tickets  = data;
+    lastSync = new Date();
+
+    populateRegionFilter();
+    setSyncState('ok', `${tickets.length} tickets · ${fmtTime(lastSync)}`);
+    renderAll();
+    toast(`✓ ${tickets.length} tickets loaded`, 'ok');
+
+  } catch(e) {
+    setSyncState('err', e.message.slice(0, 50));
+    toast('Load failed: ' + e.message, 'err');
+    console.error(e);
+  }
+  document.getElementById('refreshBtn').textContent = '↻ REFRESH';
+}
+
+// ── REGION FILTER POPULATION ───────────────────────────────────────────────
+function populateRegionFilter() {
+  const sel = document.getElementById('f-region');
+  if (!sel) return;
+  const regions = [...new Set(tickets.map(t => t.region).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Regions</option>' +
+    regions.map(r => `<option value="${xss(r)}"${r===cur?' selected':''}>${xss(r)}</option>`).join('');
+}
+
+// ── CONFIG FORM ────────────────────────────────────────────────────────────
+async function saveConfig() {
+  const gistId   = document.getElementById('cfg-gist-id').value.trim();
+  const token    = document.getElementById('cfg-token').value.trim();
+  const filename = document.getElementById('cfg-file').value.trim() || 'tickets.json';
+  const msg      = document.getElementById('cfg-msg');
+
+  msg.textContent = 'Testing…'; msg.style.color = 'var(--muted)';
+  if (!gistId) { msg.textContent = 'Gist ID required'; msg.style.color = 'var(--red)'; return; }
+
+  try {
+    const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}${r.status===401?' (bad token)':r.status===404?' (gist not found)':''}`);
+    const d = await r.json();
+    _owner = d.owner?.login || '';
+
+    Object.assign(CFG, { gistId, token, filename });
+    storeCfg();
+
+    const f = d.files?.[filename];
+    let count = 0;
+    if (f) { try { count = JSON.parse(f.content||'[]').length; } catch(_) {} }
+
+    msg.textContent = `✓ Connected · owner: ${_owner} · ${count} ticket(s) in Gist`;
+    msg.style.color = 'var(--green)';
+    updateRawUrl();
+    loadData();
+  } catch(e) {
+    msg.textContent = '✗ ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+function clearConfig() {
+  Object.assign(CFG, { gistId:'', token:'', filename:'tickets.json' });
+  _owner = '';
+  try { sessionStorage.removeItem('fob-hub-v4'); } catch(_) {}
+  ['cfg-gist-id','cfg-token'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  const cf = document.getElementById('cfg-file'); if(cf) cf.value='tickets.json';
+  document.getElementById('cfg-msg').textContent = 'Cleared.';
+  setSyncState('', 'Not configured');
+  updateRawUrl();
+}
+
+function populateConfigForm() {
+  const a=document.getElementById('cfg-gist-id'); if(a) a.value=CFG.gistId||'';
+  const b=document.getElementById('cfg-token');   if(b) b.value=CFG.token||'';
+  const c=document.getElementById('cfg-file');    if(c) c.value=CFG.filename||'tickets.json';
+  updateRawUrl();
+}
+
+function updateRawUrl() {
+  const el = document.getElementById('rawUrlBox');
+  if (!el) return;
+  if (CFG.gistId && _owner)
+    el.textContent = `https://gist.githubusercontent.com/${_owner}/${CFG.gistId}/raw/${CFG.filename}`;
+  else if (CFG.gistId)
+    el.textContent = `https://gist.githubusercontent.com/<username>/${CFG.gistId}/raw/${CFG.filename}`;
+  else
+    el.textContent = 'Enter your Gist ID above to see the URL.';
+}
+
+// ── SYNC INDICATOR ─────────────────────────────────────────────────────────
+function setSyncState(state, txt) {
+  const dot  = document.getElementById('syncDot');
+  const span = document.getElementById('syncTxt');
+  dot.className = 'sync-dot' + (state ? ' ' + state : '');
+  span.textContent = txt;
+}
+
+// ── NAV ────────────────────────────────────────────────────────────────────
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + page);
+  if (pg) pg.classList.add('active');
+  const nb = document.querySelector(`[data-page="${page}"]`);
+  if (nb) nb.classList.add('active');
+  if (page === 'setup')      populateConfigForm();
+  if (page === 'all')        renderFiltered();
+  if (page === 'open')       { renderTable('openTable',      tickets.filter(t=>t.status!=='closed')); set('open-sub', tickets.filter(t=>t.status!=='closed').length + ' tickets'); }
+  if (page === 'escalated')  renderTable('escalatedTable',  tickets.filter(t=>t.bucket==='escalated'));
+  if (page === 'unassigned') renderTable('unassignedTable', tickets.filter(t=>t.bucket==='unassigned'));
+  if (page === 'closed')     { renderTable('closedTable', tickets.filter(t=>t.status==='closed')); set('closed-sub', tickets.filter(t=>t.status==='closed').length + ' tickets'); }
+}
+
+function navType(type) {
+  nav(type);
+  renderTable(type + 'Table', tickets.filter(t => t.type === type));
+}
+
+// ── RENDER ALL ─────────────────────────────────────────────────────────────
+function renderAll() {
+  const open = tickets.filter(t => t.status !== 'closed');
+  const esc  = tickets.filter(t => t.bucket === 'escalated');
+  const una  = tickets.filter(t => t.bucket === 'unassigned');
+  const cls  = tickets.filter(t => t.status === 'closed');
+  const sla  = tickets.filter(t => t.slaMet === 'NO');
+
+  // Stats
+  set('s-total',  tickets.length);
+  set('s-open',   open.length);
+  set('s-esc',    esc.length);
+  set('s-una',    una.length);
+  set('s-closed', cls.length);
+  set('s-sla',    sla.length);
+  set('nb-total', tickets.length);
+  set('nb-open',  open.length);
+  set('nb-esc',   esc.length);
+  set('nb-una',   una.length);
+
+  // Type breakdown
+  set('tc-support', tickets.filter(t=>t.type==='support').length);
+  set('tc-install', tickets.filter(t=>t.type==='installation').length);
+  set('tc-reloc',   tickets.filter(t=>t.type==='relocation').length);
+
+  // SLA bar
+  const measured = tickets.filter(t => t.slaMet === 'YES' || t.slaMet === 'NO');
+  if (measured.length > 0) {
+    const met  = tickets.filter(t=>t.slaMet==='YES').length;
+    const pct  = Math.round(met / measured.length * 100);
+    const fill = document.getElementById('bbar-fill');
+    if (fill) fill.style.width = pct + '%';
+    set('bbar-stat', `${met}/${measured.length} met (${pct}%)`);
+    const bb = document.getElementById('breachBar');
+    if (bb) bb.style.display = 'flex';
+  }
+
+  // Dash sub
+  set('dash-sub',
+    `${tickets.length} total · ${open.length} open · ${esc.length} escalated · ${una.length} unassigned · ${sla.length} SLA breaches` +
+    (lastSync ? ` · synced ${fmtTime(lastSync)}` : '')
+  );
+
+  // Dash table — 30 most recent
+  const recent = [...tickets].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,30);
+  renderTable('dashTable', recent);
+
+  // Keep current filter page in sync
+  renderFiltered();
+}
+
+// ── FILTERED TABLE ─────────────────────────────────────────────────────────
+function renderFiltered() {
+  const q  = (document.getElementById('q')?.value         || '').toLowerCase();
+  const ft = document.getElementById('f-type')?.value     || '';
+  const fb = document.getElementById('f-bucket')?.value   || '';
+  const fs = document.getElementById('f-sla')?.value      || '';
+  const fr = document.getElementById('f-region')?.value   || '';
+
+  const filtered = tickets.filter(t => {
+    if (ft && t.type   !== ft)   return false;
+    if (fb && t.bucket !== fb)   return false;
+    if (fs && t.slaMet !== fs)   return false;
+    if (fr && t.region !== fr)   return false;
+    if (q) {
+      const hay = [t.id, t.serviceId, t.name, t.area, t.region, t.assignedTo,
+                   t.stage, t.complaint, t.type, t.issueCategory, t.olt].join(' ').toLowerCase();
+      return hay.includes(q);
+    }
+    return true;
+  });
+
+  set('all-sub', `${filtered.length} ticket(s)${tickets.length !== filtered.length ? ' of ' + tickets.length : ''}`);
+  renderTable('allTable', filtered);
+}
+
+function clearFilters() {
+  ['q','f-type','f-bucket','f-sla','f-region'].forEach(id => {
+    const e = document.getElementById(id); if (e) e.value = '';
+  });
+  renderFiltered();
+}
+
+// ── RENDER TABLE ───────────────────────────────────────────────────────────
+function renderTable(targetId, rows) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+
+  if (!rows?.length) {
+    el.innerHTML = CFG.gistId
+      ? `<div class="empty"><div class="empty-ico">◻</div><h3>No tickets</h3></div>`
+      : `<div class="empty"><div class="empty-ico">⚙</div><h3>Not configured</h3>
+           <p style="margin-top:6px"><a href="#" onclick="nav('setup');return false;" style="color:var(--accent)">Go to Setup & Config →</a></p>
+         </div>`;
+    return;
+  }
+
+  const head = `<thead><tr>
+    <th>ID</th><th>Service ID</th><th>Customer</th><th>Type</th>
+    <th>Bucket</th><th>Stage</th><th>Area</th><th>Assignee</th>
+    <th>Created</th><th>Age</th><th>SLA</th><th></th>
+  </tr></thead>`;
+
+  const body = rows.map(t => {
+    const b   = t.bucket || 'assigned';
+    const sla = t.slaMet === 'YES'
+      ? `<span class="badge bd-yes">MET</span>`
+      : t.slaMet === 'NO'
+      ? `<span class="badge bd-no">BREACH</span>`
+      : `<span style="color:var(--muted);font-size:0.7rem;font-family:var(--mono)">—</span>`;
+    const ageStr = t.ageHrs != null ? t.ageHrs + 'h' : '—';
+    const ageColor = (t.status !== 'closed' && t.ageHrs != null && t.ageHrs > (t.slaLimit||48))
+      ? 'color:var(--red);' : '';
+
+    const typeBadge = `<span class="badge bd-${xss(t.type||'')}">${xss(t.type||'—')}</span>`;
+
+    return `<tr class="r-${xss(b)}">
+      <td class="mono">#${xss(t.id)}</td>
+      <td class="mono" style="color:var(--accent)">${xss(t.serviceId||'—')}</td>
+      <td style="max-width:175px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${xss(t.name)}">${xss(t.name||'—')}</td>
+      <td>${typeBadge}</td>
+      <td><span class="badge bd-${xss(b)}">${bucketLbl(b)}</span></td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.77rem" title="${xss(t.stage)}">${xss(t.stage||'—')}</td>
+      <td style="font-size:0.79rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xss(t.area||'—')}</td>
+      <td style="font-size:0.79rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${xss(t.assignedTo||'—')}</td>
+      <td style="font-size:0.73rem;color:var(--text2);font-family:var(--mono)">${t.createdAt?t.createdAt.slice(0,10):'—'}</td>
+      <td class="mono" style="font-size:0.73rem;${ageColor}">${ageStr}</td>
+      <td>${sla}</td>
+      <td>
+        <div style="display:flex;gap:4px;">
+          <button class="act-btn act-view" onclick="viewTicket('${xss(String(t.id))}')">View</button>
+          ${t.bitrixUrl?`<a href="${xss(t.bitrixUrl)}" target="_blank" rel="noopener"><button class="act-btn act-ext">↗</button></a>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<table>${head}<tbody>${body}</tbody></table>`;
+}
+
+// ── TICKET DETAIL MODAL ────────────────────────────────────────────────────
+function viewTicket(id) {
+  const t = tickets.find(x => String(x.id) === String(id));
+  if (!t) return;
+
+  document.getElementById('viewTitle').textContent = `// TICKET #${t.id}  ·  ${t.name || ''}`;
+
+  const row = (lbl, val, wide) => {
+    if (val == null || val === '') return '';
+    return `<div class="detail-card${wide?' detail-wide':''}">
+      <div class="detail-lbl">${lbl}</div>
+      <div class="detail-val">${val}</div>
+    </div>`;
+  };
+
+  const slaBadge = t.slaMet === 'YES'
+    ? `<span class="badge bd-yes">MET</span>`
+    : t.slaMet === 'NO'
+    ? `<span class="badge bd-no">BREACHED</span>` : '—';
+
+  document.getElementById('viewBody').innerHTML = `
+    <div class="detail-grid">
+      ${row('Ticket ID',     `<span style="font-family:var(--mono)">${xss(t.id)}</span>`)}
+      ${row('Service ID',    `<span style="font-family:var(--mono);color:var(--accent)">${xss(t.serviceId)}</span>`)}
+      ${row('eService ID',   t.eServiceTckId ? xss(t.eServiceTckId) : null)}
+      ${row('Type',          `<span class="badge bd-${xss(t.type)}">${xss(t.type)}</span>`)}
+      ${row('Status',        `<span class="badge bd-${xss(t.status)}">${xss(t.status?.toUpperCase())}</span>`)}
+      ${row('Bucket',        `<span class="badge bd-${xss(t.bucket)}">${bucketLbl(t.bucket)}</span>`)}
+      ${row('Stage',         xss(t.stage))}
+      ${row('Customer',      xss(t.name))}
+      ${row('Area',          xss(t.area))}
+      ${row('Region',        xss(t.region))}
+      ${row('Assigned To',   xss(t.assignedTo))}
+      ${row('Created By',    xss(t.createdBy))}
+      ${row('ISM Agent',     xss(t.ismAgent))}
+      ${row('Priority',      xss(t.priority))}
+      ${row('Escalation',    xss(t.escalation))}
+      ${row('Service Impact',xss(t.serviceImpact))}
+      ${row('Level Status',  xss(t.levelStatus))}
+      ${row('Outage Ticket', xss(t.outageTicket))}
+      ${row('OLT',           xss(t.olt))}
+      ${row('GPON',          xss(t.gpon))}
+      ${row('Interface',     xss(t.iface))}
+      ${row('Serial No.',    xss(t.serial))}
+      ${row('VLAN',          xss(t.vlan))}
+      ${row('Issue Category',xss(t.issueCategory))}
+      ${row('Complaint Type',xss(t.complaintType))}
+      ${row('Ticket Source', xss(t.ticketSource))}
+      ${row('Service Plan',  xss(t.servicePlan))}
+      ${row('Age (hrs)',     t.ageHrs != null ? t.ageHrs + 'h' : null)}
+      ${row('SLA Limit',     t.slaLimit ? t.slaLimit + 'h' : null)}
+      ${row('SLA',           slaBadge)}
+      ${row('SLA Indicator', xss(t.slaIndicator))}
+      ${row('SLA Breached',  xss(t.slaBreached))}
+      ${row('MTTR',          xss(t.mttr))}
+      ${row('Created',       fmtDate(t.createdAt))}
+      ${row('Resolved',      fmtDate(t.resolvedAt))}
+      ${row('Updated',       fmtDate(t.updatedAt))}
+      ${row('Expected Close',fmtDate(t.expectedClosure))}
+      ${row('Last Update',   xss(t.lastUpdate))}
+      ${row('Synced At',     fmtDate(t.syncedAt))}
+    </div>
+    ${t.complaint    ? row('Complaint',          xss(t.complaint),    true) : ''}
+    ${t.notes        ? row('Notes / Desc',        `<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6">${xss(t.notes)}</pre>`, true) : ''}
+    ${t.rootCause    ? row('Root Cause',          `<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6">${xss(t.rootCause)}</pre>`, true) : ''}
+    ${t.resolution   ? row('Resolution',          `<pre style="white-space:pre-wrap;font-size:0.8rem;line-height:1.6">${xss(t.resolution)}</pre>`, true) : ''}
+    ${t.customerAddr ? row('Customer Address',    xss(t.customerAddr), true) : ''}
+  `;
+
+  const lnk = document.getElementById('viewBitrixLink');
+  if (t.bitrixUrl) { lnk.href = t.bitrixUrl; lnk.style.display = 'inline-flex'; }
+  else lnk.style.display = 'none';
+
+  document.getElementById('viewOverlay').classList.add('show');
+}
+
+function closeOverlay() {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('show'));
+}
+function overlayClick(e) {
+  if (e.target === document.getElementById('viewOverlay')) closeOverlay();
+}
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function xss(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function set(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+function fmtTime(d) { return d ? d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''; }
+function fmtDate(s) {
+  if (!s) return '';
+  try { const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+  catch(_) { return s; }
+}
+function bucketLbl(b) {
+  return { assigned:'ASSIGNED', unassigned:'UNASSIGNED', escalated:'ESCALATED', closed:'CLOSED' }[b]
+    || String(b||'').toUpperCase();
+}
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type||''}`;
+  clearTimeout(window._tt);
+  window._tt = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ── AUTO-REFRESH (5 min) ───────────────────────────────────────────────────
+setInterval(() => { if (CFG.gistId) loadData(); }, 5 * 60 * 1000);
+
+// ── KEYBOARD ──────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlay(); });
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+loadCfg();
+if (CFG.gistId) {
+  loadData();
+} else {
+  nav('setup');
+  setSyncState('', 'Not configured');
+}
+</script>
+</body>
+</html>
