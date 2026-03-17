@@ -1338,6 +1338,24 @@ async function loadAllClients() {
   });
 }
 
+async function populateNewUserAreaDropdown() {
+  const sel = document.getElementById('newUserArea');
+  sel.innerHTML = '<option>Loading...</option>';
+  try {
+    const res = await fetch(API_URL + "?action=getAreas");
+    const areas = await res.json();
+    sel.innerHTML = '<option value="">Select User Area...</option>';
+    areas.forEach(a => {
+      let opt = document.createElement('option');
+      opt.value = a;
+      opt.text = a;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    sel.innerHTML = '<option value="">Error loading areas</option>';
+  }
+}
+
 async function registerNewUser() {
   const u = document.getElementById('newUserUsername').value;
   const p = document.getElementById('newUserPassword').value;
