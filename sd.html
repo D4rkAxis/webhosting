@@ -14062,3 +14062,36 @@
                 datasets[1].fill = true;
                 datasets[1].backgroundColor = 'rgba(230, 57, 70, 0.2)';
             }
+            options.scales.y = { type: 'linear', position: 'left', beginAtZero: true, stacked: chartType === 'bar', title: { display: true, text: 'Number of Tickets' } };
+            options.scales.y1 = { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'Avg. Resolution (Hours)' }, grid: { drawOnChartArea: false } };
+            options.scales.x.stacked = chartType === 'bar';
+        }
+
+        slaPerformanceChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar', // Base type
+            data: { labels, datasets },
+            options: options
+        });
+
+        statsDiv.innerHTML = `
+            <div class="stat-box"><div class="stat-val">${stats.total}</div><div class="stat-label">Total Tickets</div></div>
+            <div class="stat-box"><div class="stat-val" style="color:var(--success);">${stats.met}</div><div class="stat-label">SLA Met</div></div>
+            <div class="stat-box"><div class="stat-val" style="color:var(--error);">${stats.breached}</div><div class="stat-label">SLA Breached</div></div>
+            <div class="stat-box"><div class="stat-val">${stats.rate}%</div><div class="stat-label">Met Rate</div></div>
+            <div class="stat-box" style="border-top: 3px solid #16a085;">
+                <div class="stat-val" style="font-size:1.4rem;">${stats.avgMetMttr}h</div>
+                <div class="stat-label">Avg. Time (Met)</div>
+            </div>
+            <div class="stat-box" style="border-top: 3px solid #c0392b;">
+                <div class="stat-val" style="font-size:1.4rem;">${stats.avgBreachedMttr}h</div>
+                <div class="stat-label">Avg. Time (Breached)</div>
+            </div>
+        `;
+    }
+
+    renderBitrixHistory(); // Initial render
+
+  });
+  </script>
+</body>
+</html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
