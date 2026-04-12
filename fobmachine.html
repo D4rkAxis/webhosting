@@ -101,15 +101,20 @@
       user-select: none;
     }
 
-    /* Mobile Exchange UI */
-    .mobile-card { border-radius: 20px; border: 2px solid #0f172a; }
-    .code-display { font-size: 2.5rem; letter-spacing: 8px; font-weight: 900; color: #0f172a; background: #f1f5f9; padding: 10px; border-radius: 10px; }
+    /* Secure Handshake UI */
+    .handshake-modal .modal-content { border-radius: 25px; border: none; overflow: hidden; }
+    .handshake-header { background: #0f172a; color: white; padding: 2rem; text-align: center; }
+    .handshake-code-box { font-size: 3rem; letter-spacing: 12px; font-weight: 900; color: #0f172a; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 15px; margin: 15px 0; }
     
-    @media (min-width: 769px) {
-      .mobile-only { display: none !important; }
-    }
+    /* Mobile Responsive Optimizations */
     @media (max-width: 768px) {
-      .desktop-only { display: none !important; }
+      .container { padding-left: 10px; padding-right: 10px; }
+      .nav-tabs .nav-link { font-size: 0.8rem; padding: 8px 10px; }
+      .table-responsive { border: 0; }
+      .btn-lg-mobile { width: 100%; padding: 15px; font-weight: bold; }
+      .card-header { font-size: 0.9rem; }
+      /* Fix mobile overflow for creation form */
+      .col-md-4 { margin-bottom: 10px; }
     }
 
     @media (max-width: 576px) {
@@ -174,13 +179,8 @@
       </div>
     </nav>
 
-    <!-- MOBILE EXCHANGE HUB (Visible only on mobile for resolved tickets) -->
-    <div id="mobileExchangeHub" class="mobile-only mt-3">
-      <!-- Injected via JS -->
-    </div>
-
     <!-- CLIENT VIEW -->
-    <div id="clientView" class="d-none desktop-only">
+    <div id="clientView" class="d-none">
       <h3>Welcome, <span id="clientName"></span> (Client - <span id="clientAreaDisplay"></span>)</h3>
       
       <div class="row g-4">
@@ -239,7 +239,7 @@
     </div>
 
     <!-- TECHNICIAN VIEW -->
-    <div id="techView" class="d-none desktop-only">
+    <div id="techView" class="d-none">
       <h3>Welcome, <span id="techName"></span> (Technician)</h3>
 
       <!-- Nav tabs -->
@@ -456,6 +456,28 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Advanced Secure Handshake Modal -->
+<div class="modal fade" id="handshakeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content handshake-modal shadow-lg">
+      <div class="handshake-header">
+        <i class="fas fa-shield-alt fa-3x mb-3"></i>
+        <h4>Secure Verification</h4>
+        <p class="mb-0 opacity-75">Exchange codes to finalize machine return</p>
+      </div>
+      <div class="modal-body p-4 text-center">
+        <label class="small text-uppercase fw-bold text-muted">Show this code to the other party</label>
+        <div id="myHandshakeCode" class="handshake-code-box">0000</div>
+        <hr class="my-4">
+        <label class="form-label fw-bold">Enter the code they gave you:</label>
+        <input type="number" id="otherPartyCodeInput" class="form-control form-control-lg text-center mb-3" placeholder="XXXX" style="letter-spacing: 8px; font-size: 2rem; font-weight: bold;">
+        <input type="hidden" id="handshakeTicketId">
+        <button class="btn btn-navy btn-lg-mobile w-100 py-3" onclick="handleAction(this, submitExchange)">VERIFY & CLOSE TICKET</button>
       </div>
     </div>
   </div>
@@ -983,55 +1005,19 @@ async function loadClientData() {
   loadClientTickets();
 }
 
-function renderMobileHub(tickets) {
-  const hub = document.getElementById('mobileExchangeHub');
-  const resolved = tickets.filter(t => t.status === 'RESOLVED');
-  
-  if (resolved.length === 0) {
-    hub.innerHTML = `
-      <div class="card p-4 text-center border-0 shadow-sm">
-        <i class="fas fa-check-circle text-success fs-1 mb-2"></i>
-        <h5>All Systems Clear</h5>
-        <p class="text-muted small">No machines currently awaiting pickup verification.</p>
-      </div>`;
-    return;
-  }
-
-  hub.innerHTML = '<h4 class="mb-3"><i class="fas fa-handshake me-2"></i>Pickup Verifications</h4>';
-  resolved.forEach(t => {
-    const isTech = currentUser.role === 'TECHNICIAN';
-    const myCode = isTech ? t.techCode : t.clientCode;
-    const prompt = isTech ? "Enter Client's Verification Code" : "Enter Tech's Verification Code";
-    
-    hub.innerHTML += `
-      <div class="card mobile-card shadow-lg mb-4">
-        <div class="card-body text-center">
-          <span class="badge bg-warning text-dark mb-2">Awaiting Verification</span>
-          <h5 class="fw-bold">${t.machine}</h5>
-          <p class="text-muted small mb-3">Ticket: ${t.ticketId}</p>
-          
-          <div class="mb-4">
-            <label class="small text-uppercase fw-bold text-muted">Your Security Code</label>
-            <div class="code-display mx-auto" style="max-width:200px;">${myCode}</div>
-            <p class="small mt-2">Give this code to the ${isTech ? 'Client' : 'Technician'}</p>
-          </div>
-
-          <div class="bg-light p-3 rounded-4">
-            <label class="form-label fw-bold">${prompt}</label>
-            <input type="number" id="verifyInput_${t.ticketId}" class="form-control form-control-lg text-center mb-3" placeholder="0000" style="letter-spacing:10px; font-size:1.5rem;">
-            <button class="btn btn-navy w-100 py-3 fw-bold" onclick="handleAction(this, submitExchange, '${t.ticketId}')">VERIFY & COMPLETE</button>
-          </div>
-        </div>
-      </div>
-    `;
-  });
+function openHandshake(ticketId, myCode) {
+  document.getElementById('handshakeTicketId').value = ticketId;
+  document.getElementById('myHandshakeCode').innerText = myCode;
+  document.getElementById('otherPartyCodeInput').value = '';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('handshakeModal')).show();
 }
 
-async function submitExchange(ticketId) {
-  const code = document.getElementById('verifyInput_' + ticketId).value;
+async function submitExchange() {
+  const ticketId = document.getElementById('handshakeTicketId').value;
+  const code = document.getElementById('otherPartyCodeInput').value;
   if (!code) return alert("Enter the verification code");
 
-  const res = await fetch(API_URL, {
+  const res = await fetchWithRetry(API_URL, {
     method: 'POST',
     body: JSON.stringify({
       action: 'verifyExchange',
@@ -1043,7 +1029,9 @@ async function submitExchange(ticketId) {
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
+  
   showToast(data.message);
+  bootstrap.Modal.getInstance(document.getElementById('handshakeModal')).hide();
   loadDashboard();
 }
 
@@ -1118,14 +1106,10 @@ async function loadClientTickets() {
   const tbody = document.querySelector('#clientTicketsTable tbody');
   tbody.innerHTML = "";
   
-  if (window.innerWidth <= 768) {
-    renderMobileHub(tickets);
-  }
-
   if (Array.isArray(tickets)) {
     tickets.forEach(t => {
     let statusClass = t.status === 'OPEN' ? 'status-open' : (t.status === 'RESOLVED' ? 'status-resolved' : (t.status === 'REWORK' ? 'status-rework' : 'status-closed'));
-    let actionHtml = `<span class="badge ${statusClass}">${t.status}</span>`;
+    let actionBadge = `<span class="badge ${statusClass}">${t.status}</span>`;
     
     let detailsHtml = `<small>${t.opened}</small>`;
     if (t.clientLoc) detailsHtml += ` <a href="https://www.google.com/maps?q=${t.clientLoc}" target="_blank" class="text-decoration-none"><i class="fas fa-map-marker-alt text-danger"></i></a>`;
@@ -1139,6 +1123,14 @@ async function loadClientTickets() {
       if (t.pickup) detailsHtml += `<br><span class="badge bg-warning text-dark mt-1"><i class="fas fa-clock"></i> Pickup: ${t.pickup.replace('T', ' ')}</span>`;
     }
     
+    let actionHtml = `
+      <button class="btn btn-primary btn-sm mb-1 w-100" onclick="handleAction(this, openCloseModal, '${t.ticketId}')">Finish Repair</button>
+      <button class="btn btn-danger btn-sm w-100" onclick="handleAction(this, deleteTicket, '${t.ticketId}')"><i class="fas fa-trash"></i></button>`;
+    
+    if (t.status === 'RESOLVED') {
+       actionHtml = `<button class="btn btn-navy btn-sm fw-bold w-100" onclick="openHandshake('${t.ticketId}', '${t.techCode}')"><i class="fas fa-handshake"></i> VERIFY EXCHANGE</button>`;
+    }
+
     let row = `<tr>
       <td><strong>${t.ticketId}</strong></td>
       <td>${t.machine}</td>
@@ -1246,10 +1238,6 @@ async function loadTechnicianTickets() {
     if (t.status === 'CLOSED' || t.status === 'RESOLVED') machineCounts[t.machine]++;
   });
 
-  if (window.innerWidth <= 768) {
-    renderMobileHub(tickets);
-  }
-
   tickets.filter(t => t.status === 'OPEN' || t.status === 'REWORK').forEach(t => {
     let deadlineHtml = t.deadline ? `<br><span class="badge bg-danger"><i class="fas fa-hourglass-end"></i> Due: ${t.deadline}</span>` : '';
     let serviceCountHtml = `<span class="badge bg-info text-dark">${machineCounts[t.machine] || 0} Services</span>`;
@@ -1269,10 +1257,7 @@ async function loadTechnicianTickets() {
       <td><strong>${t.ticketId}</strong></td>
       <td>${t.opened}</td>
       <td>${serviceCountHtml}</td>
-      <td>
-        <button class="btn btn-primary btn-sm" onclick="handleAction(this, openCloseModal, '${t.ticketId}')">Close Ticket</button>
-        <button class="btn btn-danger btn-sm" onclick="handleAction(this, deleteTicket, '${t.ticketId}')"><i class="fas fa-trash"></i></button>
-      </td>
+      <td>${actionHtml}</td>
     </tr>`;
     tbody.innerHTML += row;
   });
