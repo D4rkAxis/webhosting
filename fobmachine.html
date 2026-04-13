@@ -100,23 +100,6 @@
       line-height: 1.2;
       user-select: none;
     }
-
-    /* Secure Handshake UI */
-    .handshake-modal .modal-content { border-radius: 25px; border: none; overflow: hidden; }
-    .handshake-header { background: #0f172a; color: white; padding: 2rem; text-align: center; }
-    .handshake-code-box { font-size: 3rem; letter-spacing: 12px; font-weight: 900; color: #0f172a; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 15px; margin: 15px 0; }
-    
-    /* Mobile Responsive Optimizations */
-    @media (max-width: 768px) {
-      .container { padding-left: 10px; padding-right: 10px; }
-      .nav-tabs .nav-link { font-size: 0.8rem; padding: 8px 10px; }
-      .table-responsive { border: 0; }
-      .btn-lg-mobile { width: 100%; padding: 15px; font-weight: bold; }
-      .card-header { font-size: 0.9rem; }
-      /* Fix mobile overflow for creation form */
-      .col-md-4 { margin-bottom: 10px; }
-    }
-
     @media (max-width: 576px) {
       .container { padding-left: 15px; padding-right: 15px; }
       .card-body { padding: 1.25rem; }
@@ -456,28 +439,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Advanced Secure Handshake Modal -->
-<div class="modal fade" id="handshakeModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content handshake-modal shadow-lg">
-      <div class="handshake-header">
-        <i class="fas fa-shield-alt fa-3x mb-3"></i>
-        <h4>Secure Verification</h4>
-        <p class="mb-0 opacity-75">Exchange codes to finalize machine return</p>
-      </div>
-      <div class="modal-body p-4 text-center">
-        <label class="small text-uppercase fw-bold text-muted">Show this code to the other party</label>
-        <div id="myHandshakeCode" class="handshake-code-box">0000</div>
-        <hr class="my-4">
-        <label class="form-label fw-bold">Enter the code they gave you:</label>
-        <input type="number" id="otherPartyCodeInput" class="form-control form-control-lg text-center mb-3" placeholder="XXXX" style="letter-spacing: 8px; font-size: 2rem; font-weight: bold;">
-        <input type="hidden" id="handshakeTicketId">
-        <button class="btn btn-navy btn-lg-mobile w-100 py-3" onclick="handleAction(this, submitExchange)">VERIFY & CLOSE TICKET</button>
       </div>
     </div>
   </div>
@@ -895,14 +856,11 @@ function logout() {
 function loadDashboard() {
   document.getElementById('userInfo').innerHTML = `Logged in as: <b>${currentUser.fullName}</b> (${currentUser.role})`;
   
-  // Run the 24h auto-check every time a dashboard loads
-  fetch(API_URL + "?action=runAutoCompletion");
-
   if (currentUser.role === 'CLIENT') {
     document.getElementById('clientView').classList.remove('d-none');
     document.getElementById('clientName').innerText = currentUser.fullName;
     document.getElementById('clientAreaDisplay').innerText = currentUser.area || "General Area";
-    handleAction(null, loadClientData);
+    loadClientData();
   } else { // Technician view
     document.getElementById('techView').classList.remove('d-none');
     document.getElementById('techName').innerText = currentUser.fullName;
@@ -1005,36 +963,6 @@ async function loadClientData() {
   loadClientTickets();
 }
 
-function openHandshake(ticketId, myCode) {
-  document.getElementById('handshakeTicketId').value = ticketId;
-  document.getElementById('myHandshakeCode').innerText = myCode;
-  document.getElementById('otherPartyCodeInput').value = '';
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('handshakeModal')).show();
-}
-
-async function submitExchange() {
-  const ticketId = document.getElementById('handshakeTicketId').value;
-  const code = document.getElementById('otherPartyCodeInput').value;
-  if (!code) return alert("Enter the verification code");
-
-  const res = await fetchWithRetry(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'verifyExchange',
-      ticketId: ticketId,
-      inputCode: code,
-      role: currentUser.role,
-      username: currentUser.username
-    })
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  
-  showToast(data.message);
-  bootstrap.Modal.getInstance(document.getElementById('handshakeModal')).hide();
-  loadDashboard();
-}
-
 function updateTicketSerial() {
   const machineName = document.getElementById('ticketMachine').value;
   const serialSelect = document.getElementById('ticketSerial');
@@ -1109,7 +1037,7 @@ async function loadClientTickets() {
   if (Array.isArray(tickets)) {
     tickets.forEach(t => {
     let statusClass = t.status === 'OPEN' ? 'status-open' : (t.status === 'RESOLVED' ? 'status-resolved' : (t.status === 'REWORK' ? 'status-rework' : 'status-closed'));
-    let actionBadge = `<span class="badge ${statusClass}">${t.status}</span>`;
+    let actionHtml = `<span class="badge ${statusClass}">${t.status}</span>`;
     
     let detailsHtml = `<small>${t.opened}</small>`;
     if (t.clientLoc) detailsHtml += ` <a href="https://www.google.com/maps?q=${t.clientLoc}" target="_blank" class="text-decoration-none"><i class="fas fa-map-marker-alt text-danger"></i></a>`;
@@ -1123,14 +1051,6 @@ async function loadClientTickets() {
       if (t.pickup) detailsHtml += `<br><span class="badge bg-warning text-dark mt-1"><i class="fas fa-clock"></i> Pickup: ${t.pickup.replace('T', ' ')}</span>`;
     }
     
-    let actionHtml = `
-      <button class="btn btn-primary btn-sm mb-1 w-100" onclick="handleAction(this, openCloseModal, '${t.ticketId}')">Finish Repair</button>
-      <button class="btn btn-danger btn-sm w-100" onclick="handleAction(this, deleteTicket, '${t.ticketId}')"><i class="fas fa-trash"></i></button>`;
-    
-    if (t.status === 'RESOLVED') {
-       actionHtml = `<button class="btn btn-navy btn-sm fw-bold w-100" onclick="openHandshake('${t.ticketId}', '${t.techCode}')"><i class="fas fa-handshake"></i> VERIFY EXCHANGE</button>`;
-    }
-
     let row = `<tr>
       <td><strong>${t.ticketId}</strong></td>
       <td>${t.machine}</td>
@@ -1257,7 +1177,10 @@ async function loadTechnicianTickets() {
       <td><strong>${t.ticketId}</strong></td>
       <td>${t.opened}</td>
       <td>${serviceCountHtml}</td>
-      <td>${actionHtml}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="handleAction(this, openCloseModal, '${t.ticketId}')">Close Ticket</button>
+        <button class="btn btn-danger btn-sm" onclick="handleAction(this, deleteTicket, '${t.ticketId}')"><i class="fas fa-trash"></i></button>
+      </td>
     </tr>`;
     tbody.innerHTML += row;
   });
