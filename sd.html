@@ -47,6 +47,7 @@
       border-radius: 20px;
       font-weight: 500;
     }
+    
     #status.connecting { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     #status.connected { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     #status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -1494,12 +1495,24 @@
                           </select>
                           <small style="display: block; margin-top: 5px; color: #777;">(Ctrl+click to select multiple)</small>
                       </div>
+                      <div style="flex: 1; min-width: 200px;">
+                          <label style="font-weight: 600; color: #555; margin-bottom: 8px; display: block;">Area</label>
+                          <select id="advQueryArea" class="bitrix-input">
+                              <option value="">All Areas</option>
+                          </select>
+                      </div>
                       <div style="flex: 1.5; min-width: 250px;">
                           <label style="font-weight: 600; color: #555; margin-bottom: 8px; display: block;">Date Range (Created)</label>
                           <div style="display: flex; gap: 10px;">
                             <input type="date" id="advQueryDateStart" class="bitrix-input">
                             <input type="date" id="advQueryDateEnd" class="bitrix-input">
                           </div>
+                      </div>
+                      <div style="flex: 1; min-width: 150px; align-self: flex-end;">
+                          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding-bottom: 8px;">
+                              <input type="checkbox" id="includeOpenTickets" checked style="accent-color: #3bc8f5; transform: scale(1.2);">
+                              <span style="font-weight: 500; font-size: 0.85rem; color: #555;">Include open tickets (created in range)</span>
+                          </label>
                       </div>
                       <div style="align-self: flex-end; display:flex; align-items:center; gap:1rem;">
                           <button id="advQueryFetchBtn" class="bitrix-btn-primary" style="height: 42px; padding: 0 2rem; background: linear-gradient(135deg, #6f42c1, #4e2a84);">SCAN CATEGORIES</button>
@@ -2065,22 +2078,6 @@
         <button id="filterIncompleteBtn" class="header-btn" style="background:#f39c12; display:none; margin-right: auto;">Filter Incomplete</button>
         <button id="pushFromTestBtn" class="header-btn" style="background:#27ae60; display:none;">Push to Sheet</button>
         <button id="closeRawConfigBtn" class="header-btn" style="background:#6c757d;">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PIN Modal for CRM Access -->
-  <div id="pinModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 360px; text-align: center;">
-      <h2>Enter PIN</h2>
-      <p style="color: #666; margin-bottom: 1.5rem;">Please enter the PIN to access the CRM portal.</p>
-      <form id="pinForm" onsubmit="return false;">
-        <input type="password" id="pinInput" class="pin-input" maxlength="4" pattern="\d*" autocomplete="off">
-        <p id="pinError" style="color: var(--error); height: 1rem; margin-top: 0.5rem; font-weight: 500;"></p>
-      </form>
-      <div class="modal-actions" style="justify-content: center; margin-top: 1.5rem;">
-        <button id="pinSubmitBtn" class="header-btn">Unlock</button>
-        <button id="pinCancelBtn" class="header-btn" style="background:#6c757d;">Cancel</button>
       </div>
     </div>
   </div>
@@ -2667,6 +2664,61 @@
         return fullPipelineMap[String(categoryId)] || `UNKNOWN (${categoryId})`;
     }
 
+    // Global variable to store area items
+    let areaItems = [];
+
+    async function populateAdvancedQueryAreaSelect(categoryId = '163') {
+      const areaSelect = document.getElementById('advQueryArea');
+      if (!areaSelect) return;
+
+      // Clear and show loading state
+      areaSelect.innerHTML = '<option value="">Loading Areas...</option>';
+
+      try {
+        // Determine the correct area field ID for this category
+        const areaFieldId = await getAreaFieldForCategory(categoryId);
+        
+        // Fetch fields for the selected category
+        const fieldsRes = await fetch(`${WEBHOOK}crm.item.fields?entityTypeId=${categoryId}`);
+        const fieldsData = await fieldsRes.json();
+        const areaField = fieldsData.result.fields[areaFieldId];
+        
+        if (areaField && areaField.type === 'enumeration') {
+          areaItems = areaField.items;
+          areaSelect.innerHTML = '<option value="">All Areas</option>';
+          areaItems.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.ID;
+            opt.textContent = item.VALUE;
+            areaSelect.appendChild(opt);
+          });
+          console.log(`Loaded ${areaItems.length} areas for category ${categoryId}.`);
+        } else {
+          areaSelect.innerHTML = '<option value="">All Areas (None Found)</option>';
+        }
+      } catch (err) {
+        console.error('Failed to load area list:', err);
+        areaSelect.innerHTML = '<option value="">All Areas (Error)</option>';
+      }
+    }
+
+    async function getAreaFieldForCategory(categoryId) {
+      const possibleFields = ['ufCrm13_1689696317', 'ufCrm13_1734959489', 'ufCrm11_1696580149069'];
+      try {
+        const fieldsRes = await fetch(`${WEBHOOK}crm.item.fields?entityTypeId=${categoryId}`);
+        const fieldsData = await fieldsRes.json();
+        const fields = fieldsData.result.fields;
+        for (const field of possibleFields) {
+          if (fields[field]) {
+            return field;
+          }
+        }
+      } catch (err) {
+        console.warn(`Could not determine area field for category ${categoryId}`, err);
+      }
+      return 'ufCrm13_1689696317'; // fallback
+    }
+
     // --- NEW: Advanced Query State ---
     let advQueryResults = [];
     let advQueryCache = {}; // NEW: Cache for brutal/ultimate scans
@@ -2706,8 +2758,11 @@
                 option.selected = true; // Select all by default
                 pipelineSelect.add(option);
             }
+            // Refresh area list for this specific category
+            populateAdvancedQueryAreaSelect(categoryId);
         } else {
             pipelineSelect.innerHTML = '<option disabled>Select a category first</option>';
+            document.getElementById('advQueryArea').innerHTML = '<option value="">All Areas</option>';
         }
     });
     
@@ -2764,11 +2819,22 @@
         const API_FETCH_LIMIT = 50;
         const categoryId = document.getElementById('advQueryCategory').value;
         const selectedPipelines = Array.from(document.getElementById('advQueryPipelines').selectedOptions).map(opt => opt.value);
+        const areaSelect = document.getElementById('advQueryArea');
+        const areaId = areaSelect ? areaSelect.value : '';
+        const areaOption = areaSelect ? areaSelect.options[areaSelect.selectedIndex] : null;
+        const areaName = (areaOption && areaId) ? areaOption.textContent.replace(/Area\s+/i, '').trim() : '';
         const dateStart = document.getElementById('advQueryDateStart').value;
         const dateEnd = document.getElementById('advQueryDateEnd').value;
+        const includeOpen = document.getElementById('includeOpenTickets').checked;
 
-        if (!categoryId || selectedPipelines.length === 0 || !dateStart || !dateEnd) {
-            alert("Select Category, Pipelines, and Date Range to begin Deep Scan.");
+        const hasDates = dateStart && dateEnd;
+        if (!categoryId || selectedPipelines.length === 0) {
+            alert("Select Category and Pipelines to begin Deep Scan.");
+            return;
+        }
+
+        if (!areaId && !hasDates) {
+            alert("Select an Area OR a Date Range to begin Deep Scan.");
             return;
         }
 
@@ -2785,23 +2851,29 @@
         advQueryResults = [];
         const foundItemIds = new Set();
 
-        const selectFields = [ 'id', 'title', 'stageId', 'categoryId', 'createdTime', 'assignedById', 'updatedTime', 'closedTime', 'movedTime', ...Object.values(FIELD_MAP).flat(), ...Object.values(BITRIX_CONFIG).map(c => c.escalatedField).filter(Boolean), ...Object.values(BITRIX_CONFIG).map(c => c.resolvedField).filter(Boolean) ].filter((v, i, a) => a.indexOf(v) === i);
+        const selectFields = [ 'id', 'title', 'stageId', 'categoryId', 'createdTime', 'assignedById', 'updatedTime', 'closedTime', 'movedTime', ...Object.values(TRACKER_CONFIG.fields).flat(), ...Object.values(BITRIX_CONFIG).map(c => c.escalatedField).filter(Boolean), ...Object.values(BITRIX_CONFIG).map(c => c.resolvedField).filter(Boolean) ].filter((v, i, a) => a.indexOf(v) === i);
 
-        const startBoundary = `${dateStart}T00:00:00+01:00`;
-        const endBoundary = `${dateEnd}T23:59:59+01:00`;
-
-        // MULTI-VECTOR SCAN: Search by Created, Updated, and Moved dates simultaneously
-        const searchVectors = [
-            { ">=createdTime": startBoundary, "<=createdTime": endBoundary },
-            { ">=updatedTime": startBoundary, "<=updatedTime": endBoundary },
-            { ">=movedTime": startBoundary, "<=movedTime": endBoundary },
-            { ">=closedTime": startBoundary, "<=closedTime": endBoundary }
-        ];
+        let searchVectors = [];
+        if (hasDates) {
+            const startBoundary = `${dateStart}T00:00:00+01:00`;
+            const endBoundary = `${dateEnd}T23:59:59+01:00`;
+            // MULTI-VECTOR SCAN: Search by Created, Updated, Moved, and Closed dates simultaneously
+            searchVectors = [
+                { ">=createdTime": startBoundary, "<=createdTime": endBoundary },
+                { ">=updatedTime": startBoundary, "<=updatedTime": endBoundary },
+                { ">=movedTime": startBoundary, "<=movedTime": endBoundary },
+                { ">=closedTime": startBoundary, "<=closedTime": endBoundary }
+            ];
+        } else {
+            // Area-only Scan: Fetch the entire history for this area in the selected pipelines
+            searchVectors = [ {} ];
+        }
 
         try {
             for (let i = 0; i < searchVectors.length; i++) {
                 const vectorFilter = { ...searchVectors[i], "categoryId": selectedPipelines };
-                const vectorLabel = ["Created", "Updated", "Moved"][i];
+                const vectorLabel = hasDates ? ["Updated", "Moved", "Closed", "Created"][i] : (areaId ? ["By Area Field", "By Title Keyword"][i] : "All Tickets");
+                console.log(`Deep Scan Filter [${vectorLabel}]:`, JSON.stringify(vectorFilter, null, 2));
                 
                 progressText.textContent = `Deep Scanning Vector: ${vectorLabel}...`;
                 progressBar.style.width = `${(i / searchVectors.length) * 100}%`;
@@ -2809,8 +2881,9 @@
                 let start = 0;
                 let hasMore = true;
                 let vectorCount = 0;
+                let pageCount = 0;
 
-                while(hasMore) {
+                while(hasMore && pageCount < 200) {
                     const response = await safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' }, 
@@ -2824,33 +2897,74 @@
                     }));
                     const data = await response.json();
                     const items = data.result?.items || [];
+                    console.log(`Vector ${vectorLabel} - Page ${pageCount}: Found ${items.length} items`);
                     
                     if (items.length > 0) {
-                        const newItems = items.filter(item => !foundItemIds.has(item.id));
+                        // TRIPLE-CHECK FILTERING: Catch tickets via Field ID OR Title Keywords
+                        const areaFilteredItems = items.filter(item => {
+                            if (!areaId) return true; // "All Areas"
+                            
+                            // Check official area fields (redundant safety check)
+                            const matchesField = TRACKER_CONFIG.fields.areas.some(field => {
+                                const val = item[field];
+                                if (Array.isArray(val)) return val.includes(areaId);
+                                return String(val) === String(areaId);
+                            });
+                            if (matchesField) return true;
+
+                            // Check Title for Area Name (e.g. "YABA")
+                            if (areaName && item.title && item.title.toUpperCase().includes(areaName.toUpperCase())) {
+                                return true;
+                            }
+                            return false;
+                        });
+
+                        const newItems = areaFilteredItems.filter(item => !foundItemIds.has(item.id));
+                        
                         if (newItems.length > 0) {
                             newItems.forEach(item => foundItemIds.add(item.id));
 
-                            // Process items and trigger deep enrichment
+                            // Map directly to Result Objects (bypass sheet-specific filters)
                             const processedItems = newItems.map(item => {
-                                const row = ticketToRow({ ...item, _typeId: parseInt(categoryId) });
-                                const trackerItem = sheetRowToTrackerItem(row);
-                                if (trackerItem) {
-                                    trackerItem.enriched = false;
-                                    trackerItem.enriching = true;
-                                    enrichmentQueue.push(trackerItem);
-                                }
-                                return trackerItem;
-                            }).filter(Boolean);
+                                const rawStageId = item.stageId || "";
+                                let stageInfo = trackerStageMap[rawStageId] || trackerStageMap[rawStageId.split(':').pop()] || { label: rawStageId.split(':').pop().replace(/_/g, ' '), semantics: "" };
+                                
+                                let typeLabel = "Support", defaultBucket = "assigned";
+                                if (categoryId === '188') typeLabel = "Installation";
+                                if (categoryId === '190') { typeLabel = "Relocation"; defaultBucket = "escalated"; }
+
+                                const bucket = classifyTrackerItem(stageInfo.label, stageInfo.semantics, defaultBucket);
+                                
+                                const result = {
+                                    id: parseInt(item.id),
+                                    serviceId: getTrackerField(item, 'serviceId'),
+                                    type: typeLabel,
+                                    title: item.title,
+                                    stage: stageInfo.label,
+                                    bucket: bucket,
+                                    area: trackerEnumMap[getTrackerField(item, 'areas')] || getTrackerField(item, 'areas') || 'N/A',
+                                    region: trackerEnumMap[getTrackerField(item, 'region')] || getTrackerField(item, 'region') || 'N/A',
+                                    created: item.createdTime,
+                                    assignedById: item.assignedById,
+                                    typeId: parseInt(categoryId),
+                                    enriched: false,
+                                    enriching: true
+                                };
+                                enrichmentQueue.push(result);
+                                return result;
+                            });
 
                             advQueryResults.push(...processedItems);
                             processEnrichmentQueue(); // Start deep analysis
                             resultsContainer.style.display = 'block';
+                            progressText.textContent = `Deep Scan: Found ${foundItemIds.size} tickets so far...`;
                             renderAdvancedQueryResults();
                             document.getElementById('advQueryAnalyticsBtn').style.display = 'inline-block';
                         }
                     }
                     
                     vectorCount += items.length;
+                    pageCount++;
                     progressText.textContent = `${vectorLabel} Scan: Found ${vectorCount} items...`;
 
                     if (data.next) { start = data.next; } else { hasMore = false; }
@@ -4998,13 +5112,6 @@
 
     const showSlaChartBtn = document.getElementById('showSlaChartBtn');
     const slaChartModal = document.getElementById('slaChartModal');
-    // --- PIN Modal Elements ---
-    const pinModal = document.getElementById('pinModal');
-    const pinInput = document.getElementById('pinInput');
-    const pinError = document.getElementById('pinError');
-    const pinSubmitBtn = document.getElementById('pinSubmitBtn');
-    const pinCancelBtn = document.getElementById('pinCancelBtn');
-
     const showChartBtn = document.getElementById('showChartBtn');
     const chartModal = document.getElementById('chartModal');
     const chartTypeSelect = document.getElementById('chartTypeSelect');
@@ -7723,6 +7830,10 @@
             if (tabId === 'outagesTab') {
                 fetchOutages();
             }
+
+            if (tabId === 'directQueryTab') {
+                populateAdvancedQueryAreaSelect();
+            }
         });
     });
     const clearBitrixHistoryBtn = document.getElementById('clearBitrixHistoryBtn');
@@ -7732,7 +7843,7 @@
     const WEBHOOK = "https://intranet.fob.ng/rest/4059/u41ader6cm8tit71/";
     
     // --- GOOGLE SHEET SUBMISSION CONFIG ---
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbz1ERNCY-_DHxk09FwEJJroJquSBFmuyFV7KKUS6wLuM5Mo9r6DZtPALBcTIKkCqx50/exec'; 
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxd37IwVeYVbqPW8Fp-aez45Ou1g0_W_q3MbQAEScZPLMfnqqHpX7uQAqSmDFkzR9-4wg/exec'; 
 
     async function sendToGoogleSheet(data) {
       try {
@@ -9347,45 +9458,8 @@
 
     if (openBitrixWorkspaceBtn) {
         openBitrixWorkspaceBtn.addEventListener('click', () => {
-            // Check for mobile view (max-width: 768px) as defined in CSS
-            if (window.matchMedia('(max-width: 768px)').matches) {
-                showView('bitrix');
-            } else {
-                pinError.textContent = '';
-                pinInput.value = '';
-                pinModal.classList.add('show');
-                pinInput.focus();
-            }
+            showView('bitrix');
         });
-    }
-
-    // --- PIN Modal Listeners ---
-    if(pinCancelBtn) {
-      pinCancelBtn.addEventListener('click', () => pinModal.classList.remove('show'));
-    }
-    if(pinModal) {
-      pinModal.addEventListener('click', (e) => {
-          if (e.target === pinModal) pinModal.classList.remove('show');
-      });
-    }
-    const pinForm = document.getElementById('pinForm');
-    if(pinForm) {
-      pinForm.addEventListener('submit', (e) => {
-          e.preventDefault();
-          pinSubmitBtn.click();
-      });
-    }
-    if(pinSubmitBtn) {
-      pinSubmitBtn.addEventListener('click', () => {
-          if (pinInput.value === '1962') {
-              pinModal.classList.remove('show');
-              showView('bitrix');
-          } else {
-              pinError.textContent = 'Incorrect PIN.';
-              pinInput.value = '';
-              pinInput.focus();
-          }
-      });
     }
 
 
@@ -9433,7 +9507,7 @@
     // === NEW: TRACKER WEB APP CONFIG ===
     // IMPORTANT: If you redeploy the App Script, paste the NEW Deployment URL below.
     // The Web App must be deployed as "Execute as: Me" to avoid permission errors.
-    const TRACKER_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwlaHMshL69SiQV1wVmKjYPV2RVOktpRBBb1NrtA1IZJvia7QETM9stX8inljZZ04Aong/exec'; // UPDATE THIS IF YOU REDEPLOYED
+    const TRACKER_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxd37IwVeYVbqPW8Fp-aez45Ou1g0_W_q3MbQAEScZPLMfnqqHpX7uQAqSmDFkzR9-4wg/exec'; // UPDATE THIS IF YOU REDEPLOYED
     // === TRACKER OUTPUT SHEET (where crawler saves data) ===
     const TRACKER_OUTPUT_SHEET_ID = "1i-zSWKrQ-s6mSCg0uTokhi9GIo9iLkl3K_xtkcH0xAA"; // Use Mainland East, or replace with any sheet ID
     const TRACKER_OUTPUT_TAB_NAME = "Tracker"; // The tab where data will be stored
@@ -12623,7 +12697,6 @@
       const loading = document.getElementById('outageLoading');
       const tbody = document.getElementById('outageTableBody');
       const statsDiv = document.getElementById('outageStats');
-      // const chartLoading = document.getElementById('outageChartLoading'); // Removed in new layout
 
       loading.style.display = 'block';
       tbody.innerHTML = '';
@@ -12636,116 +12709,112 @@
         if (startDate) filter['>createdTime'] = new Date(startDate).toISOString();
       }
 
+      const allItems = [];          // accumulate all items
+      let start = 0;
+      const LIMIT = 200;            // Max per request (Bitrix allows up to 500, but 200 is safe)
+      let hasMore = true;
+
       try {
-        // Fetch outages (limit 200 for performance, adjust as needed)
-        const response = await safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            entityTypeId: OUTAGE_ENTITY_TYPE,
-            select: ['id', 'title', 'createdBy', 'assignedById', 'stageId', 'createdTime', 'movedTime', 'closedate', 'closedTime'],
-            filter,
-            order: { id: 'DESC' },
-            limit: 100
-          })
-        }));
+        while (hasMore) {
+          const response = await safeApiCall(() => fetch(`${WEBHOOK}crm.item.list`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              entityTypeId: OUTAGE_ENTITY_TYPE,
+              select: ['id', 'title', 'createdBy', 'assignedById', 'stageId', 'createdTime', 'movedTime', 'closedate', 'closedTime'],
+              filter,
+              order: { id: 'DESC' },
+              start: start,
+              limit: LIMIT
+            })
+          }));
 
-        const data = await response.json();
-        if (data['error']) throw new Error(data['error']['error_description'] || data['error']['message']);
+          const data = await response.json();
+          if (data.error) throw new Error(data.error.error_description || data.error.message);
 
-        const items = data['result']['items'] || [];
-        
-        // 1. Collect Unique User IDs
+          const items = data.result.items || [];
+          allItems.push(...items);
+
+          // Pagination: if `next` is provided, continue; otherwise stop
+          if (data.next) {
+            start = data.next;
+            // Optional: Provide UI feedback during long fetches
+            const logEl = document.getElementById('trackerLog');
+            if (logEl) logEl.textContent = `Fetching outages... page starting at ${start}`;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        console.log(`Fetched ${allItems.length} total outages`);
+
+        // 1. Collect unique user IDs for name resolution
         const uniqueUserIds = new Set();
-        items.forEach(item => {
-            if (item['createdBy']) uniqueUserIds.add(item['createdBy']);
-            if (item['assignedById']) uniqueUserIds.add(item['assignedById']);
+        allItems.forEach(item => {
+          if (item.createdBy) uniqueUserIds.add(item.createdBy);
+          if (item.assignedById) uniqueUserIds.add(item.assignedById);
         });
 
-        // 2. Fetch all missing users in parallel (deduplicated)
-        const userFetchPromisesArray = [];
+        // 2. Fetch missing user names (parallel)
+        const userFetchPromises = [];
         uniqueUserIds.forEach(userId => {
-            if (!userCache[userId]) userFetchPromisesArray.push(fetchUserName(userId));
+          if (!userCache[userId]) userFetchPromises.push(fetchUserName(userId));
         });
-        await Promise.all(userFetchPromisesArray);
+        await Promise.all(userFetchPromises);
 
-        // 3. Process items (synchronous cache lookup)
-        const processed = items.map(item => {
-          const createdByName = userCache[item['createdBy']] || `User ${item['createdBy']}`;
-          const assignedName = userCache[item['assignedById']] || `User ${item['assignedById']}`;
-          const resolvedDate = item['closedTime'] || null;
-          const isResolved = !!item['closedTime'];
+        // 3. Process items
+        const processed = allItems.map(item => {
+          const createdByName = userCache[item.createdBy] || `User ${item.createdBy}`;
+          const assignedName = userCache[item.assignedById] || `User ${item.assignedById}`;
+          const resolvedDate = item.closedTime || null;
+          const isResolved = !!item.closedTime;
           return {
             ...item,
             createdByName,
             assignedName,
             resolvedDate,
             isResolved,
-            stageDisplay: getStageDisplay(item['stageId']),
-            badgeClass: getStageBadgeClass(item['stageId'])
+            stageDisplay: getStageDisplay(item.stageId),
+            badgeClass: getStageBadgeClass(item.stageId)
           };
         });
 
         // --- PERSISTENCE LOGIC ---
-        // 1. Load existing history
-        let historyMap = getOutageHistory(); // Local cache first
-        
-        // Try to load from Sheet DB if connected (merging with local)
+        let historyMap = getOutageHistory();
         if (accessToken) {
-            try {
-                const sheetHistory = await loadOutagesFromSheet();
-                historyMap = { ...historyMap, ...sheetHistory };
-            } catch (e) {
-                console.warn("Could not load from Sheet DB, using local cache only.");
-            }
+          try {
+            const sheetHistory = await loadOutagesFromSheet();
+            historyMap = { ...historyMap, ...sheetHistory };
+          } catch (e) { console.warn("Could not load from Sheet DB, using local cache only.", e); }
         }
 
-        // --- AUTO-RESOLVE LOGIC (Detect Disappeared Tickets) ---
-        // 1. Identify IDs currently in Bitrix response
-        const currentBitrixIds = new Set(processed.map(i => i['id']));
+        // --- AUTO-RESOLVE LOGIC ---
+        const currentBitrixIds = new Set(processed.map(i => i.id));
         const nowISO = new Date().toISOString();
 
-        // 2. Check existing history for active tickets that are NOT in the new response
         Object.values(historyMap).forEach(histItem => {
-            // If item was previously unresolved AND is missing from new batch
-            // AND it's not just a pagination issue (we assume fetch limit covers active ones)
-            if (!histItem.isResolved && !currentBitrixIds.has(histItem['id'])) {
-                console.log(`Ticket ${histItem['id']} disappeared from Bitrix. Marking as resolved.`);
-                
-                // Update the item in history
-                histItem.isResolved = true;
-                histItem.resolvedDate = nowISO; // Set resolution time to NOW
-                histItem.closedTime = nowISO;
-                histItem.stageId = 'DT186_4:RESOLVED'; // Force visual stage update
-                histItem.stageDisplay = 'Resolved (Auto)';
-                histItem.badgeClass = 'badge-yes';
-            }
+          if (!histItem.isResolved && !currentBitrixIds.has(histItem.id)) {
+            console.log(`Ticket ${histItem.id} disappeared from Bitrix. Marking as resolved.`);
+            histItem.isResolved = true;
+            histItem.resolvedDate = nowISO;
+            histItem.closedTime = nowISO;
+            histItem.stageId = 'DT186_4:RESOLVED';
+            histItem.stageDisplay = 'Resolved (Auto)';
+            histItem.badgeClass = 'badge-yes';
+          }
         });
 
-        // 2. Update history with new items (merge)
-        processed.forEach(item => {
-            historyMap[item['id']] = item;
-        });
-
-        // 3. Save back to local storage
+        // Update history with fetched items
+        processed.forEach(item => { historyMap[item.id] = item; });
         saveOutageHistory(historyMap);
-        
-        // 4. Sync back to Sheet DB (Fire and forget to not block UI)
         syncOutagesToSheet(processed);
 
-        // 5. Convert map back to array for display, sorted by ID desc
-        const allItems = Object.values(historyMap).sort((a, b) => b['id'] - a['id']);
-        
-        // Update global variable used for client-side filtering
-        lastOutageItems = allItems;
-        // -------------------------
+        const allHistoryItems = Object.values(historyMap).sort((a, b) => b.id - a.id);
+        lastOutageItems = allHistoryItems;
 
-        // Render stats
-        renderOutageStats(allItems);
-        // Render chart
-        renderOutageChart(allItems);
-        // Render table (pass full processed array)
-        renderOutageTable(allItems);
+        renderOutageStats(allHistoryItems);
+        renderOutageChart(allHistoryItems);
+        renderOutageTable(allHistoryItems);
 
       } catch (err) {
         console.error('Outage fetch error:', err);
