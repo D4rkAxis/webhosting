@@ -100,6 +100,16 @@
       line-height: 1.2;
       user-select: none;
     }
+
+    /* Tool Tracker Calendar */
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
+    .calendar-header-day { background: #0f172a; color: white; text-align: center; padding: 10px; font-weight: bold; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase; }
+    .calendar-day { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; min-height: 110px; display: flex; flex-direction: column; transition: all 0.3s; }
+    .calendar-day:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: #3b82f6; }
+    .calendar-day-number { font-size: 1.1rem; font-weight: 800; color: #64748b; margin-bottom: 8px; }
+    .calendar-day-area { font-size: 0.7rem; font-weight: 700; color: #1e2937; background: #f1f5f9; padding: 6px; border-radius: 6px; flex-grow: 1; display: flex; align-items: center; justify-content: center; text-align: center; border-left: 3px solid #0f172a; }
+    .border-primary { border: 2px solid #3b82f6 !important; }
+
     @media (max-width: 576px) {
       .container { padding-left: 15px; padding-right: 15px; }
       .card-body { padding: 1.25rem; }
@@ -243,6 +253,7 @@
             <li id="admin-manage-areas-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#areas-tab-pane" type="button" onclick="handleAction(this, loadAreasList)">Manage Areas</button></li>
             <li id="admin-tool-inventory-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tools-tab-pane" type="button" onclick="handleAction(this, loadToolsList)">Tool Inventory</button></li>
             <li id="admin-tool-addon-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tool-addon-tab-pane" type="button" onclick="handleAction(this, loadMasterToolsList)">Tools Addon</button></li>
+            <li id="admin-tool-tracker-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#tool-tracker-tab-pane" type="button" onclick="handleAction(this, initToolTracker)">Tool Tracker</button></li>
           </ul>
         </li>
       </ul>
@@ -435,6 +446,27 @@
               </div>
               <div id="areaOverviewContainer" class="mt-3">
                 <!-- Accordion will be injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tool Tracker Pane -->
+        <div class="tab-pane fade" id="tool-tracker-tab-pane" role="tabpanel">
+          <div class="card mt-3 border-0 shadow-sm">
+            <div class="card-header navy text-white fw-bold d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-calendar-day me-2"></i>Area Service Tool Tracker</span>
+              <span id="trackerMonthYear" class="badge bg-light text-navy"></span>
+            </div>
+            <div class="card-body bg-light">
+              <div class="input-group mb-3 shadow-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="trackerSearch" class="form-control border-start-0" placeholder="Find when an area is scheduled..." onkeyup="initToolTracker()">
+              </div>
+              <div id="toolTrackerContainer"></div>
+              <div class="mt-4 p-3 bg-white rounded shadow-sm border-start border-4 border-info">
+                <h6><i class="fas fa-info-circle text-info me-2"></i>How it works</h6>
+                <p class="small text-muted mb-0">The Tool Tracker automatically assigns an operational area to each day of the month. This schedule is randomized every month to ensure balanced coverage across all sectors. Use this as a guide for specialized equipment rotation.</p>
               </div>
             </div>
           </div>
@@ -714,6 +746,16 @@
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbxU2TZV4w6AMy4FCWpTI1VjEMk04GvyGqH3PQKQ1yrzEll3SK96tf2a7_aaKiPXdFGyXA/exec";
+const TRACKER_AREAS = [
+  "A1E Agege", "A1N-Ikeja(Opebi/Allen)", "A1S-Ikeja(GRA/Ogba)", "A2E-Oregun/Ketu", "A2N-Ojodu/Olowora",
+  "A2S-Ikosi/Magodo", "A2W Ikorodu", "A3N-Anthony/Ilupeju", "A3S-Gbagada/Ifako", "A3W - Ilupeju Ajao",
+  "A4-Arepo", "A5-Festac/Amuwo", "A5N-Festac/Amuwo", "A5S Satellite", "A6E Apapa", "A6N-Surulere",
+  "A6S-Yaba", "A6W Mushin", "A7-Oniru", "A8-VI/Ikoyi", "A9N-Lekki Phase 1", "A9S-Lekki/Ikate",
+  "A10E - Agungi Ologolo Igboefon", "A10N - Agungi Chevy View", "A10N-Agungi", "A10S - Agungi Osapa",
+  "A10S-Agungi", "A11E - Sangotedo Ajah", "A11N-Ikota/Ajah", "A11S-Orchid/Ologolo", "A11W Awoyaya",
+  "A12-Ilorin", "A13E-Abuja(Wuse)", "A13N-Abuja(Asokoro)", "A13S-Abuja(Jabi)", "A14-PHC", "A15-Alimosho", "A16-Ibadan"
+];
+
 let currentUser = null;
 let currentAreaTools = []; // Cache for client-side tool filtering
 let allClosedTickets = [];
@@ -834,7 +876,7 @@ async function login() {
     });
     const data = await res.json();
     if (data.error) {
-      msg.innerHTML = '<span class="text-danger">' + data.error + '</span>';
+      msg.innerHTML = '<div class="alert alert-danger py-2 mt-2" style="font-size:0.9rem;">Username or password incorrect. Please try again.</div>';
     } else {
       currentUser = data.user;
       localStorage.setItem('machineryUser', JSON.stringify(currentUser));
@@ -873,8 +915,12 @@ function loadDashboard() {
     if (hasAdminPerms) {
       adminDropdown.classList.remove('d-none');
       
-      const showIf = (perm, id) => {
-        if (perms.includes(perm)) document.getElementById(id).classList.remove('d-none');
+      const showIf = (perm, elementId) => {
+        if (perms.split(',').map(p => p.trim()).includes(perm)) {
+          document.getElementById(elementId).classList.remove('d-none');
+          return true;
+        }
+        return false;
       };
 
       showIf('CAN_VIEW_ALL_CLIENTS', 'admin-manage-users-li');
@@ -883,8 +929,9 @@ function loadDashboard() {
       showIf('CAN_MANAGE_AREAS', 'admin-manage-areas-li');
       showIf('CAN_MANAGE_MACHINES', 'admin-tool-inventory-li');
       showIf('CAN_MANAGE_MACHINES', 'admin-tool-addon-li');
+      showIf('CAN_VIEW_TOOL_TRACKER', 'admin-tool-tracker-li');
       
-      if (perms.includes('CAN_VIEW_AREA_DATA') || perms.includes('CAN_MANAGE_AREAS') || perms.includes('CAN_MANAGE_MACHINES')) {
+      if (perms.includes('CAN_VIEW_AREA_DATA') || perms.includes('CAN_MANAGE_AREAS') || perms.includes('CAN_MANAGE_MACHINES') || perms.includes('CAN_VIEW_TOOL_TRACKER')) {
         document.getElementById('admin-divider-1').classList.remove('d-none');
       }
     } else {
@@ -1617,6 +1664,52 @@ async function deleteMasterTool(name) {
     body: JSON.stringify({ action: 'deleteMasterTool', toolName: name, username: currentUser.username })
   });
   loadMasterToolsList();
+}
+
+// ================= TOOL TRACKER FUNCTIONS =================
+function initToolTracker() {
+  const container = document.getElementById('toolTrackerContainer');
+  const searchQuery = document.getElementById('trackerSearch').value.toLowerCase();
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  
+  document.getElementById('trackerMonthYear').innerText = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Seeded Random based on Year and Month (e.g., 202604)
+  let seed = year * 100 + month;
+  const seededShuffle = (arr) => {
+    let m = arr.length, i, t;
+    while (m) {
+      const r = (Math.sin(seed++) * 10000) % 1;
+      i = Math.floor(Math.abs(r) * m--);
+      t = arr[m]; arr[m] = arr[i]; arr[i] = t;
+    }
+    return arr;
+  };
+
+  const assignedAreas = seededShuffle([...TRACKER_AREAS]);
+  let html = `<div class="calendar-grid">`;
+  ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => html += `<div class="calendar-header-day">${d}</div>`);
+
+  for (let i = 0; i < firstDay; i++) html += '<div class="calendar-day bg-light opacity-50"></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const area = assignedAreas[(d - 1) % assignedAreas.length];
+    const isMatch = searchQuery && area.toLowerCase().includes(searchQuery);
+    const isToday = (d === date.getDate() && month === new Date().getMonth()) ? 'border-primary shadow' : '';
+    const highlightStyle = isMatch ? 'background: #fef9c3; border: 2px solid #facc15;' : '';
+    html += `
+      <div class="calendar-day ${isToday}" style="${highlightStyle}">
+        <div class="calendar-day-number">${d}</div>
+        <div class="calendar-day-area">${area}</div>
+      </div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
 }
 
 // ================= UTILS =================
