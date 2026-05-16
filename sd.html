@@ -706,38 +706,49 @@
 
     @media (max-width: 768px) {
         /* 1. Header Transformation */
-        .desktop-title { display: none; }
-        .mobile-title { display: inline; font-weight: 700; letter-spacing: -0.5px; }
+        #mobileMenuBtn { display: block !important; }
         header { 
-            justify-content: center !important; 
-            padding: 12px 16px !important;
-            min-height: 56px;
+            padding: 10px 15px !important;
+            flex-wrap: wrap;
+            justify-content: flex-start !important;
+            height: auto !important;
             position: sticky;
             top: 0;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
-            box-shadow: none !important;
         }
-        h1 { 
-            font-size: 1.1rem !important; 
-            margin: 0 !important; 
-            text-align: center;
-            width: 100%;
-            color: #1a1a1a;
+        h1 { font-size: 1.1rem !important; margin: 0 !important; width: auto !important; flex: 1; text-align: left !important; }
+        .desktop-title { display: none; }
+        .mobile-title { display: inline; font-weight: 700; }
+        
+        #status { display: block !important; order: 2; font-size: 0.75rem; padding: 4px 8px; margin-left: auto; }
+        
+        .header-controls { 
+            display: none !important; 
+            width: 100%; 
+            flex-direction: column; 
+            margin: 10px 0 0 0 !important; 
+            gap: 8px;
+            order: 3;
         }
-        .header-controls, #status { display: none !important; }
+        .header-controls.mobile-open { display: flex !important; }
+        .header-select { width: 100%; min-width: 0; }
 
         /* 2. Layout Reset & Background */
         body { background-color: #f2f4f6; }
         .container { display: block !important; }
-        aside { display: none !important; }
-        main { padding: 0 !important; overflow-y: visible !important; }
+        aside { 
+            display: none !important; 
+            width: 100%; 
+            border-right: none; 
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+        }
+        aside.mobile-open { display: block !important; }
+        main { padding: 15px !important; overflow-y: visible !important; }
 
-        /* 3. Hide Data Section */
-        #dataSection { display: none !important; }
+        /* 3. Data Section Visibility */
+        #dataSection { display: block; }
+        #statsBar { grid-template-columns: 1fr 1fr; gap: 10px; }
 
         /* 4. Bitrix Workspace - App Container */
         #bitrixWorkspaceSection { 
@@ -950,6 +961,14 @@
         #outageMapContent > div {
             height: 60vh !important;
         }
+        .ticket-card { margin-bottom: 1rem; }
+        .ticket-header { padding: 0.6rem 1rem !important; }
+        .ticket-body { padding: 1rem !important; }
+    }
+    @media (max-width: 480px) {
+        .ticket-id { font-size: 0.95rem !important; }
+        .ticket-date { font-size: 0.8rem !important; }
+        .ticket-row { font-size: 0.85rem !important; }
     }
     .cesium-widget-credits { display: none !important; }
 
@@ -1096,6 +1115,7 @@
 <body>
 
   <header>
+    <button id="mobileMenuBtn" class="header-btn" style="display: none; padding: 6px 12px; margin-right: 10px; background: #2c3e50; border-radius: 4px; color: white;">Menu</button>
     <h1>
       <span class="desktop-title">SD Workspace</span>
       <span class="mobile-title">SD Mobile Workspace</span>
@@ -2482,6 +2502,17 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        const controls = document.querySelector('.header-controls');
+        const aside = document.querySelector('aside');
+        controls.classList.toggle('mobile-open');
+        aside.classList.toggle('mobile-open');
+      });
+    }
+
     // === Your Service Account JSON (keep this file private!) ===
     const SERVICE_ACCOUNT = {
 		"type": "service_account",
@@ -5313,6 +5344,13 @@
     connectBtn.addEventListener('click', async () => {
       statusEl.textContent = 'Connecting...';
       statusEl.className = 'connecting';
+
+      if (typeof gapi === 'undefined' || !gapi.client) {
+          statusEl.textContent = 'API Library Not Loaded';
+          statusEl.className = 'error';
+          return;
+      }
+
       try {
         // Only perform full connection if we don't have a token yet
         if (!accessToken) {
