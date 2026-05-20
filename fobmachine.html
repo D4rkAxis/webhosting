@@ -35,6 +35,7 @@
     .table-secondary:hover { filter: brightness(0.95); }
 
     .status-open { background: #fee2e2; color: #991b1b; }
+    .status-pending { background: #fef9c3; color: #854d0e; }
     .status-closed { background: #d1fae5; color: #166534; }
     .status-resolved { background: #ffedd5; color: #c2410c; }
     .status-rework { background: #ffe4e6; color: #be123c; border: 1px solid #fda4af; }
@@ -246,6 +247,7 @@
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Admin Tools</a>
           <ul class="dropdown-menu">
+            <li id="admin-approvals-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#approvals-tab-pane" type="button" onclick="handleAction(this, loadPendingApprovals)">Ticket Approvals</button></li>
             <li id="admin-manage-users-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#clients-tab-pane" type="button" onclick="handleAction(this, loadAllClients)">Manage Users</button></li>
             <li id="admin-register-user-li" class="d-none"><button class="dropdown-item" data-bs-toggle="tab" data-bs-target="#register-tab-pane" type="button" onclick="handleAction(this, populateNewUserAreaDropdown)">Register User</button></li>
             <li id="admin-divider-1" class="d-none"><hr class="dropdown-divider"></li>
@@ -269,6 +271,31 @@
                 <table class="table table-hover mb-0" id="techTicketsTable">
                   <thead class="navy text-white"><tr><th>Area</th><th>Machine</th><th>Client</th><th>Ticket ID</th><th>Opened</th><th>Service Count</th><th>Action</th></tr></thead>
                   <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket Approvals Pane -->
+        <div class="tab-pane fade" id="approvals-tab-pane" role="tabpanel">
+          <div class="card mt-3">
+            <div class="card-header navy text-white fw-bold">Pending Ticket Approvals</div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle" id="approvalsTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Ticket ID</th>
+                      <th>From Client</th>
+                      <th>Assigned To</th>
+                      <th>Asset Details</th>
+                      <th>Client Stats</th>
+                      <th>Reported Issue</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="approvalsTbody"></tbody>
                 </table>
               </div>
             </div>
@@ -616,6 +643,27 @@
   </div>
 </div>
 
+<!-- Decline Approval Modal -->
+<div class="modal fade" id="declineApprovalModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Decline Ticket Approval</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="declineTicketId">
+        <label class="form-label fw-bold">Reason for Decline</label>
+        <textarea id="declineReason" class="form-control" rows="3" placeholder="Explain why this ticket is being declined..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger" onclick="handleAction(this, submitDeclineApproval)">Confirm Decline</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Reject Ticket Modal -->
 <div class="modal fade" id="rejectTicketModal" tabindex="-1">
   <div class="modal-dialog">
@@ -925,13 +973,14 @@ function loadDashboard() {
 
       showIf('CAN_VIEW_ALL_CLIENTS', 'admin-manage-users-li');
       showIf('CAN_REGISTER_USER', 'admin-register-user-li');
+      showIf('CAN_APPROVE_TICKET', 'admin-approvals-li');
       showIf('CAN_VIEW_AREA_DATA', 'admin-area-overview-li');
       showIf('CAN_MANAGE_AREAS', 'admin-manage-areas-li');
       showIf('CAN_MANAGE_MACHINES', 'admin-tool-inventory-li');
       showIf('CAN_MANAGE_MACHINES', 'admin-tool-addon-li');
       showIf('CAN_VIEW_TOOL_TRACKER', 'admin-tool-tracker-li');
       
-      if (perms.includes('CAN_VIEW_AREA_DATA') || perms.includes('CAN_MANAGE_AREAS') || perms.includes('CAN_MANAGE_MACHINES') || perms.includes('CAN_VIEW_TOOL_TRACKER')) {
+      if (perms.includes('CAN_VIEW_AREA_DATA') || perms.includes('CAN_MANAGE_AREAS') || perms.includes('CAN_MANAGE_MACHINES') || perms.includes('CAN_VIEW_TOOL_TRACKER') || perms.includes('CAN_APPROVE_TICKET')) {
         document.getElementById('admin-divider-1').classList.remove('d-none');
       }
     } else {
@@ -1083,7 +1132,7 @@ async function loadClientTickets() {
   
   if (Array.isArray(tickets)) {
     tickets.forEach(t => {
-    let statusClass = t.status === 'OPEN' ? 'status-open' : (t.status === 'RESOLVED' ? 'status-resolved' : (t.status === 'REWORK' ? 'status-rework' : 'status-closed'));
+    let statusClass = t.status === 'PENDING_APPROVAL' ? 'status-pending' : (t.status === 'OPEN' ? 'status-open' : (t.status === 'RESOLVED' ? 'status-resolved' : (t.status === 'REWORK' ? 'status-rework' : 'status-closed')));
     let actionHtml = `<span class="badge ${statusClass}">${t.status}</span>`;
     
     let detailsHtml = `<small>${t.opened}</small>`;
@@ -1189,6 +1238,66 @@ async function submitRejectTicket() {
   showToast("Ticket rejected. Re-assigned to technician.", "warning");
   bootstrap.Modal.getInstance(document.getElementById('rejectTicketModal')).hide();
   loadClientTickets();
+}
+
+async function loadPendingApprovals() {
+  const res = await fetch(API_URL + "?action=getPendingApprovalTickets&username=" + currentUser.username);
+  const tickets = await res.json();
+  const tbody = document.getElementById('approvalsTbody');
+  tbody.innerHTML = "";
+  if (tickets.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center p-4 text-muted">No tickets waiting for approval.</td></tr>';
+    return;
+  }
+  tickets.forEach(t => {
+    tbody.innerHTML += `<tr>
+      <td class="fw-bold text-primary">${t.ticketId}</td>
+      <td>
+        <div class="fw-bold">${t.clientFullName}</div>
+        <div class="small text-muted">@${t.client}</div>
+        <div class="small text-muted italic">${t.clientEmail}</div>
+      </td>
+      <td><span class="badge bg-navy">${t.assignedToFullName}</span></td>
+      <td>
+        <div class="fw-bold">${t.machine}</div>
+        <div class="small">SN: ${t.serial}</div>
+      </td>
+      <td><small class="text-muted">Last Active:<br>${t.lastTicketSent}</small></td>
+      <td><div class="p-2 bg-light rounded small border-start border-3 border-warning">${t.issues}</div></td>
+      <td>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-success" onclick="handleAction(this, approveTicket, '${t.ticketId}')"><i class="fas fa-check"></i></button>
+          <button class="btn btn-sm btn-danger" onclick="openDeclineModal('${t.ticketId}')"><i class="fas fa-times"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  });
+}
+
+async function approveTicket(id) {
+  await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'approveTicket', ticketId: id, username: currentUser.username }) });
+  showToast("Ticket " + id + " approved and assigned.");
+  loadPendingApprovals();
+}
+
+function openDeclineModal(id) {
+  document.getElementById('declineTicketId').value = id;
+  document.getElementById('declineReason').value = "";
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('declineApprovalModal')).show();
+}
+
+async function submitDeclineApproval() {
+  const id = document.getElementById('declineTicketId').value;
+  const reason = document.getElementById('declineReason').value;
+  if (!reason) return alert("Please provide a reason.");
+  
+  await fetch(API_URL, { 
+    method: 'POST', 
+    body: JSON.stringify({ action: 'rejectApproval', ticketId: id, username: currentUser.username, reason: reason }) 
+  });
+  showToast("Ticket " + id + " declined.");
+  bootstrap.Modal.getInstance(document.getElementById('declineApprovalModal')).hide();
+  loadPendingApprovals();
 }
 
 // ================= TECH FUNCTIONS =================
